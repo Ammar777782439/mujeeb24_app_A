@@ -1,0 +1,285 @@
+import 'package:flutter/material.dart';
+import 'package:mujeeb24_app/app/localization/app_localizations.dart';
+import 'package:mujeeb24_app/app/theme/app_theme.dart';
+import 'package:mujeeb24_app/core/models/merchant_models.dart';
+import 'package:mujeeb24_app/features/auth/providers/auth_provider.dart';
+import 'package:mujeeb24_app/features/catalog/presentation/catalogs_screen.dart';
+import 'package:mujeeb24_app/features/catalog/providers/catalog_provider.dart';
+import 'package:mujeeb24_app/features/channels/presentation/channels_screen.dart';
+import 'package:mujeeb24_app/features/channels/providers/channel_automation_provider.dart';
+import 'package:mujeeb24_app/features/crm/presentation/customers_tab.dart';
+import 'package:mujeeb24_app/features/crm/presentation/leads_tab.dart';
+import 'package:mujeeb24_app/features/crm/providers/crm_provider.dart';
+import 'package:mujeeb24_app/features/merchant/presentation/business_settings_tab.dart';
+import 'package:mujeeb24_app/features/merchant/presentation/conversation_detail_screen.dart';
+import 'package:mujeeb24_app/features/merchant/presentation/dashboard_tab.dart';
+import 'package:mujeeb24_app/features/merchant/presentation/inbox_tab.dart';
+import 'package:mujeeb24_app/features/merchant/providers/merchant_provider.dart';
+import 'package:mujeeb24_app/features/transactions/presentation/transactions_screen.dart';
+import 'package:mujeeb24_app/features/transactions/providers/transaction_provider.dart';
+
+class MerchantHomeScreen extends StatefulWidget {
+  final AuthProvider authProvider;
+  final MerchantProvider merchantProvider;
+  final CrmProvider? crmProvider;
+  final TransactionProvider? transactionProvider;
+  final CatalogProvider? catalogProvider;
+  final ChannelAutomationProvider? channelAutomationProvider;
+  final AppLocaleProvider localeProvider;
+  final VoidCallback onSwitchBusiness;
+  final VoidCallback onLogout;
+
+  const MerchantHomeScreen({
+    super.key,
+    required this.authProvider,
+    required this.merchantProvider,
+    this.crmProvider,
+    this.transactionProvider,
+    this.catalogProvider,
+    this.channelAutomationProvider,
+    required this.localeProvider,
+    required this.onSwitchBusiness,
+    required this.onLogout,
+  });
+
+  @override
+  State<MerchantHomeScreen> createState() => _MerchantHomeScreenState();
+}
+
+class _MerchantHomeScreenState extends State<MerchantHomeScreen> {
+  int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.merchantProvider.addListener(_onStateChange);
+    widget.crmProvider?.addListener(_onStateChange);
+    widget.transactionProvider?.addListener(_onStateChange);
+    widget.catalogProvider?.addListener(_onStateChange);
+    widget.channelAutomationProvider?.addListener(_onStateChange);
+  }
+
+  @override
+  void dispose() {
+    widget.merchantProvider.removeListener(_onStateChange);
+    widget.crmProvider?.removeListener(_onStateChange);
+    widget.transactionProvider?.removeListener(_onStateChange);
+    widget.catalogProvider?.removeListener(_onStateChange);
+    widget.channelAutomationProvider?.removeListener(_onStateChange);
+    super.dispose();
+  }
+
+  void _onStateChange() {
+    if (mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {});
+        }
+      });
+    }
+  }
+
+  void _openConversation(Conversation conversation) {
+    final business = widget.authProvider.selectedBusiness?.business;
+    if (business == null) {
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ConversationDetailScreen(
+          merchantProvider: widget.merchantProvider,
+          businessId: business.id,
+          conversationId: conversation.id,
+        ),
+      ),
+    );
+  }
+
+  void _openTransactions([String? filter]) {
+    final business = widget.authProvider.selectedBusiness?.business;
+    if (business == null || widget.transactionProvider == null) {
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => TransactionsScreen(
+          transactionProvider: widget.transactionProvider!,
+          businessId: business.id,
+          initialStateFilter: filter,
+        ),
+      ),
+    );
+  }
+
+  void _openCatalogs() {
+    final business = widget.authProvider.selectedBusiness?.business;
+    if (business == null || widget.catalogProvider == null) {
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => CatalogsScreen(
+          catalogProvider: widget.catalogProvider!,
+          businessId: business.id,
+        ),
+      ),
+    );
+  }
+
+  void _openChannels() {
+    final business = widget.authProvider.selectedBusiness?.business;
+    if (business == null || widget.channelAutomationProvider == null) {
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ChannelsScreen(
+          channelProvider: widget.channelAutomationProvider!,
+          businessId: business.id,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    String strings(String key) => AppStrings.get(key, context);
+    final business = widget.authProvider.selectedBusiness?.business;
+    final hasCrm = widget.crmProvider != null;
+
+    final tabs = <Widget>[
+      DashboardTab(
+        merchantProvider: widget.merchantProvider,
+        currentBusiness: business,
+        onNavigateToInbox: () => setState(() => _currentIndex = 1),
+        onNavigateToCustomers: hasCrm
+            ? () => setState(() => _currentIndex = 2)
+            : null,
+        onNavigateToLeads: hasCrm
+            ? () => setState(() => _currentIndex = 3)
+            : null,
+        onNavigateToTransactions: widget.transactionProvider != null
+            ? () => _openTransactions(null)
+            : null,
+        onNavigateToReviews: widget.transactionProvider != null
+            ? () => _openTransactions('review')
+            : null,
+        onNavigateToCatalogs: widget.catalogProvider != null
+            ? _openCatalogs
+            : null,
+        onNavigateToChannels: widget.channelAutomationProvider != null
+            ? _openChannels
+            : null,
+      ),
+      InboxTab(
+        merchantProvider: widget.merchantProvider,
+        currentBusiness: business,
+        onConversationSelected: _openConversation,
+      ),
+      if (hasCrm) ...[
+        CustomersTab(
+          crmProvider: widget.crmProvider!,
+          businessId: business?.id ?? '',
+        ),
+        LeadsTab(
+          crmProvider: widget.crmProvider!,
+          businessId: business?.id ?? '',
+        ),
+      ],
+      BusinessSettingsTab(
+        merchantProvider: widget.merchantProvider,
+        currentBusiness: business,
+        onSwitchBusiness: widget.onSwitchBusiness,
+        onLogout: widget.onLogout,
+        onToggleLanguage: () => widget.localeProvider.toggleLocale(),
+      ),
+    ];
+
+    final navItems = <BottomNavigationBarItem>[
+      BottomNavigationBarItem(
+        icon: const Icon(Icons.dashboard_rounded),
+        label: strings('nav_home'),
+      ),
+      BottomNavigationBarItem(
+        icon: const Icon(Icons.forum_rounded),
+        label: strings('nav_inbox'),
+      ),
+      if (hasCrm) ...[
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.people_alt_rounded),
+          label: strings('nav_customers'),
+        ),
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.trending_up_rounded),
+          label: strings('nav_leads'),
+        ),
+      ],
+      BottomNavigationBarItem(
+        icon: const Icon(Icons.settings_rounded),
+        label: strings('nav_settings'),
+      ),
+    ];
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          business?.name ?? strings('app_name'),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        actions: [
+          if (widget.authProvider.accessibleBusinesses.length > 1)
+            IconButton(
+              icon: const Icon(Icons.swap_horiz_rounded),
+              tooltip: strings('select_business'),
+              onPressed: widget.onSwitchBusiness,
+            ),
+          if (widget.transactionProvider != null)
+            IconButton(
+              icon: const Icon(Icons.receipt_long_rounded),
+              tooltip: strings('transactions_title'),
+              onPressed: () => _openTransactions(null),
+            ),
+          if (widget.catalogProvider != null)
+            IconButton(
+              icon: const Icon(Icons.inventory_2_rounded),
+              tooltip: strings('catalogs_title'),
+              onPressed: _openCatalogs,
+            ),
+          if (widget.channelAutomationProvider != null)
+            IconButton(
+              icon: const Icon(Icons.hub_rounded),
+              tooltip: strings('channels_title'),
+              onPressed: _openChannels,
+            ),
+          IconButton(
+            icon: const Icon(Icons.language_rounded),
+            tooltip: strings('switch_language'),
+            onPressed: () => widget.localeProvider.toggleLocale(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout_rounded),
+            tooltip: strings('logout'),
+            onPressed: widget.onLogout,
+          ),
+        ],
+      ),
+      body: IndexedStack(
+        index: _currentIndex.clamp(0, tabs.length - 1),
+        children: tabs,
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex.clamp(0, navItems.length - 1),
+        onTap: (index) => setState(() => _currentIndex = index),
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: AppColors.textMuted,
+        backgroundColor: AppColors.surfaceCanvas,
+        type: BottomNavigationBarType.fixed,
+        items: navItems,
+      ),
+    );
+  }
+}
