@@ -763,6 +763,39 @@ void main() {
       expect(detail.definitions.first.key, 'size');
     });
 
+    test('listAttributeSchemas loads cursor pages without omitting later Arabic templates', () async {
+      var requests = 0;
+      final mock = MockClient((request) async {
+        requests++;
+        expect(request.url.path,
+          '/api/v1/businesses/$testBusinessId/attribute-schemas');
+        expect(request.url.queryParameters['limit'], '50');
+        final cursor = request.url.queryParameters['cursor'];
+        final firstPage = cursor == null;
+        if (!firstPage) expect(cursor, 'next-templates');
+        return http.Response(jsonEncode({
+          'items': [
+            {
+              'id': firstPage ? 'schema-one' : 'schema-two',
+              'business_id': testBusinessId,
+              'name': firstPage ? 'مواصفات الملابس' : 'مواصفات الهواتف',
+              'version': 1,
+              'definitions': [],
+            }
+          ],
+          'pagination': {
+            'has_more': firstPage,
+            'next_cursor': firstPage ? 'next-templates' : null,
+          },
+        }), 200, headers: {'content-type': 'application/json'});
+      });
+      final repo = CatalogRepository(apiClient: ApiClient(client: mock));
+      final templates = await repo.listAttributeSchemas(businessId: testBusinessId);
+      expect(templates.map((schema) => schema.name),
+        ['مواصفات الملابس', 'مواصفات الهواتف']);
+      expect(requests, 2);
+    });
+
     test('throws ApiErrorEnvelope on HTTP 412 Precondition Failed during concurrent update', () async {
       final mock = MockClient((request) async {
         return http.Response(
