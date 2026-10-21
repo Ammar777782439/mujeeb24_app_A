@@ -147,9 +147,13 @@ class MerchantProvider extends ChangeNotifier {
           code.contains('invalid_token') ||
           code.contains('token_expired') ||
           serverMessage.contains('invalid access token');
+      final safeArabicMessage = e.error.message.length <= 160 &&
+          RegExp(r'[\\u0600-\\u06FF]').hasMatch(e.error.message);
       _dashboardError = _dashboardRequiresLogin
           ? 'انتهت صلاحية جلسة الدخول. سجّل دخولك من جديد.'
-          : 'تعذر جلب بيانات النشاط حاليًا. حاول مرة أخرى.';
+          : safeArabicMessage
+              ? e.error.message
+              : 'تعذر جلب بيانات النشاط حاليًا. حاول مرة أخرى.';
     } on NetworkException {
       _dashboardOverview = null;
       _dashboardError = 'تعذر الاتصال بالخادم. تحقق من الإنترنت ثم أعد المحاولة.';
