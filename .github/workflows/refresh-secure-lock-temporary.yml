@@ -1,0 +1,36 @@
+name: Refresh Flutter lockfile (temporary)
+on:
+  push:
+    branches:
+      - feat/secure-session-persistence
+permissions:
+  contents: write
+jobs:
+  refresh-lock:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: true
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.5'
+          channel: stable
+          cache: true
+      - name: Solve dependencies
+        run: flutter pub get
+      - name: Commit resolved Flutter lockfile
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- pubspec.lock; then
+            echo 'Lockfile already current'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add pubspec.lock
+          git commit -m 'build(deps): pin flutter_secure_storage transitive lockfile'
+          git push origin HEAD:refs/heads/feat/secure-session-persistence
