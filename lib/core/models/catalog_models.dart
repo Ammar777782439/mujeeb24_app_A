@@ -547,31 +547,97 @@ class CreateOfferRequest {
   }
 }
 
-/// Request body for updating an Offer.
+/// Request body for updating an Offer, using the full backend OpenAPI contract.
 @immutable
 class UpdateOfferRequest {
   final String? name;
+  final String? pricingMode;
   final double? amount;
+  final String? currency;
+  final String? pricingUnit;
+  final String? availabilityMode;
   final String? availabilityStatus;
+  final String? fulfillmentMode;
+  final String? variantId;
   final String? status;
+  final String? validityFrom;
+  final String? validityUntil;
+  /// When true, send nullable fields explicitly to clear saved values.
+  final bool sendNullableFields;
 
   const UpdateOfferRequest({
     this.name,
+    this.pricingMode,
     this.amount,
+    this.currency,
+    this.pricingUnit,
+    this.availabilityMode,
     this.availabilityStatus,
+    this.fulfillmentMode,
+    this.variantId,
     this.status,
+    this.validityFrom,
+    this.validityUntil,
+    this.sendNullableFields = false,
   });
 
   Map<String, dynamic> toJson() {
-    final map = <String, dynamic>{};
-    if (name != null) map['name'] = name;
-    if (amount != null) map['amount'] = amount;
-    if (availabilityStatus != null) {
-      map['availability_status'] = availabilityStatus;
-    }
-    if (status != null) map['status'] = status;
-    return map;
+    return {
+      if (name != null) 'name': name,
+      if (pricingMode != null) 'pricing_mode': pricingMode,
+      if (availabilityMode != null) 'availability_mode': availabilityMode,
+      if (availabilityStatus != null) 'availability_status': availabilityStatus,
+      if (fulfillmentMode != null) 'fulfillment_mode': fulfillmentMode,
+      if (status != null) 'status': status,
+      if (sendNullableFields || amount != null) 'amount': amount,
+      if (sendNullableFields || currency != null) 'currency': currency,
+      if (sendNullableFields || pricingUnit != null) 'pricing_unit': pricingUnit,
+      if (sendNullableFields || variantId != null) 'variant_id': variantId,
+      if (sendNullableFields || validityFrom != null) 'validity_from': validityFrom,
+      if (sendNullableFields || validityUntil != null) 'validity_until': validityUntil,
+    };
   }
+}
+
+/// Merchant supplies an Arabic label. Only the server generates the opaque key.
+@immutable
+class AttributeDefinitionInput {
+  final String label;
+  final String dataType;
+  final bool required;
+  final int displayOrder;
+  final Map<String, dynamic>? validationRules;
+
+  const AttributeDefinitionInput({
+    required this.label,
+    required this.dataType,
+    required this.required,
+    required this.displayOrder,
+    this.validationRules,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'label': label,
+    'data_type': dataType,
+    'required': required,
+    'display_order': displayOrder,
+    if (validationRules != null) 'validation_rules': validationRules,
+  };
+}
+
+@immutable
+class CreateAttributeSchemaRequest {
+  final String name;
+  final List<AttributeDefinitionInput> definitions;
+  const CreateAttributeSchemaRequest({
+    required this.name,
+    required this.definitions,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'definitions': definitions.map((d) => d.toJson()).toList(),
+  };
 }
 
 /// Attribute definition within an AttributeSchema.

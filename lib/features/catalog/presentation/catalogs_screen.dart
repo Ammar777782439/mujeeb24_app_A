@@ -4,6 +4,7 @@ import '../../../app/theme/app_theme.dart';
 import '../../../core/models/catalog_models.dart';
 import '../providers/catalog_provider.dart';
 import 'catalog_items_screen.dart';
+import 'attribute_schemas_screen.dart';
 
 /// Screen displaying all Catalogs for the current business.
 class CatalogsScreen extends StatefulWidget {
@@ -319,6 +320,21 @@ class _CatalogsScreenState extends State<CatalogsScreen> {
           ),
           body: Column(
             children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: SizedBox(width: double.infinity,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.tune_rounded),
+                    label: const Text('قوالب المواصفات'),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => AttributeSchemasScreen(
+                        catalogProvider: widget.catalogProvider,
+                        businessId: widget.businessId,
+                      )),
+                    ),
+                  ),
+                ),
+              ),
               // Status Filters Bar
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,

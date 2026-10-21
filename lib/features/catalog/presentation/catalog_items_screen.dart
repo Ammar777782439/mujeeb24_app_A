@@ -3,6 +3,7 @@ import '../../../app/localization/app_localizations.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/models/catalog_models.dart';
 import '../providers/catalog_provider.dart';
+import 'catalog_specification_input.dart';
 import 'catalog_item_detail_screen.dart';
 import 'catalog_item_form_screen.dart';
 
@@ -338,6 +339,7 @@ class _CatalogItemsScreenState extends State<CatalogItemsScreen> {
                 businessId: widget.businessId,
                 catalogId: widget.catalog.id,
                 itemId: item.id,
+                businessCurrency: widget.businessCurrency,
               ),
             ),
           );
@@ -377,7 +379,9 @@ class _CatalogItemsScreenState extends State<CatalogItemsScreen> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Row(
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -389,7 +393,7 @@ class _CatalogItemsScreenState extends State<CatalogItemsScreen> {
                                     Border.all(color: AppColors.borderHairline),
                               ),
                               child: Text(
-                                item.itemType,
+                                merchantItemTypeLabel(item.itemType),
                                 style: const TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
@@ -398,7 +402,6 @@ class _CatalogItemsScreenState extends State<CatalogItemsScreen> {
                               ),
                             ),
                             if (item.requiresConfirmation) ...[
-                              const SizedBox(width: 6),
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 6, vertical: 2),

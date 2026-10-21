@@ -52,11 +52,21 @@ class CatalogProvider extends ChangeNotifier {
   // ==========================================
   List<Variant> _variants = [];
   List<Offer> _offers = [];
+  bool _variantsHasMore = false;
+  bool _offersHasMore = false;
+  String? _variantsCursor;
+  String? _offersCursor;
+  bool _loadingMoreVariants = false;
+  bool _loadingMoreOffers = false;
   bool _isLoadingItemDetail = false;
   String? _itemDetailError;
 
   List<Variant> get variants => _variants;
   List<Offer> get offers => _offers;
+  bool get variantsHasMore => _variantsHasMore;
+  bool get offersHasMore => _offersHasMore;
+  bool get loadingMoreVariants => _loadingMoreVariants;
+  bool get loadingMoreOffers => _loadingMoreOffers;
   bool get isLoadingItemDetail => _isLoadingItemDetail;
   String? get itemDetailError => _itemDetailError;
 
@@ -66,10 +76,16 @@ class CatalogProvider extends ChangeNotifier {
   List<AttributeSchema> _attributeSchemas = [];
   CatalogEntityContract _entityContract = CatalogEntityContract.defaults();
   bool _isLoadingContract = false;
+  bool _hasLoadedContract = false;
+  String? _contractError;
+  String? _schemasError;
 
   List<AttributeSchema> get attributeSchemas => _attributeSchemas;
   CatalogEntityContract get entityContract => _entityContract;
   bool get isLoadingContract => _isLoadingContract;
+  bool get hasLoadedContract => _hasLoadedContract;
+  String? get contractError => _contractError;
+  String? get schemasError => _schemasError;
 
   // ==========================================
   // Action State (Mutations)
@@ -99,6 +115,10 @@ class CatalogProvider extends ChangeNotifier {
     _selectedItem = null;
     _variants = [];
     _offers = [];
+    _variantsCursor = null;
+    _offersCursor = null;
+    _variantsHasMore = false;
+    _offersHasMore = false;
     notifyListeners();
   }
 
@@ -419,14 +439,58 @@ class CatalogProvider extends ChangeNotifier {
       ]);
 
       _selectedItem = results[0] as CatalogItem;
-      _variants = (results[1] as VariantPage).items;
-      _offers = (results[2] as OfferPage).items;
+      final variantPage = results[1] as VariantPage;
+      final offerPage = results[2] as OfferPage;
+      _variants = variantPage.items;
+      _offers = offerPage.items;
+      _variantsHasMore = variantPage.hasMore;
+      _offersHasMore = offerPage.hasMore;
+      _variantsCursor = variantPage.nextCursor;
+      _offersCursor = offerPage.nextCursor;
     } on ApiErrorEnvelope catch (e) {
       _itemDetailError = e.error.message;
     } catch (e) {
       _itemDetailError = e.toString();
     } finally {
       _isLoadingItemDetail = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadMoreVariants(String businessId, String itemId) async {
+    if (_loadingMoreVariants || !_variantsHasMore || _variantsCursor == null) return;
+    _loadingMoreVariants = true;
+    notifyListeners();
+    try {
+      final page = await catalogRepository.listVariants(
+        businessId: businessId, itemId: itemId, cursor: _variantsCursor);
+      final known = _variants.map((v) => v.id).toSet();
+      _variants.addAll(page.items.where((v) => known.add(v.id)));
+      _variantsHasMore = page.hasMore;
+      _variantsCursor = page.nextCursor;
+    } catch (e) {
+      _itemDetailError = 'تعذر تحميل خيارات أخرى. أعد المحاولة.';
+    } finally {
+      _loadingMoreVariants = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadMoreOffers(String businessId, String itemId) async {
+    if (_loadingMoreOffers || !_offersHasMore || _offersCursor == null) return;
+    _loadingMoreOffers = true;
+    notifyListeners();
+    try {
+      final page = await catalogRepository.listOffers(
+        businessId: businessId, itemId: itemId, cursor: _offersCursor);
+      final known = _offers.map((o) => o.id).toSet();
+      _offers.addAll(page.items.where((o) => known.add(o.id)));
+      _offersHasMore = page.hasMore;
+      _offersCursor = page.nextCursor;
+    } catch (e) {
+      _itemDetailError = 'تعذر تحميل أسعار أخرى. أعد المحاولة.';
+    } finally {
+      _loadingMoreOffers = false;
       notifyListeners();
     }
   }
@@ -603,23 +667,57 @@ class CatalogProvider extends ChangeNotifier {
   Future<void> fetchEntityContract(String businessId) async {
     if (businessId.isEmpty) return;
     _isLoadingContract = true;
+    _hasLoadedContract = false;
+    _contractError = null;
     notifyListeners();
 
     try {
       final contract = await catalogRepository.getCatalogEntityContract(
         businessId: businessId,
       );
+      if (contract.pricingModes.isEmpty ||
+          contract.availabilityStatuses.isEmpty ||
+          contract.fulfillmentModes.isEmpty) {
+        throw StateError('incomplete catalog entity contract');
+      }
       _entityContract = contract;
+      _hasLoadedContract = true;
     } catch (_) {
-      // Keep defaults
+      // Defaults may explain existing records; never use them to authorize saves.
+      _hasLoadedContract = false;
+      _contractError = 'تعذر تحميل اختيارات الكتالوج. أعد المحاولة.';
     } finally {
       _isLoadingContract = false;
       notifyListeners();
     }
   }
 
+  Future<AttributeSchema?> createAttributeSchema(
+    String businessId, CreateAttributeSchemaRequest request) async {
+    if (_isPerformingAction) return null;
+    _isPerformingAction = true;
+    _actionError = null;
+    notifyListeners();
+    try {
+      final created = await catalogRepository.createAttributeSchema(
+        businessId: businessId, request: request);
+      _attributeSchemas = [created, ..._attributeSchemas];
+      return created;
+    } on ApiErrorEnvelope catch (error) {
+      _actionError = error.error.message;
+      return null;
+    } catch (_) {
+      _actionError = 'تعذر حفظ قالب المواصفات. تحقق من الاتصال.';
+      return null;
+    } finally {
+      _isPerformingAction = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> fetchAttributeSchemas(String businessId) async {
     if (businessId.isEmpty) return;
+    _schemasError = null;
     try {
       final schemas = await catalogRepository.listAttributeSchemas(
         businessId: businessId,
@@ -627,7 +725,8 @@ class CatalogProvider extends ChangeNotifier {
       _attributeSchemas = schemas;
       notifyListeners();
     } catch (_) {
-      // Non-critical, ignore
+      _schemasError = 'تعذر تحميل قوالب المواصفات. أعد المحاولة.';
+      notifyListeners();
     }
   }
 }

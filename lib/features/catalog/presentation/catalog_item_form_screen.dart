@@ -3,6 +3,8 @@ import '../../../app/localization/app_localizations.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/models/catalog_models.dart';
 import '../providers/catalog_provider.dart';
+import 'catalog_specification_input.dart';
+import 'catalog_currency_select.dart';
 
 /// Form screen for creating or editing a CatalogItem.
 class CatalogItemFormScreen extends StatefulWidget {
@@ -28,8 +30,12 @@ class CatalogItemFormScreen extends StatefulWidget {
 class _AttributeEntryController {
   final TextEditingController keyController;
   final TextEditingController valueController;
+  final String? originalKey;
+  final dynamic originalValue;
+  bool changed = false;
 
-  _AttributeEntryController({String key = '', String value = ''})
+  _AttributeEntryController({String key = '', String value = '',
+      this.originalKey, this.originalValue})
       : keyController = TextEditingController(text: key),
         valueController = TextEditingController(text: value);
 
@@ -62,6 +68,15 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
   String? _selectedAttributeSchemaId;
 
   final List<_AttributeEntryController> _attributeControllers = [];
+  final Map<String, dynamic> _attributeValues = {};
+  final Set<String> _removedKeys = {};
+  AttributeSchema? _selectedSchema;
+  bool _schemaLoading = false;
+  String? _schemaError;
+  String? _customError;
+  bool _attributesDirty = false;
+  bool _isSaving = false;
+  bool _manualInitialized = false;
 
   bool get _isEditing => widget.existingItem != null;
 
@@ -78,6 +93,11 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
     _longDescController =
         TextEditingController(text: item?.longDescription ?? '');
 
+    if (item != null) {
+      const known = ['product', 'physical_good', 'service',
+        'consultation', 'booking', 'real_estate', 'course', 'subscription'];
+      _customItemType = !known.contains(item.itemType);
+    }
     _selectedPricingMode = item?.pricingMode ?? 'fixed';
     _selectedAvailabilityMode = item?.availabilityMode ?? 'unknown';
     _selectedFulfillmentMode = item?.fulfillmentMode ?? 'manual';
@@ -88,13 +108,14 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
     _currencyController = TextEditingController(text: widget.businessCurrency ?? '');
     _unitController = TextEditingController();
 
-    if (item != null && item.attributes.isNotEmpty) {
-      item.attributes.forEach((k, v) {
-        _attributeControllers.add(
-          _AttributeEntryController(key: k, value: v.toString()),
-        );
-      });
-    }
+    if (item != null) _attributeValues.addAll(item.attributes);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await widget.catalogProvider.fetchEntityContract(widget.businessId);
+      if (!mounted) return;
+      await widget.catalogProvider.fetchAttributeSchemas(widget.businessId);
+      if (!mounted) return;
+      await _selectSchema(_selectedAttributeSchemaId);
+    });
   }
 
   @override
@@ -112,29 +133,141 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
     super.dispose();
   }
 
-  void _addAttribute() {
+  Future<void> _selectSchema(String? schemaId) async {
+    if (_selectedAttributeSchemaId != schemaId && !_isEditing) {
+      _attributeValues.removeWhere((key, _) =>
+        _selectedSchema?.definitions.any((d) => d.key == key) ?? false);
+      _attributesDirty = true;
+    }
     setState(() {
-      _attributeControllers.add(_AttributeEntryController());
+      _selectedAttributeSchemaId = schemaId;
+      _selectedSchema = null;
+      _schemaError = null;
+      _schemaLoading = schemaId != null;
     });
+    if (schemaId != null) {
+      try {
+        final schema = await widget.catalogProvider.catalogRepository.getAttributeSchema(
+          businessId: widget.businessId, schemaId: schemaId);
+        if (!mounted || schemaId != _selectedAttributeSchemaId) return;
+        setState(() => _selectedSchema = schema);
+      } catch (_) {
+        if (!mounted || schemaId != _selectedAttributeSchemaId) return;
+        setState(() => _schemaError =
+          'تعذر تحميل أسئلة قالب المواصفات. أعد اختياره.');
+      } finally {
+        if (mounted && schemaId == _selectedAttributeSchemaId) {
+          setState(() => _schemaLoading = false);
+        }
+      }
+    }
+    if (_isEditing && !_manualInitialized && mounted) {
+      final managed = _selectedSchema?.definitions.map((d) => d.key).toSet() ??
+          <String>{};
+      for (final entry in widget.existingItem!.attributes.entries) {
+        // An opaque server key is never presented as a merchant-editable label.
+        if (managed.contains(entry.key) || entry.key.startsWith('attr_')) continue;
+        _attributeControllers.add(_AttributeEntryController(
+          key: entry.key,
+          value: entry.value is String ? entry.value as String : '',
+          originalKey: entry.key,
+          originalValue: entry.value,
+        ));
+      }
+      _manualInitialized = true;
+      setState(() {});
+    }
+  }
+
+  void _addAttribute() {
+    setState(() => _attributeControllers.add(_AttributeEntryController()));
   }
 
   void _removeAttribute(int index) {
     setState(() {
       final removed = _attributeControllers.removeAt(index);
+      if (removed.originalKey != null) _removedKeys.add(removed.originalKey!);
+      _attributesDirty = true;
       removed.dispose();
     });
   }
 
+  void _changeManagedAttribute(String key, dynamic value) {
+    setState(() {
+      if (value == null || (value is String && value.isEmpty)) {
+        _attributeValues.remove(key);
+      } else {
+        _attributeValues[key] = value;
+      }
+      _attributesDirty = true;
+    });
+  }
+
+  String? _validateAttributes() {
+    if (_schemaLoading) return 'انتظر تحميل قالب المواصفات.';
+    if (_selectedAttributeSchemaId != null && _selectedSchema == null) {
+      return _schemaError ?? 'تعذر تحميل قالب المواصفات. أعد المحاولة.';
+    }
+    final definitions = _selectedSchema?.definitions ?? <AttributeDefinition>[];
+    for (final definition in definitions) {
+      final error = validateSpecification(definition, _attributeValues[definition.key]);
+      if (error != null) return error;
+    }
+    final names = definitions.map((d) => d.label.trim()).toSet();
+    final originalManagedKeys = definitions.map((d) => d.key).toSet();
+    for (final row in _attributeControllers) {
+      final key = row.keyController.text.trim();
+      final value = row.valueController.text.trim();
+      final isUntouchedSavedValue = row.originalKey != null && !row.changed;
+      if (key.isEmpty && value.isEmpty && row.originalKey == null) continue;
+      if (key.isEmpty || (!isUntouchedSavedValue && value.isEmpty)) {
+        return 'اكتب اسم المعلومة وقيمتها، أو احذف السطر.';
+      }
+      if (key.startsWith('attr_') || key.length > 120 ||
+          key.runes.any((r) => r < 32 || r == 127) ||
+          originalManagedKeys.contains(key)) {
+        return 'استخدم اسم معلومة طبيعيًا، مثل الضمان أو اللون.';
+      }
+      if (!names.add(key)) return 'هذه المعلومة موجودة بالفعل: $key';
+    }
+    return null;
+  }
+
   Map<String, dynamic> _collectAttributes() {
-    final map = <String, dynamic>{};
-    for (final c in _attributeControllers) {
-      final key = c.keyController.text.trim();
-      final val = c.valueController.text.trim();
-      if (key.isNotEmpty) {
-        map[key] = val;
+    final map = Map<String, dynamic>.from(_attributeValues);
+    for (final removed in _removedKeys) {
+      map.remove(removed);
+    }
+    for (final row in _attributeControllers) {
+      final name = row.keyController.text.trim();
+      if (name.isEmpty) continue;
+      if (row.originalKey != null && row.originalKey != name) {
+        map.remove(row.originalKey);
+      }
+      if (row.originalKey != null && !row.changed &&
+          row.originalKey == name) {
+        map[name] = row.originalValue;
+      } else {
+        map[name] = row.valueController.text.trim();
       }
     }
     return map;
+  }
+
+  String _reviewPrice() {
+    if (_selectedPricingMode == 'quote_required') return 'يحدد بعد معرفة الطلب';
+    if (_amountController.text.trim().isEmpty) return 'سعر متغير يحتاج تأكدًا';
+    return '${_amountController.text.trim()} ${_currencyController.text.trim().toUpperCase()}';
+  }
+
+  String _itemTypeName(String type) {
+    const types = {
+      'product': 'منتج', 'physical_good': 'منتج',
+      'service': 'خدمة', 'consultation': 'استشارة',
+      'booking': 'حجز', 'real_estate': 'عقار',
+      'course': 'دورة', 'subscription': 'اشتراك',
+    };
+    return types[type] ?? type;
   }
 
   void _nextStep() {
@@ -144,17 +277,31 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
         const SnackBar(content: Text('اختر نوع المنتج أو الخدمة')));
       return;
     }
+    if (_step == 0) {
+      final attributesError = _validateAttributes();
+      if (attributesError != null) {
+        setState(() => _customError = attributesError);
+        return;
+      }
+      setState(() => _customError = null);
+    }
+    if (_step == 1 && !widget.catalogProvider.hasLoadedContract) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('تعذر تحميل اختيارات الكتالوج. أعد المحاولة قبل الحفظ.'),
+      ));
+      return;
+    }
     if (_step == 1 && _saveInitialOffer) {
       final amount = double.tryParse(_amountController.text.trim());
       final needsAmount = _selectedPricingMode != 'quote_required' &&
           _selectedPricingMode != 'dynamic';
-      final needsUnit = ['per_unit', 'per_person', 'per_day']
-          .contains(_selectedPricingMode);
+      final needsUnit = _selectedPricingMode == 'per_unit';
       if (_availabilityStatus == null ||
-          (needsAmount && (amount == null || amount <= 0)) ||
+          (needsAmount && (amount == null || amount < 0)) ||
           (_amountController.text.trim().isNotEmpty && amount == null) ||
           (needsUnit && _unitController.text.trim().isEmpty) ||
-          !RegExp(r'^[A-Za-z]{3}$').hasMatch(_currencyController.text.trim())) {
+          ((needsAmount || (_selectedPricingMode == 'dynamic' && amount != null)) &&
+              !RegExp(r'^[A-Za-z]{3}$').hasMatch(_currencyController.text.trim()))) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('راجع السعر والعملة وحدد حالة التوفر قبل المتابعة')),
         );
@@ -166,10 +313,29 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
 
   Future<void> _submit() async {
     if (!_isEditing && _step != 2) return;
-    if (!_formKey.currentState!.validate()) return;
+    if (_isSaving || !_formKey.currentState!.validate()) return;
+    if (!widget.catalogProvider.hasLoadedContract) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('حمّل اختيارات الكتالوج قبل الحفظ.')));
+      return;
+    }
+    final attributesError = _validateAttributes();
+    if ((_attributesDirty || !_isEditing) && attributesError != null) {
+      setState(() => _customError = attributesError);
+      if (!_isEditing) setState(() => _step = 0);
+      return;
+    }
+    setState(() => _isSaving = true);
 
     String strings(String key) => AppStrings.get(key, context);
     final attributes = _collectAttributes();
+    final parsedAmount = double.tryParse(_amountController.text.trim());
+    final effectiveUnit = _unitController.text.trim().isNotEmpty
+        ? _unitController.text.trim()
+        : _selectedPricingMode == 'per_person'
+            ? 'person'
+            : _selectedPricingMode == 'per_day' ? 'day' : null;
+
 
     CatalogItem? result;
     if (_isEditing) {
@@ -187,7 +353,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
         longDescription: _longDescController.text.trim().isNotEmpty
             ? _longDescController.text.trim()
             : null,
-        attributes: attributes,
+        attributes: _attributesDirty ? attributes : null,
       );
 
       result = await widget.catalogProvider.updateCatalogItem(
@@ -216,10 +382,11 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
         initialOffer: _saveInitialOffer ? CreateOfferRequest(
           name: 'السعر الأساسي',
           pricingMode: _selectedPricingMode,
-          amount: double.tryParse(_amountController.text.trim()),
-          currency: _currencyController.text.trim().toUpperCase(),
-          pricingUnit: _unitController.text.trim().isEmpty
-              ? null : _unitController.text.trim(),
+          amount: _selectedPricingMode == 'quote_required' ? null : parsedAmount,
+          currency: parsedAmount != null && _selectedPricingMode != 'quote_required'
+              ? _currencyController.text.trim().toUpperCase() : null,
+          pricingUnit: ['per_unit', 'per_person', 'per_day'].contains(_selectedPricingMode)
+              ? effectiveUnit : null,
           availabilityMode: _selectedAvailabilityMode,
           availabilityStatus: _availabilityStatus!,
           fulfillmentMode: _selectedFulfillmentMode,
@@ -235,6 +402,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
     }
 
     if (mounted) {
+      setState(() => _isSaving = false);
       if (result != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -264,7 +432,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
   Widget build(BuildContext context) {
     String strings(String key) => AppStrings.get(key, context);
     final contract = widget.catalogProvider.entityContract;
-    final isBusy = widget.catalogProvider.isPerformingAction;
+    final isBusy = widget.catalogProvider.isPerformingAction || _isSaving;
     final schemas = widget.catalogProvider.attributeSchemas;
 
     return Scaffold(
@@ -274,44 +442,14 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
       ),
-      body: Form(
+      body: SafeArea(
+        child: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            if (_isEditing) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceSubtle,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.borderHairline),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.info_outline_rounded,
-                      size: 20,
-                      color: AppColors.primary,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'ID: ${widget.existingItem!.id}\nVersion: ${widget.existingItem!.resourceVersion}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-
             if (!_isEditing) ...[
-              Text('الخطوة ' + (_step + 1).toString() + ' من 3',
+              Text('الخطوة ${_step + 1} من 3',
                 style: const TextStyle(color: AppColors.primary,
                   fontWeight: FontWeight.bold)),
               Text(const [
@@ -338,56 +476,49 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Show a human-friendly item type, while preserving its API value.
-            if (_isEditing) ...[
+            // Use the same merchant vocabulary in create and edit.
+            DropdownButtonFormField<String>(
+              key: ValueKey('item-type-' + (_customItemType ? 'custom' :
+                _itemTypeController.text.trim())),
+              initialValue: _customItemType ? 'custom' :
+                _itemTypeController.text.trim(),
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'ما الذي تقدمه؟',
+                border: OutlineInputBorder()),
+              items: [
+                const DropdownMenuItem(value: 'product', child: Text('منتج')),
+                if (_isEditing && widget.existingItem?.itemType == 'physical_good')
+                  const DropdownMenuItem(value: 'physical_good', child: Text('منتج')),
+                const DropdownMenuItem(value: 'service', child: Text('خدمة')),
+                const DropdownMenuItem(value: 'consultation', child: Text('استشارة')),
+                const DropdownMenuItem(value: 'booking', child: Text('حجز')),
+                const DropdownMenuItem(value: 'real_estate', child: Text('عقار')),
+                const DropdownMenuItem(value: 'course', child: Text('دورة')),
+                const DropdownMenuItem(value: 'subscription', child: Text('اشتراك')),
+                const DropdownMenuItem(value: 'custom', child: Text('نوع آخر')),
+              ],
+              onChanged: isBusy ? null : (type) {
+                if (type == null) return;
+                setState(() {
+                  _customItemType = type == 'custom';
+                  if (!_customItemType) _itemTypeController.text = type;
+                  if (_customItemType && !_isEditing) _itemTypeController.clear();
+                });
+              },
+            ),
+            if (_customItemType) ...[
+              const SizedBox(height: 12),
               TextFormField(
                 controller: _itemTypeController,
                 enabled: !isBusy,
                 decoration: const InputDecoration(
-                  labelText: 'نوع المنتج أو الخدمة',
-                  border: OutlineInputBorder(),
-                ),
+                  labelText: 'اسم النوع',
+                  hintText: 'مثل: بطاقة حضور',
+                  border: OutlineInputBorder()),
                 validator: (v) => v == null || v.trim().isEmpty
-                    ? strings('required_field') : null,
+                  ? strings('required_field') : null,
               ),
-            ] else ...[
-              DropdownButtonFormField<String>(
-                initialValue: 'product',
-                isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'ما الذي تقدمه؟',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'product', child: Text('منتج')),
-                  DropdownMenuItem(value: 'service', child: Text('خدمة')),
-                  DropdownMenuItem(value: 'consultation', child: Text('استشارة')),
-                  DropdownMenuItem(value: 'booking', child: Text('حجز')),
-                  DropdownMenuItem(value: 'real_estate', child: Text('عقار')),
-                  DropdownMenuItem(value: 'course', child: Text('دورة')),
-                  DropdownMenuItem(value: 'subscription', child: Text('اشتراك')),
-                  DropdownMenuItem(value: 'custom', child: Text('نوع آخر')),
-                ],
-                onChanged: isBusy ? null : (value) {
-                  if (value == null) return;
-                  setState(() {
-                    _customItemType = value == 'custom';
-                    _itemTypeController.text = _customItemType ? '' : value;
-                  });
-                },
-              ),
-              if (_customItemType) ...[
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _itemTypeController,
-                  decoration: const InputDecoration(
-                    labelText: 'اسم النوع', hintText: 'اكتب النوع الذي يناسب نشاطك',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (v) => v == null || v.trim().isEmpty
-                      ? strings('required_field') : null,
-                ),
-              ],
             ],
             const SizedBox(height: 16),
 
@@ -415,118 +546,151 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Optional Attribute Schema Selector (only on create)
-            if (!_isEditing && schemas.isNotEmpty) ...[
-              DropdownButtonFormField<String>(
-                initialValue: _selectedAttributeSchemaId,
-                decoration: InputDecoration(
-                  labelText: strings('attribute_schema'),
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.schema_rounded),
-                ),
-                isExpanded: true,
-                items: [
-                  DropdownMenuItem<String>(
-                    value: null,
-                    child: Text(strings('select_attribute_schema')),
-                  ),
-                  ...schemas.map((s) {
-                    return DropdownMenuItem<String>(
-                      value: s.id,
-                      child: Text('${s.name} (v${s.version})'),
-                    );
-                  }),
-                ],
-                onChanged: isBusy ? null : (val) {
-                  setState(() => _selectedAttributeSchemaId = val);
-                },
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // Custom Attributes Section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  strings('attributes'),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.onSurface,
-                  ),
-                ),
-                TextButton.icon(
-                  onPressed: isBusy ? null : _addAttribute,
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: Text(strings('add_attribute')),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-
-            if (_attributeControllers.isEmpty)
-              Container(
+            // Arabic merchant specifications: the server owns opaque schema keys.
+            const SizedBox(height: 4),
+            Text('المعلومات والمواصفات (اختياري)',
+              style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 6),
+            const Text('مثل اللون أو الضمان. خيارات المقاس واللون التي يختارها العميل تضاف بعد حفظ المنتج.'),
+            const SizedBox(height: 12),
+            if (!_isEditing && widget.catalogProvider.schemasError != null)
+              Card(child: Padding(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceSubtle,
-                  borderRadius: BorderRadius.circular(8),
+                child: Column(children: [
+                  Text(widget.catalogProvider.schemasError!),
+                  TextButton(
+                    onPressed: () => widget.catalogProvider.fetchAttributeSchemas(widget.businessId),
+                    child: const Text('إعادة تحميل القوالب')),
+                ]),
+              )),
+            if (!_isEditing && schemas.isNotEmpty)
+              DropdownButtonFormField<String>(
+                key: ValueKey('schema-${_selectedAttributeSchemaId ?? 'none'}'),
+                initialValue: _selectedAttributeSchemaId,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'استخدام قالب مواصفات', border: OutlineInputBorder()),
+                items: [
+                  const DropdownMenuItem<String>(
+                    value: null, child: Text('سأضيف المعلومات بنفسي')),
+                  for (final schema in schemas)
+                    DropdownMenuItem<String>(
+                      value: schema.id,
+                      child: Text(schema.name, overflow: TextOverflow.ellipsis),
+                    ),
+                ],
+                onChanged: isBusy ? null : (value) => _selectSchema(value),
+              ),
+            if (_isEditing && _selectedAttributeSchemaId != null)
+              Text(_selectedSchema == null
+                ? 'جاري تحميل قالب المواصفات المحفوظ'
+                : 'قالب المواصفات الحالي: ${_selectedSchema!.name}'),
+            if (_schemaLoading) const LinearProgressIndicator(),
+            if (_schemaError != null)
+              Card(child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(children: [
+                  Text(_schemaError!, style: const TextStyle(color: AppColors.statusError)),
+                  TextButton(onPressed: () => _selectSchema(_selectedAttributeSchemaId),
+                    child: const Text('إعادة تحميل المواصفات')),
+                ]),
+              )),
+            if (_selectedSchema != null) ...[
+              const SizedBox(height: 14),
+              for (final definition in (_selectedSchema!.definitions.toList()
+                ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder))))
+                CatalogSpecificationInput(
+                  key: ValueKey('spec-${definition.key}'),
+                  definition: definition,
+                  value: _attributeValues[definition.key],
+                  enabled: !isBusy,
+                  onChanged: (value) => _changeManagedAttribute(definition.key, value),
                 ),
-                child: Center(
-                  child: Text(
-                    strings('no_scores'),
-                    style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
-                  ),
-                ),
-              )
-            else
-              ...List.generate(_attributeControllers.length, (index) {
-                final ctrl = _attributeControllers[index];
+            ],
+            const SizedBox(height: 12),
+            Text('معلومات أخرى', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 6),
+            for (var index = 0; index < _attributeControllers.length; index++) ...[
+              Builder(builder: (context) {
+                final row = _attributeControllers[index];
+                final isStructuredSaved = row.originalKey != null &&
+                  row.originalValue is! String;
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: TextFormField(
-                          controller: ctrl.keyController,
-                          enabled: !isBusy,
-                          decoration: InputDecoration(
-                            labelText: strings('attribute_key'),
-                            border: const OutlineInputBorder(),
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 8),
-                          ),
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Card(child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          Expanded(child: Text('المعلومة ${index + 1}',
+                            style: const TextStyle(fontWeight: FontWeight.w600))),
+                          IconButton(
+                            tooltip: 'حذف المعلومة',
+                            onPressed: isBusy ? null : () => _removeAttribute(index),
+                            icon: const Icon(Icons.delete_outline_rounded)),
+                        ]),
+                        TextFormField(
+                          controller: row.keyController,
+                          enabled: !isBusy && row.originalKey == null,
+                          textDirection: TextDirection.rtl,
+                          decoration: const InputDecoration(
+                            labelText: 'اسم المعلومة',
+                            hintText: 'مثل: الضمان أو اللون',
+                            border: OutlineInputBorder()),
+                          onChanged: (_) { row.changed = true; _attributesDirty = true; },
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        flex: 3,
-                        child: TextFormField(
-                          controller: ctrl.valueController,
-                          enabled: !isBusy,
-                          decoration: InputDecoration(
-                            labelText: strings('attribute_value'),
-                            border: const OutlineInputBorder(),
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 8),
+                        const SizedBox(height: 10),
+                        if (isStructuredSaved) ...[
+                          Text('القيمة: ${displaySpecification(row.originalValue)}'),
+                          const Text('هذه القيمة محفوظة بنوعها الأصلي ولن تتحول إلى نص عند الحفظ.',
+                            style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                        ] else
+                          TextFormField(
+                            controller: row.valueController,
+                            enabled: !isBusy,
+                            textDirection: TextDirection.rtl,
+                            decoration: const InputDecoration(
+                              labelText: 'قيمة المعلومة',
+                              hintText: 'اكتب القيمة بالعربية',
+                              border: OutlineInputBorder()),
+                            onChanged: (_) { row.changed = true; _attributesDirty = true; },
                           ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline_rounded,
-                            color: AppColors.statusError),
-                        onPressed: isBusy ? null : () => _removeAttribute(index),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  )),
                 );
               }),
-
-            const SizedBox(height: 24),
-
+            ],
+            OutlinedButton.icon(
+              icon: const Icon(Icons.add_rounded),
+              onPressed: isBusy ? null : _addAttribute,
+              label: const Text('إضافة معلومة'),
+            ),
+            if (_customError != null) ...[
+              const SizedBox(height: 8),
+              Text(_customError!, style: const TextStyle(color: AppColors.statusError)),
+            ],
+            if (_isEditing && _selectedSchema == null &&
+                widget.existingItem!.attributes.keys.any((k) => k.startsWith('attr_')))
+              const Text('المواصفات المحفوظة من القالب ستبقى كما هي حتى يكتمل تحميل القالب.',
+                style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+            const SizedBox(height: 20),
             ],
             if (_isEditing || _step == 1) ...[
+            if (widget.catalogProvider.isLoadingContract)
+              const LinearProgressIndicator(),
+            if (widget.catalogProvider.contractError != null)
+              Card(child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(children: [
+                  Text(widget.catalogProvider.contractError!,
+                    style: const TextStyle(color: AppColors.statusError)),
+                  TextButton(
+                    onPressed: () => widget.catalogProvider.fetchEntityContract(widget.businessId),
+                    child: const Text('إعادة تحميل الاختيارات')),
+                ]),
+              )),
             // Pricing Mode Dropdown
             DropdownButtonFormField<String>(
               initialValue: _selectedPricingMode,
@@ -540,7 +704,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                 return DropdownMenuItem(
                   value: e.key,
                   child: Text(
-                    '${e.key} - ${e.value}',
+                    e.value,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 13),
                   ),
@@ -565,7 +729,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                 return DropdownMenuItem(
                   value: e.key,
                   child: Text(
-                    '${e.key} - ${e.value}',
+                    e.value,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 13),
                   ),
@@ -590,7 +754,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                 return DropdownMenuItem(
                   value: e.key,
                   child: Text(
-                    '${e.key} - ${e.value}',
+                    e.value,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 13),
                   ),
@@ -615,7 +779,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                 items: contract.itemStatuses.entries.map((e) {
                   return DropdownMenuItem(
                     value: e.key,
-                    child: Text('${e.key} - ${e.value}'),
+                    child: Text(e.value),
                   );
                 }).toList(),
                 onChanged: isBusy ? null : (val) {
@@ -664,14 +828,10 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                   ),
                   const SizedBox(height: 12),
                 ],
-                TextField(
-                  controller: _currencyController,
-                  maxLength: 3,
-                  textCapitalization: TextCapitalization.characters,
-                  decoration: const InputDecoration(
-                    labelText: 'عملة النشاط *', hintText: 'YER أو SAR',
-                  ),
-                ),
+                if (_selectedPricingMode != 'quote_required')
+                  CatalogCurrencySelect(
+                    controller: _currencyController, enabled: !isBusy),
+
                 if (['per_unit', 'per_person', 'per_day'].contains(_selectedPricingMode))
                   TextField(
                     controller: _unitController,
@@ -699,7 +859,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
               ],
             ],
             if (!_isEditing && _step == 2) ...[
-              Text('راجع المعلومات قبل الحفظ',
+              Text('راجع جميع المعلومات قبل الحفظ',
                 style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 12),
               Card(child: Padding(
@@ -708,23 +868,41 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(_nameController.text.trim(),
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                    Text(_itemTypeController.text.trim()),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                    const SizedBox(height: 6),
+                    Text('النوع: ${_itemTypeName(_itemTypeController.text.trim())}'),
+                    if (_shortDescController.text.trim().isNotEmpty)
+                      Text('الوصف المختصر: ${_shortDescController.text.trim()}'),
+                    if (_longDescController.text.trim().isNotEmpty)
+                      Text('الوصف التفصيلي: ${_longDescController.text.trim()}'),
+                    if (_selectedSchema != null)
+                      Text('قالب المواصفات: ${_selectedSchema!.name}'),
+                    for (final entry in _collectAttributes().entries)
+                      Padding(padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          '${specificationName(entry.key, _selectedSchema?.definitions ?? <AttributeDefinition>[])}: ${displaySpecification(entry.value)}')),
                     const Divider(),
+                    Text('طريقة التسعير: ${contract.labelPricingMode(_selectedPricingMode)}'),
                     if (_saveInitialOffer) ...[
-                      Text('السعر: ' +
-                        (_amountController.text.trim().isEmpty
-                          ? 'حسب الطلب' : _amountController.text.trim()) +
-                        ' ' + _currencyController.text.trim().toUpperCase()),
-                      Text('التوفر: ' + contract.labelAvailabilityStatus(
-                        _availabilityStatus ?? 'unknown')),
+                      Text('السعر: ${_reviewPrice()}'),
+                      if (['per_unit', 'per_person', 'per_day']
+                        .contains(_selectedPricingMode))
+                        Text('وحدة التسعير: ${_unitController.text.trim().isEmpty ? (_selectedPricingMode == 'per_person' ? 'شخص' : 'يوم') : _unitController.text.trim()}'),
+                      Text('التوفر الحالي: ${contract.labelAvailabilityStatus(_availabilityStatus ?? 'unknown')}'),
                     ] else
-                      const Text('لم يضف السعر الآن'),
-                    const Text('يحفظ المنتج مسودة. التنشيط إجراء منفصل.',
-                      style: TextStyle(color: AppColors.textMuted)),
+                      const Text('السعر والتوفر سيُضافان لاحقًا'),
+                    Text('طريقة التأكد من التوفر: ${contract.labelAvailabilityMode(_selectedAvailabilityMode)}'),
+                    Text('طريقة الحصول عليه: ${contract.labelFulfillmentMode(_selectedFulfillmentMode)}'),
+                    Text('موافقة الموظف: ${_requiresConfirmation ? 'مطلوبة قبل التأكيد' : 'حسب سياسات النشاط'}'),
                   ],
                 ),
               )),
+              const SizedBox(height: 10),
+              const Text('سيُحفظ المنتج كمسودة. الحفظ لا يفعّل الرد الآلي عليه تلقائيًا.',
+                style: TextStyle(color: AppColors.textMuted)),
+              const SizedBox(height: 6),
+              const Text('يمكن إضافة المقاسات والألوان وخيارات المنتج بعد الحفظ.',
+                style: TextStyle(color: AppColors.textMuted)),
               const SizedBox(height: 20),
             ],
             // Submit Button
@@ -761,6 +939,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
             const SizedBox(height: 32),
           ],
         ),
+      ),
       ),
     );
   }
