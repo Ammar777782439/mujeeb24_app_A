@@ -92,6 +92,49 @@ void main() {
     expect(store.cookie, isNull);
   });
 
+  test('explicit new account login cannot inherit prior user cookie', () async {
+    final store = _MemorySecureStore()..cookie = 'mujeeb_refresh=user-a';
+    final api = ApiClient(
+      cookieStore: store,
+      client: MockClient((request) async {
+        expect(request.url.path, '/api/v1/auth/login');
+        expect(request.headers.containsKey('Cookie'), isFalse);
+        return http.Response(jsonEncode({'data': {
+          'access_token': 'user-b-access',
+          'principal': {'principal_id': 'b', 'display_name': 'Second'},
+        }}), 200, headers: {
+          'set-cookie': 'mujeeb_refresh=user-b; Secure; HttpOnly',
+        });
+      }),
+    );
+    await api.restoreRefreshCookie();
+    await AuthRepository(apiClient: api).login(email: 'b@test.com', password: 'valid');
+    expect(store.cookie, 'mujeeb_refresh=user-b');
+    expect(api.refreshCookie, 'mujeeb_refresh=user-b');
+    expect(api.accessToken, 'user-b-access');
+  });
+
+  test('revoked restored refresh cookie is deleted before next launch', () async {
+    final store = _MemorySecureStore()..cookie = 'mujeeb_refresh=revoked';
+    final api = ApiClient(cookieStore: store, client: MockClient((request) async {
+      return http.Response(jsonEncode({'error': {
+        'code': 'UNAUTHENTICATED',
+        'message': 'refresh revoked',
+        'retryable': false,
+      }}), 401);
+    }));
+    await api.restoreRefreshCookie();
+    try {
+      await AuthRepository(apiClient: api).refreshSession();
+      fail('expected rejected refresh');
+    } catch (e) {
+      expect(e.toString(), contains('ApiErrorEnvelope'));
+    }
+    expect(api.accessToken, isNull);
+    expect(api.refreshCookie, isNull);
+    expect(store.cookie, isNull);
+  });
+
   test('pending storage read never restores after logout', () async {
     final store = _MemorySecureStore();
     final readGate = Completer<String?>();
