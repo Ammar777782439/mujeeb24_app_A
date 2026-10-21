@@ -137,6 +137,7 @@ class _MerchantHomeScreenState extends State<MerchantHomeScreen> {
         builder: (context) => CatalogsScreen(
           catalogProvider: widget.catalogProvider!,
           businessId: business.id,
+          businessCurrency: business.defaultCurrency,
         ),
       ),
     );
