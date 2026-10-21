@@ -507,8 +507,7 @@ class CatalogRepository {
       final pagination = response['pagination'];
       final hasMore = pagination is Map && pagination['has_more'] == true;
       if (!hasMore) return collected;
-      final nextCursor = pagination is Map
-          ? pagination['next_cursor']?.toString() : null;
+      final nextCursor = pagination['next_cursor']?.toString();
       if (nextCursor == null || nextCursor.isEmpty ||
           !seenCursors.add(nextCursor)) {
         throw StateError('Invalid catalog schema pagination cursor');
