@@ -5,6 +5,7 @@ import '../../../app/theme/app_theme.dart';
 import '../../../app/widgets/merchant_editor_dialog.dart';
 import '../../../core/models/team_audit_models.dart';
 import '../../../core/services/invitation_link_service.dart';
+import '../../../core/team/team_invitation_presentation.dart';
 import '../providers/team_audit_provider.dart';
 
 class TeamScreen extends StatefulWidget {
@@ -639,60 +640,90 @@ class _TeamScreenState extends State<TeamScreen>
 
   void _showResendInvitationDialog(TeamInvitationDetails invitation) {
     final expiryController = TextEditingController(text: '72');
-
-    showDialog(
+    bool sending = false;
+    String? error;
+    showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(AppStrings.get('resend_invitation', ctx)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(AppStrings.get('resend_invitation_confirm', ctx)),
-            const SizedBox(height: 12),
-            TextField(
-              key: const Key('input_resend_expiry'),
-              controller: expiryController,
-              decoration: InputDecoration(
-                labelText: AppStrings.get('expires_in_hours', ctx),
-                prefixIcon: const Icon(Icons.timer_outlined),
-              ),
-              keyboardType: TextInputType.number,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, updateDialog) => AlertDialog(
+          scrollable: true,
+          title: const Text('تجديد رابط الدعوة'),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('سيصبح رابط الدعوة السابق غير صالح، وسيُنشأ رمز جديد. لن يُرسل بريد تلقائيًا؛ شارك الرابط الجديد مع الموظف بعد إنشائه.'),
+                const SizedBox(height: 16),
+                TextField(
+                  key: const Key('input_resend_expiry'),
+                  controller: expiryController,
+                  enabled: !sending,
+                  textDirection: TextDirection.ltr,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'صلاحية الرابط الجديد بالساعات',
+                    helperText: 'من ساعة واحدة إلى 720 ساعة',
+                    prefixIcon: Icon(Icons.timer_outlined),
+                  ),
+                ),
+                if (error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(error!, style: const TextStyle(color: AppColors.statusError)),
+                  if (widget.provider.lastRequestId?.isNotEmpty == true)
+                    SelectableText(
+                      'رقم الطلب للدعم: ${widget.provider.lastRequestId}',
+                      style: const TextStyle(fontSize: 12,
+                        color: AppColors.textMuted)),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: sending ? null : () => Navigator.of(ctx).pop(),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              key: const Key('btn_confirm_resend_invitation'),
+              onPressed: sending ? null : () async {
+                final hours = int.tryParse(expiryController.text.trim());
+                if (hours == null || hours < 1 || hours > 720) {
+                  updateDialog(() => error = 'اختر مدة من ساعة إلى 720 ساعة.');
+                  return;
+                }
+                updateDialog(() {
+                  sending = true;
+                  error = null;
+                });
+                final created = await widget.provider.resendInvitation(
+                  businessId: widget.businessId,
+                  invitationId: invitation.id,
+                  expiresInHours: hours,
+                );
+                if (!ctx.mounted) return;
+                if (created == null) {
+                  updateDialog(() {
+                    sending = false;
+                    error = widget.provider.actionError ??
+                      'تعذر تجديد الدعوة. أعد تحميل القائمة ثم حاول مجددًا.';
+                  });
+                  return;
+                }
+                Navigator.of(ctx).pop();
+                if (mounted) _showTokenDialog(created);
+              },
+              child: sending
+                ? const SizedBox(width: 20, height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2,
+                      color: Colors.white))
+                : const Text('إنشاء رابط جديد'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(AppStrings.get('cancel', ctx)),
-          ),
-          ElevatedButton(
-            key: const Key('btn_confirm_resend_invitation'),
-            onPressed: () async {
-              final expiry = int.tryParse(expiryController.text.trim());
-              Navigator.of(ctx).pop();
-              final created = await widget.provider.resendInvitation(
-                businessId: widget.businessId,
-                invitationId: invitation.id,
-                expiresInHours: expiry,
-              );
-
-              if (created != null && mounted) {
-                _showTokenDialog(created);
-              } else if (mounted && widget.provider.actionError != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(widget.provider.actionError!),
-                    backgroundColor: AppColors.statusError,
-                  ),
-                );
-              }
-            },
-            child: Text(AppStrings.get('resend_invitation', ctx)),
-          ),
-        ],
       ),
-    );
+    ).whenComplete(expiryController.dispose);
   }
 
   void _showRevokeInvitationDialog(TeamInvitationDetails invitation) {
@@ -1236,7 +1267,7 @@ class _TeamScreenState extends State<TeamScreen>
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              '${AppStrings.get('expires_at', context)}: ${inv.expiresAt}',
+                              '${AppStrings.get('expires_at', context)}: ${formatTeamInvitationDate(context, inv.expiresAt)}',
                               style: const TextStyle(
                                   fontSize: 12, color: AppColors.textMuted),
                             ),

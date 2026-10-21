@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:mujeeb24_app/core/errors/api_error.dart';
+import 'package:mujeeb24_app/core/team/team_invitation_presentation.dart';
 import 'package:mujeeb24_app/core/models/auth_models.dart';
 import 'package:mujeeb24_app/core/auth/auth_repository.dart';
 import 'package:mujeeb24_app/core/auth/workspace_repository.dart';
@@ -209,13 +210,13 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return invitation;
     } on ApiErrorEnvelope catch (e) {
-      _errorMessage = e.error.message;
+      _errorMessage = invitationErrorMessage(e, resend: false);
       _lastRequestId = e.requestId;
       _isLoading = false;
       notifyListeners();
       return null;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = 'تعذر إكمال الدعوة. تحقق من الاتصال وحاول مرة أخرى.';
       _isLoading = false;
       notifyListeners();
       return null;
@@ -242,13 +243,13 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } on ApiErrorEnvelope catch (e) {
-      _errorMessage = e.error.message;
+      _errorMessage = invitationErrorMessage(e, resend: false);
       _lastRequestId = e.requestId;
       _isLoading = false;
       notifyListeners();
       return false;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = 'تعذر إكمال الدعوة. تحقق من الاتصال وحاول مرة أخرى.';
       _isLoading = false;
       notifyListeners();
       return false;
@@ -268,13 +269,13 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } on ApiErrorEnvelope catch (e) {
-      _errorMessage = e.error.message;
+      _errorMessage = invitationErrorMessage(e, resend: false);
       _lastRequestId = e.requestId;
       _isLoading = false;
       notifyListeners();
       return false;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = 'تعذر إكمال الدعوة. تحقق من الاتصال وحاول مرة أخرى.';
       _isLoading = false;
       notifyListeners();
       return false;
