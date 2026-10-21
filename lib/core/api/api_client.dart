@@ -111,7 +111,7 @@ class ApiClient {
         response.headers['Set-Cookie'];
     if (header == null) return;
     // Never copy another website/backend cookie into a refresh request.
-    final match = RegExp(r'(?:^|,\\s*)mujeeb_refresh=([^;,]*)')
+    final match = RegExp(r'(?:^|,\s*)mujeeb_refresh=([^;,]*)')
         .firstMatch(header);
     if (match == null) return;
     final value = match.group(1) ?? '';
@@ -198,6 +198,9 @@ class ApiClient {
         final recovered = await _refreshAfter401(requestEpoch, usedToken);
         if (recovered == true && requestEpoch == _sessionEpoch) {
           response = await send().timeout(timeout);
+          if (response.statusCode == 401) {
+            _expireAuthenticatedSession(requestEpoch);
+          }
         } else if (recovered == null) {
           throw const NetworkException(
             message: 'تعذر تجديد الجلسة مؤقتًا. تحقق من الاتصال ثم أعد المحاولة.',
