@@ -1217,7 +1217,33 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
       ),
       body: Column(children: [
         if (widget.justCreated) _postCreateBanner(),
-        Expanded(child: variants.isEmpty
+        Expanded(child: widget.catalogProvider.variantsError != null &&
+                variants.isEmpty
+          ? Center(child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.cloud_off_outlined,
+                    color: AppColors.textMuted, size: 40),
+                  const SizedBox(height: 12),
+                  Text(widget.catalogProvider.variantsError!,
+                    textAlign: TextAlign.center),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => widget.catalogProvider.refreshVariants(
+                      widget.businessId, widget.itemId),
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('إعادة تحميل المتغيرات'),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('تم حفظ المنتج، ويمكنك العودة لإضافة متغيراته لاحقًا.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.textMuted)),
+                ],
+              ),
+            ))
+          : variants.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -1363,7 +1389,28 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
         icon: const Icon(Icons.add_rounded),
         label: Text(strings('add_offer')),
       ),
-      body: offers.isEmpty
+      body: widget.catalogProvider.offersError != null && offers.isEmpty
+          ? Center(child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.cloud_off_outlined,
+                    color: AppColors.textMuted, size: 40),
+                  const SizedBox(height: 12),
+                  Text(widget.catalogProvider.offersError!,
+                    textAlign: TextAlign.center),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => widget.catalogProvider.refreshOffers(
+                      widget.businessId, widget.itemId),
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('إعادة تحميل الأسعار'),
+                  ),
+                ],
+              ),
+            ))
+          : offers.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
