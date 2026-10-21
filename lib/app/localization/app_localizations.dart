@@ -40,6 +40,8 @@ class AppStrings {
       'demo_fill': 'بيانات تجريبية: admin@alufuq.com',
       'demo_fill_btn': 'تعبئة سريعة',
       'logout': 'تسجيل الخروج',
+      'cancel_action': 'إلغاء',
+      'no_catalog_attributes': 'لم تضف معلومات أو مواصفات بعد',
       'switch_language': 'English',
       'select_business': 'اختر النشاط التجاري',
       'select_business_subtitle':
@@ -65,6 +67,8 @@ class AppStrings {
       'request_failed': 'تعذر إتمام الطلب',
       'success': 'تمت العملية بنجاح',
       'session_expired': 'انتهت الجلسة، يرجى تسجيل الدخول مجددًا',
+      'dashboard_login_required': 'انتهت صلاحية الجلسة. سجّل الدخول مرة أخرى لعرض بيانات نشاطك.',
+      'dashboard_connection_failed': 'تعذر تحديث بيانات النشاط. تحقق من الاتصال وحاول مجددًا.',
       // Phase 2
       'nav_home': 'الرئيسية',
       'nav_inbox': 'المحادثات',
