@@ -3,6 +3,7 @@ import 'package:mujeeb24_app/app/localization/app_localizations.dart';
 import 'package:mujeeb24_app/app/theme/app_theme.dart';
 import 'package:mujeeb24_app/core/models/auth_models.dart';
 import 'package:mujeeb24_app/core/models/merchant_models.dart';
+import 'package:mujeeb24_app/core/widgets/filter_widgets.dart';
 import 'package:mujeeb24_app/features/merchant/providers/merchant_provider.dart';
 
 class InboxTab extends StatefulWidget {
@@ -22,7 +23,9 @@ class InboxTab extends StatefulWidget {
 }
 
 class _InboxTabState extends State<InboxTab> {
+  String _selectedChannel = 'all'; // all, whatsapp, facebook, telegram, instagram
   String _selectedFilter = 'all'; // all, waiting_human, open, closed
+  String _selectedOwnership = 'all'; // all, assigned, unassigned
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -32,9 +35,13 @@ class _InboxTabState extends State<InboxTab> {
     widget.merchantProvider.addListener(_onStateChange);
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadConversations());
     _searchController.addListener(() {
-      setState(() {
-        _searchQuery = _searchController.text.trim().toLowerCase();
-      });
+      final q = _searchController.text.trim().toLowerCase();
+      if (_searchQuery != q) {
+        setState(() {
+          _searchQuery = q;
+        });
+        widget.merchantProvider.setConversationSearchQuery(q);
+      }
     });
   }
 
@@ -52,13 +59,94 @@ class _InboxTabState extends State<InboxTab> {
   void _loadConversations() {
     final businessId = widget.currentBusiness?.id;
     if (businessId != null && businessId.isNotEmpty) {
-      widget.merchantProvider.loadConversations(businessId);
+      widget.merchantProvider.loadConversations(
+        businessId,
+        channel: _selectedChannel != 'all' ? _selectedChannel : null,
+        state: _selectedFilter != 'all' ? _selectedFilter : null,
+        ownership: _selectedOwnership != 'all' ? _selectedOwnership : null,
+      );
     }
+  }
+
+  void _onChannelSelected(String channel) {
+    setState(() {
+      _selectedChannel = channel;
+    });
+    final businessId = widget.currentBusiness?.id ?? '';
+    widget.merchantProvider.setConversationChannelFilter(businessId, channel);
+  }
+
+  void _onStateSelected(String state) {
+    setState(() {
+      _selectedFilter = state;
+    });
+    final businessId = widget.currentBusiness?.id ?? '';
+    widget.merchantProvider.setConversationStateFilter(businessId, state);
+  }
+
+  void _onOwnershipSelected(String ownership) {
+    setState(() {
+      _selectedOwnership = ownership;
+    });
+    final businessId = widget.currentBusiness?.id ?? '';
+    widget.merchantProvider.setConversationOwnershipFilter(businessId, ownership);
+  }
+
+  void _clearAllFilters() {
+    setState(() {
+      _selectedChannel = 'all';
+      _selectedFilter = 'all';
+      _selectedOwnership = 'all';
+      _searchController.clear();
+      _searchQuery = '';
+    });
+    final businessId = widget.currentBusiness?.id ?? '';
+    widget.merchantProvider.clearConversationFilters(businessId);
+  }
+
+  int get _activeFiltersCount {
+    int count = 0;
+    if (_selectedChannel != 'all') count++;
+    if (_selectedFilter != 'all') count++;
+    if (_selectedOwnership != 'all') count++;
+    if (_searchQuery.isNotEmpty) count++;
+    return count;
+  }
+
+  String _detectChannel(Conversation conv) {
+    for (final label in conv.labels) {
+      final l = label.toLowerCase();
+      if (l.contains('whatsapp')) return 'whatsapp';
+      if (l.contains('facebook') || l.contains('meta')) return 'facebook';
+      if (l.contains('telegram')) return 'telegram';
+      if (l.contains('instagram')) return 'instagram';
+    }
+    if (conv.assignment != null && conv.assignment!['channel'] != null) {
+      return conv.assignment!['channel']!;
+    }
+    if (_selectedChannel != 'all') {
+      return _selectedChannel;
+    }
+    return 'whatsapp';
   }
 
   List<Conversation> _getFilteredConversations() {
     final list = widget.merchantProvider.conversations;
     return list.where((c) {
+      // Channel Filter (client-side safety check)
+      if (_selectedChannel != 'all') {
+        final hasOtherExplicitChannel = c.labels.any((l) {
+          final low = l.toLowerCase();
+          return (low.contains('whatsapp') && _selectedChannel != 'whatsapp') ||
+              (low.contains('facebook') && _selectedChannel != 'facebook') ||
+              (low.contains('telegram') && _selectedChannel != 'telegram') ||
+              (low.contains('instagram') && _selectedChannel != 'instagram');
+        });
+        if (hasOtherExplicitChannel) {
+          return false;
+        }
+      }
+
       // State Filter
       if (_selectedFilter == 'waiting_human' && c.state != 'waiting_human') {
         return false;
@@ -70,14 +158,26 @@ class _InboxTabState extends State<InboxTab> {
         return false;
       }
 
+      // Ownership Filter
+      if (_selectedOwnership == 'assigned' &&
+          (c.assignment == null || c.ownership == 'none' || c.ownership == 'unassigned')) {
+        return false;
+      }
+      if (_selectedOwnership == 'unassigned' &&
+          (c.assignment != null && c.ownership != 'none' && c.ownership != 'unassigned')) {
+        return false;
+      }
+
       // Search Query
       if (_searchQuery.isNotEmpty) {
         final name = (c.customer.displayName ?? '').toLowerCase();
         final id = c.id.toLowerCase();
         final custId = c.customer.id.toLowerCase();
+        final labels = c.labels.join(' ').toLowerCase();
         return name.contains(_searchQuery) ||
             id.contains(_searchQuery) ||
-            custId.contains(_searchQuery);
+            custId.contains(_searchQuery) ||
+            labels.contains(_searchQuery);
       }
 
       return true;
@@ -94,11 +194,12 @@ class _InboxTabState extends State<InboxTab> {
       onRefresh: () async => _loadConversations(),
       child: Column(
         children: [
-          // Header / Search Bar
+          // Header / Search Bar & Filter Controls
           Container(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             color: AppColors.surfaceCanvas,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Live Indicator Strip
                 Row(
@@ -164,24 +265,53 @@ class _InboxTabState extends State<InboxTab> {
                 ),
                 const SizedBox(height: 10),
 
-                // Filter Chips
+                // 1. Social Channels Filter Bar (WhatsApp, Facebook, Telegram, Instagram, etc.)
+                ChannelFilterBar(
+                  selectedChannel: _selectedChannel,
+                  onChannelSelected: _onChannelSelected,
+                ),
+                const SizedBox(height: 8),
+
+                // 2. Status & Ownership Filters Row
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _buildFilterChip('all', strings('all_conversations')),
-                      const SizedBox(width: 8),
-                      _buildFilterChip(
-                        'waiting_human',
-                        strings('waiting_filter'),
+                      // State Filter Chips
+                      _buildFilterChip('all', strings('all_conversations'), _selectedFilter, _onStateSelected),
+                      const SizedBox(width: 6),
+                      _buildFilterChip('waiting_human', strings('waiting_filter'), _selectedFilter, _onStateSelected),
+                      const SizedBox(width: 6),
+                      _buildFilterChip('open', strings('open_filter'), _selectedFilter, _onStateSelected),
+                      const SizedBox(width: 6),
+                      _buildFilterChip('closed', strings('closed_filter'), _selectedFilter, _onStateSelected),
+
+                      const SizedBox(width: 12),
+                      Container(
+                        height: 18,
+                        width: 1,
+                        color: AppColors.borderHairline,
                       ),
-                      const SizedBox(width: 8),
-                      _buildFilterChip('open', strings('open_filter')),
-                      const SizedBox(width: 8),
-                      _buildFilterChip('closed', strings('closed_filter')),
+                      const SizedBox(width: 12),
+
+                      // Ownership Filter Chips
+                      _buildFilterChip('all', strings('ownership_all'), _selectedOwnership, _onOwnershipSelected),
+                      const SizedBox(width: 6),
+                      _buildFilterChip('assigned', strings('ownership_assigned'), _selectedOwnership, _onOwnershipSelected),
+                      const SizedBox(width: 6),
+                      _buildFilterChip('unassigned', strings('ownership_unassigned'), _selectedOwnership, _onOwnershipSelected),
                     ],
                   ),
                 ),
+
+                // 3. Active Filters Indicator & Clear All
+                if (_activeFiltersCount > 0) ...[
+                  const SizedBox(height: 6),
+                  ActiveFiltersHeader(
+                    activeCount: _activeFiltersCount,
+                    onClear: _clearAllFilters,
+                  ),
+                ],
               ],
             ),
           ),
@@ -200,7 +330,14 @@ class _InboxTabState extends State<InboxTab> {
           // Conversation List or Empty State
           Expanded(
             child: filtered.isEmpty
-                ? _buildEmptyState(strings)
+                ? (_activeFiltersCount > 0
+                    ? FilterEmptyState(
+                        title: strings('no_filtered_results'),
+                        subtitle: strings('no_filtered_results_hint'),
+                        onClearFilters: _clearAllFilters,
+                        clearButtonText: strings('reset_all_filters'),
+                      )
+                    : _buildEmptyState(strings))
                 : ListView.separated(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -219,14 +356,17 @@ class _InboxTabState extends State<InboxTab> {
     );
   }
 
-  Widget _buildFilterChip(String filterKey, String label) {
-    final isSelected = _selectedFilter == filterKey;
+  Widget _buildFilterChip(
+    String key,
+    String label,
+    String currentSelection,
+    ValueChanged<String> onSelected,
+  ) {
+    final isSelected = currentSelection == key;
     return ChoiceChip(
       label: Text(label),
       selected: isSelected,
-      onSelected: (_) {
-        setState(() => _selectedFilter = filterKey);
-      },
+      onSelected: (_) => onSelected(key),
       selectedColor: AppColors.primary,
       backgroundColor: AppColors.surfaceContainerLow,
       labelStyle: TextStyle(
@@ -245,6 +385,7 @@ class _InboxTabState extends State<InboxTab> {
   ) {
     final customerName = conv.customer.displayName ?? conv.customer.id;
     final isWaiting = conv.state == 'waiting_human';
+    final detectedChannel = _detectChannel(conv);
 
     return InkWell(
       onTap: () => widget.onConversationSelected(conv),
@@ -300,15 +441,26 @@ class _InboxTabState extends State<InboxTab> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Expanded(
-                            child: Text(
-                              customerName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.onSurface,
-                              ),
+                            child: Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    customerName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.onSurface,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                ChannelBadge(
+                                  channel: detectedChannel,
+                                  size: 11,
+                                ),
+                              ],
                             ),
                           ),
                           _buildStateBadge(conv.state, strings),
@@ -521,24 +673,19 @@ class _InboxTabState extends State<InboxTab> {
                   ),
                 ),
               ),
-              TextButton(
-                onPressed: _loadConversations,
-                child: Text(strings('retry')),
-              ),
             ],
           ),
-          if (requestId != null && requestId.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                '${strings('request_id')}: $requestId',
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontFamily: 'monospace',
-                  color: AppColors.textMuted,
-                ),
+          if (requestId != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              '${strings('request_id')}: $requestId',
+              style: const TextStyle(
+                fontSize: 11,
+                fontFamily: 'monospace',
+                color: AppColors.statusError,
               ),
             ),
+          ],
         ],
       ),
     );

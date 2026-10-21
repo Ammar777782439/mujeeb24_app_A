@@ -31,6 +31,12 @@ class MerchantProvider extends ChangeNotifier {
   String? _actionError;
   String? _lastRequestId;
 
+  // Conversations Filter State
+  String _conversationChannelFilter = 'all';
+  String _conversationStateFilter = 'all';
+  String _conversationOwnershipFilter = 'all';
+  String _conversationSearchQuery = '';
+
   MerchantProvider({required this.merchantRepository});
 
   DashboardOverview? get dashboardOverview => _dashboardOverview;
@@ -55,6 +61,55 @@ class MerchantProvider extends ChangeNotifier {
   String? get messagesError => _messagesError;
   String? get actionError => _actionError;
   String? get lastRequestId => _lastRequestId;
+
+  String get conversationChannelFilter => _conversationChannelFilter;
+  String get conversationStateFilter => _conversationStateFilter;
+  String get conversationOwnershipFilter => _conversationOwnershipFilter;
+  String get conversationSearchQuery => _conversationSearchQuery;
+
+  int get activeConversationFiltersCount {
+    int count = 0;
+    if (_conversationChannelFilter != 'all') count++;
+    if (_conversationStateFilter != 'all') count++;
+    if (_conversationOwnershipFilter != 'all') count++;
+    if (_conversationSearchQuery.trim().isNotEmpty) count++;
+    return count;
+  }
+
+  /// Filtered conversations considering search query, state, and ownership
+  List<Conversation> get filteredConversations {
+    return _conversations.where((c) {
+      if (_conversationSearchQuery.trim().isNotEmpty) {
+        final q = _conversationSearchQuery.trim().toLowerCase();
+        final name = (c.customer.displayName ?? '').toLowerCase();
+        final id = c.id.toLowerCase();
+        final custId = c.customer.id.toLowerCase();
+        final matchesLabels = c.labels.any((l) => l.toLowerCase().contains(q));
+        if (!name.contains(q) &&
+            !id.contains(q) &&
+            !custId.contains(q) &&
+            !matchesLabels) {
+          return false;
+        }
+      }
+
+      if (_conversationStateFilter != 'all' &&
+          c.state != _conversationStateFilter) {
+        return false;
+      }
+
+      if (_conversationOwnershipFilter == 'assigned' &&
+          (c.assignment == null || c.ownership == 'none' || c.ownership == 'unassigned')) {
+        return false;
+      }
+      if (_conversationOwnershipFilter == 'unassigned' &&
+          (c.assignment != null && c.ownership != 'none' && c.ownership != 'unassigned')) {
+        return false;
+      }
+
+      return true;
+    }).toList();
+  }
 
   void clearErrors() {
     _dashboardError = null;
@@ -213,6 +268,52 @@ class MerchantProvider extends ChangeNotifier {
     }
   }
 
+  void setConversationChannelFilter(String businessId, String channel) {
+    if (_conversationChannelFilter != channel) {
+      _conversationChannelFilter = channel;
+      notifyListeners();
+      if (businessId.isNotEmpty) {
+        loadConversations(businessId);
+      }
+    }
+  }
+
+  void setConversationStateFilter(String businessId, String state) {
+    if (_conversationStateFilter != state) {
+      _conversationStateFilter = state;
+      notifyListeners();
+      if (businessId.isNotEmpty) {
+        loadConversations(businessId);
+      }
+    }
+  }
+
+  void setConversationOwnershipFilter(String businessId, String ownership) {
+    if (_conversationOwnershipFilter != ownership) {
+      _conversationOwnershipFilter = ownership;
+      notifyListeners();
+      if (businessId.isNotEmpty) {
+        loadConversations(businessId);
+      }
+    }
+  }
+
+  void setConversationSearchQuery(String query) {
+    _conversationSearchQuery = query;
+    notifyListeners();
+  }
+
+  void clearConversationFilters(String businessId) {
+    _conversationChannelFilter = 'all';
+    _conversationStateFilter = 'all';
+    _conversationOwnershipFilter = 'all';
+    _conversationSearchQuery = '';
+    notifyListeners();
+    if (businessId.isNotEmpty) {
+      loadConversations(businessId);
+    }
+  }
+
   /// Load Conversations
   Future<void> loadConversations(
     String businessId, {
@@ -225,11 +326,22 @@ class MerchantProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final effectiveState = state ??
+          (_conversationStateFilter != 'all' ? _conversationStateFilter : null);
+      final effectiveOwnership = ownership ??
+          (_conversationOwnershipFilter != 'all'
+              ? _conversationOwnershipFilter
+              : null);
+      final effectiveChannel = channel ??
+          (_conversationChannelFilter != 'all'
+              ? _conversationChannelFilter
+              : null);
+
       final list = await merchantRepository.listConversations(
         businessId: businessId,
-        state: state,
-        ownership: ownership,
-        channel: channel,
+        state: effectiveState,
+        ownership: effectiveOwnership,
+        channel: effectiveChannel,
       );
       _conversations = list;
     } on ApiErrorEnvelope catch (e) {

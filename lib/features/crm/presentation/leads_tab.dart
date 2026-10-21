@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mujeeb24_app/app/localization/app_localizations.dart';
 import 'package:mujeeb24_app/app/theme/app_theme.dart';
 import 'package:mujeeb24_app/core/models/crm_models.dart';
+import 'package:mujeeb24_app/core/widgets/filter_widgets.dart';
 import 'package:mujeeb24_app/features/crm/presentation/lead_detail_screen.dart';
 import 'package:mujeeb24_app/features/crm/presentation/lead_form_screen.dart';
 import 'package:mujeeb24_app/features/crm/providers/crm_provider.dart';
@@ -21,10 +22,13 @@ class LeadsTab extends StatefulWidget {
 }
 
 class _LeadsTabState extends State<LeadsTab> {
+  final TextEditingController _searchController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     widget.crmProvider.addListener(_onStateChange);
+    _searchController.text = widget.crmProvider.leadSearchQuery;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
     });
@@ -33,11 +37,16 @@ class _LeadsTabState extends State<LeadsTab> {
   @override
   void dispose() {
     widget.crmProvider.removeListener(_onStateChange);
+    _searchController.dispose();
     super.dispose();
   }
 
   void _onStateChange() {
     if (mounted) {
+      if (_searchController.text != widget.crmProvider.leadSearchQuery &&
+          !_searchController.selection.isValid) {
+        _searchController.text = widget.crmProvider.leadSearchQuery;
+      }
       setState(() {});
     }
   }
@@ -76,7 +85,7 @@ class _LeadsTabState extends State<LeadsTab> {
   Widget build(BuildContext context) {
     String strings(String key) => AppStrings.get(key, context);
     final provider = widget.crmProvider;
-    final leads = provider.leads;
+    final leads = provider.filteredLeads;
 
     return Scaffold(
       backgroundColor: AppColors.surfaceCanvas,
@@ -94,9 +103,18 @@ class _LeadsTabState extends State<LeadsTab> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             color: AppColors.surfaceCanvas,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Status Filter Row
+                // 1. Social Channels Filter Bar
+                ChannelFilterBar(
+                  selectedChannel: provider.leadChannelFilter,
+                  onChannelSelected: (val) {
+                    provider.setLeadChannelFilter(val);
+                  },
+                ),
+                const SizedBox(height: 8),
+
+                // 2. Status Filter Row
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -155,7 +173,7 @@ class _LeadsTabState extends State<LeadsTab> {
                 ),
                 const SizedBox(height: 8),
 
-                // Score Band Filter Row
+                // 3. Score Band Filter Row
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -205,6 +223,18 @@ class _LeadsTabState extends State<LeadsTab> {
                     ],
                   ),
                 ),
+
+                // 4. Active Filters Header & Clear action
+                if (provider.activeLeadFiltersCount > 0) ...[
+                  const SizedBox(height: 6),
+                  ActiveFiltersHeader(
+                    activeCount: provider.activeLeadFiltersCount,
+                    onClear: () {
+                      _searchController.clear();
+                      provider.clearLeadFilters(widget.businessId);
+                    },
+                  ),
+                ],
               ],
             ),
           ),
@@ -254,7 +284,17 @@ class _LeadsTabState extends State<LeadsTab> {
               child: provider.isLoadingLeads && leads.isEmpty
                   ? const Center(child: CircularProgressIndicator())
                   : leads.isEmpty
-                  ? _buildEmptyState(strings)
+                  ? (provider.activeLeadFiltersCount > 0
+                      ? FilterEmptyState(
+                          title: strings('no_filtered_results'),
+                          subtitle: strings('no_filtered_results_hint'),
+                          onClearFilters: () {
+                            _searchController.clear();
+                            provider.clearLeadFilters(widget.businessId);
+                          },
+                          clearButtonText: strings('reset_all_filters'),
+                        )
+                      : _buildEmptyState(strings))
                   : ListView.separated(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
                       itemCount: leads.length,
@@ -312,6 +352,11 @@ class _LeadsTabState extends State<LeadsTab> {
     required VoidCallback onTap,
   }) {
     final statusColor = _getStatusColor(lead.status);
+    final statusIcon = _getStatusIcon(lead.status);
+    final score = lead.currentScore != null
+        ? lead.currentScore!.toStringAsFixed(1)
+        : '-';
+    final band = lead.scoreBand?.toUpperCase() ?? 'NONE';
 
     return InkWell(
       onTap: onTap,
@@ -330,109 +375,106 @@ class _LeadsTabState extends State<LeadsTab> {
             ),
           ],
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                _getStatusIcon(lead.status),
-                color: statusColor,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: statusColor.withValues(alpha: 0.15),
+                  child: Icon(statusIcon, color: statusColor, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          'Lead: ${lead.id.length > 8 ? lead.id.substring(0, 8) : lead.id}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.onSurface,
-                          ),
+                      Text(
+                        'Lead: ${lead.id}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.onSurface,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
+                      const SizedBox(height: 2),
+                      Text(
+                        'Cust: ${lead.customerId}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textMuted,
                         ),
-                        decoration: BoxDecoration(
-                          color: statusColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          lead.status.toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: statusColor,
-                          ),
-                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Cust: ${lead.customerId}',
-                    style: const TextStyle(
-                      fontSize: 12,
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    lead.status.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: statusColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 20, color: AppColors.borderHairline),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.speed_rounded,
+                      size: 16,
                       color: AppColors.textMuted,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    const SizedBox(width: 4),
+                    Text(
+                      'Score: $score',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      if (lead.scoreBand != null) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 1,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceCanvas,
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: AppColors.borderHairline),
-                          ),
-                          child: Text(
-                            'BAND: ${lead.scoreBand!.toUpperCase()}',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.onSurface,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      if (lead.currentScore != null)
-                        Text(
-                          'Score: ${lead.currentScore!.toStringAsFixed(1)}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                    ],
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(4),
                   ),
-                ],
-              ),
+                  child: Text(
+                    'BAND: $band',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
           ],
         ),
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mujeeb24_app/app/localization/app_localizations.dart';
 import 'package:mujeeb24_app/app/theme/app_theme.dart';
 import 'package:mujeeb24_app/core/models/crm_models.dart';
+import 'package:mujeeb24_app/core/widgets/filter_widgets.dart';
 import 'package:mujeeb24_app/features/transactions/presentation/transaction_detail_screen.dart';
 import 'package:mujeeb24_app/features/transactions/presentation/transaction_draft_form_screen.dart';
 import 'package:mujeeb24_app/features/transactions/providers/transaction_provider.dart';
@@ -223,6 +224,16 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                     ],
                   ),
                 ),
+                if (provider.activeFiltersCount > 0) ...[
+                  const SizedBox(height: 10),
+                  ActiveFiltersHeader(
+                    activeCount: provider.activeFiltersCount,
+                    onClear: () {
+                      _searchController.clear();
+                      provider.clearFilters(widget.businessId);
+                    },
+                  ),
+                ],
                 const SizedBox(height: 16),
 
                 // Error Banner
@@ -264,33 +275,43 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                     child: Center(child: CircularProgressIndicator()),
                   )
                 else if (txList.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 60),
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            provider.stateFilter == 'review'
-                                ? Icons.task_alt_rounded
-                                : Icons.receipt_long_rounded,
-                            size: 48,
-                            color: AppColors.textMuted,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            provider.stateFilter == 'review'
-                                ? strings('no_transactions_needing_review')
-                                : strings('no_transactions'),
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: AppColors.textMuted,
+                  provider.activeFiltersCount > 0
+                      ? FilterEmptyState(
+                          title: strings('no_filtered_results'),
+                          subtitle: strings('no_filtered_results_hint'),
+                          onClearFilters: () {
+                            _searchController.clear();
+                            provider.clearFilters(widget.businessId);
+                          },
+                          clearButtonText: strings('reset_all_filters'),
+                        )
+                      : Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 60),
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  provider.stateFilter == 'review'
+                                      ? Icons.task_alt_rounded
+                                      : Icons.receipt_long_rounded,
+                                  size: 48,
+                                  color: AppColors.textMuted,
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  provider.stateFilter == 'review'
+                                      ? strings('no_transactions_needing_review')
+                                      : strings('no_transactions'),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: AppColors.textMuted,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  )
+                        )
                 else
                   ...txList.map((tx) {
                     final stateColor = _getStateColor(tx.state);

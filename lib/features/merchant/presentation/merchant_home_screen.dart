@@ -15,6 +15,11 @@ import 'package:mujeeb24_app/features/merchant/presentation/conversation_detail_
 import 'package:mujeeb24_app/features/merchant/presentation/dashboard_tab.dart';
 import 'package:mujeeb24_app/features/merchant/presentation/inbox_tab.dart';
 import 'package:mujeeb24_app/features/merchant/providers/merchant_provider.dart';
+import 'package:mujeeb24_app/features/platform/presentation/platform_hub_screen.dart';
+import 'package:mujeeb24_app/features/platform/providers/platform_provider.dart';
+import 'package:mujeeb24_app/features/team/presentation/audit_logs_screen.dart';
+import 'package:mujeeb24_app/features/team/presentation/team_screen.dart';
+import 'package:mujeeb24_app/features/team/providers/team_audit_provider.dart';
 import 'package:mujeeb24_app/features/transactions/presentation/transactions_screen.dart';
 import 'package:mujeeb24_app/features/transactions/providers/transaction_provider.dart';
 
@@ -25,6 +30,8 @@ class MerchantHomeScreen extends StatefulWidget {
   final TransactionProvider? transactionProvider;
   final CatalogProvider? catalogProvider;
   final ChannelAutomationProvider? channelAutomationProvider;
+  final TeamAuditProvider? teamAuditProvider;
+  final PlatformProvider? platformProvider;
   final AppLocaleProvider localeProvider;
   final VoidCallback onSwitchBusiness;
   final VoidCallback onLogout;
@@ -37,6 +44,8 @@ class MerchantHomeScreen extends StatefulWidget {
     this.transactionProvider,
     this.catalogProvider,
     this.channelAutomationProvider,
+    this.teamAuditProvider,
+    this.platformProvider,
     required this.localeProvider,
     required this.onSwitchBusiness,
     required this.onLogout,
@@ -57,6 +66,8 @@ class _MerchantHomeScreenState extends State<MerchantHomeScreen> {
     widget.transactionProvider?.addListener(_onStateChange);
     widget.catalogProvider?.addListener(_onStateChange);
     widget.channelAutomationProvider?.addListener(_onStateChange);
+    widget.teamAuditProvider?.addListener(_onStateChange);
+    widget.platformProvider?.addListener(_onStateChange);
   }
 
   @override
@@ -66,6 +77,8 @@ class _MerchantHomeScreenState extends State<MerchantHomeScreen> {
     widget.transactionProvider?.removeListener(_onStateChange);
     widget.catalogProvider?.removeListener(_onStateChange);
     widget.channelAutomationProvider?.removeListener(_onStateChange);
+    widget.teamAuditProvider?.removeListener(_onStateChange);
+    widget.platformProvider?.removeListener(_onStateChange);
     super.dispose();
   }
 
@@ -145,6 +158,54 @@ class _MerchantHomeScreenState extends State<MerchantHomeScreen> {
     );
   }
 
+  void _openTeam() {
+    final business = widget.authProvider.selectedBusiness?.business;
+    if (business == null || widget.teamAuditProvider == null) {
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => TeamScreen(
+          provider: widget.teamAuditProvider!,
+          businessId: business.id,
+        ),
+      ),
+    );
+  }
+
+  void _openAuditLogs() {
+    final business = widget.authProvider.selectedBusiness?.business;
+    if (business == null || widget.teamAuditProvider == null) {
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => AuditLogsScreen(
+          provider: widget.teamAuditProvider!,
+          businessId: business.id,
+        ),
+      ),
+    );
+  }
+
+  void _openPlatform() {
+    if (widget.platformProvider == null) {
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PlatformHubScreen(
+          provider: widget.platformProvider!,
+          authProvider: widget.authProvider,
+          onBackToWorkspace: () => Navigator.of(context).pop(),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     String strings(String key) => AppStrings.get(key, context);
@@ -174,6 +235,9 @@ class _MerchantHomeScreenState extends State<MerchantHomeScreen> {
         onNavigateToChannels: widget.channelAutomationProvider != null
             ? _openChannels
             : null,
+        onNavigateToTeam: widget.teamAuditProvider != null ? _openTeam : null,
+        onNavigateToAuditLogs:
+            widget.teamAuditProvider != null ? _openAuditLogs : null,
       ),
       InboxTab(
         merchantProvider: widget.merchantProvider,
@@ -196,6 +260,13 @@ class _MerchantHomeScreenState extends State<MerchantHomeScreen> {
         onSwitchBusiness: widget.onSwitchBusiness,
         onLogout: widget.onLogout,
         onToggleLanguage: () => widget.localeProvider.toggleLocale(),
+        onNavigateToTeam: widget.teamAuditProvider != null ? _openTeam : null,
+        onNavigateToAuditLogs:
+            widget.teamAuditProvider != null ? _openAuditLogs : null,
+        onNavigateToPlatform:
+            (widget.authProvider.isPlatformAdmin && widget.platformProvider != null)
+                ? _openPlatform
+                : null,
       ),
     ];
 
@@ -254,6 +325,20 @@ class _MerchantHomeScreenState extends State<MerchantHomeScreen> {
               icon: const Icon(Icons.hub_rounded),
               tooltip: strings('channels_title'),
               onPressed: _openChannels,
+            ),
+          if (widget.teamAuditProvider != null)
+            IconButton(
+              key: const Key('btn_appbar_team'),
+              icon: const Icon(Icons.groups_rounded),
+              tooltip: strings('team_and_audit'),
+              onPressed: _openTeam,
+            ),
+          if (widget.authProvider.isPlatformAdmin && widget.platformProvider != null)
+            IconButton(
+              key: const Key('btn_appbar_platform'),
+              icon: const Icon(Icons.admin_panel_settings_rounded),
+              tooltip: strings('platform_title'),
+              onPressed: _openPlatform,
             ),
           IconButton(
             icon: const Icon(Icons.language_rounded),

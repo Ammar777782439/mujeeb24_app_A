@@ -43,12 +43,14 @@ class AppColors {
   static const Color channelWhatsapp = Color(0xFF25D366);
   static const Color channelInstagram = Color(0xFFE1306C);
   static const Color channelFacebook = Color(0xFF1877F2);
+  static const Color channelTelegram = Color(0xFF229ED9);
   static const Color presenceOnline = Color(0xFF10B981);
 
   // Design system aliases
   static const Color success = statusSuccess;
   static const Color error = statusError;
   static const Color warning = statusWarning;
+  static const Color textPrimary = onSurface;
   static const Color textSecondary = textMuted;
   static const Color border = borderHairline;
   static const Color secondaryContainer = secondaryFixed;

@@ -106,6 +106,26 @@ class TransactionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  int get activeFiltersCount {
+    int count = 0;
+    if (_stateFilter != 'all') count++;
+    if (_transactionTypeFilter != 'all') count++;
+    if (_customerIdFilter != null && _customerIdFilter!.isNotEmpty) count++;
+    if (_searchQuery.trim().isNotEmpty) count++;
+    return count;
+  }
+
+  void clearFilters(String businessId) {
+    _stateFilter = 'all';
+    _transactionTypeFilter = 'all';
+    _customerIdFilter = null;
+    _searchQuery = '';
+    notifyListeners();
+    if (businessId.isNotEmpty) {
+      loadTransactions(businessId, refresh: true);
+    }
+  }
+
   void clearTransactionDetail() {
     _selectedTransaction = null;
     _selectedReview = null;

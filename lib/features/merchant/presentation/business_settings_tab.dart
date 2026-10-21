@@ -10,6 +10,9 @@ class BusinessSettingsTab extends StatefulWidget {
   final VoidCallback onSwitchBusiness;
   final VoidCallback onLogout;
   final VoidCallback onToggleLanguage;
+  final VoidCallback? onNavigateToTeam;
+  final VoidCallback? onNavigateToAuditLogs;
+  final VoidCallback? onNavigateToPlatform;
 
   const BusinessSettingsTab({
     super.key,
@@ -18,6 +21,9 @@ class BusinessSettingsTab extends StatefulWidget {
     required this.onSwitchBusiness,
     required this.onLogout,
     required this.onToggleLanguage,
+    this.onNavigateToTeam,
+    this.onNavigateToAuditLogs,
+    this.onNavigateToPlatform,
   });
 
   @override
@@ -345,6 +351,73 @@ class _BusinessSettingsTabState extends State<BusinessSettingsTab> {
             ),
           ),
           const SizedBox(height: 24),
+
+          // Team & Audit Section
+          if (widget.onNavigateToTeam != null ||
+              widget.onNavigateToAuditLogs != null) ...[
+            _buildSectionHeader(
+              strings('team_and_audit'),
+              Icons.groups_rounded,
+            ),
+            const SizedBox(height: 8),
+            Card(
+              child: Column(
+                children: [
+                  if (widget.onNavigateToTeam != null)
+                    ListTile(
+                      key: const Key('tile_team_management'),
+                      leading: const Icon(
+                        Icons.people_alt_rounded,
+                        color: AppColors.primary,
+                      ),
+                      title: Text(strings('team_members_title')),
+                      subtitle: Text(strings('team_members_subtitle')),
+                      trailing: const Icon(Icons.chevron_left_rounded),
+                      onTap: widget.onNavigateToTeam,
+                    ),
+                  if (widget.onNavigateToTeam != null &&
+                      widget.onNavigateToAuditLogs != null)
+                    const Divider(height: 1),
+                  if (widget.onNavigateToAuditLogs != null)
+                    ListTile(
+                      key: const Key('tile_audit_logs'),
+                      leading: const Icon(
+                        Icons.history_rounded,
+                        color: AppColors.primary,
+                      ),
+                      title: Text(strings('audit_logs_title')),
+                      subtitle: Text(strings('audit_logs_subtitle')),
+                      trailing: const Icon(Icons.chevron_left_rounded),
+                      onTap: widget.onNavigateToAuditLogs,
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+
+          // Platform Administration Section (Visible to Platform Admins)
+          if (widget.onNavigateToPlatform != null) ...[
+            _buildSectionHeader(
+              strings('platform_title'),
+              Icons.admin_panel_settings_rounded,
+            ),
+            const SizedBox(height: 8),
+            Card(
+              child: ListTile(
+                key: const Key('tile_platform_administration'),
+                leading: const Icon(
+                  Icons.admin_panel_settings_rounded,
+                  color: AppColors.primary,
+                ),
+                title: Text(strings('platform_title')),
+                subtitle: Text(strings('platform_subtitle')),
+                trailing: const Icon(Icons.chevron_left_rounded),
+                onTap: widget.onNavigateToPlatform,
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
 
           // Workspace & Account Actions
           _buildSectionHeader(

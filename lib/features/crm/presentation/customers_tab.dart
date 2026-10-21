@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:mujeeb24_app/app/localization/app_localizations.dart';
 import 'package:mujeeb24_app/app/theme/app_theme.dart';
+import 'package:mujeeb24_app/core/channels/channel_presentation.dart';
 import 'package:mujeeb24_app/core/models/crm_models.dart';
+import 'package:mujeeb24_app/core/widgets/filter_widgets.dart';
 import 'package:mujeeb24_app/features/crm/presentation/customer_detail_screen.dart';
 import 'package:mujeeb24_app/features/crm/presentation/customer_form_screen.dart';
 import 'package:mujeeb24_app/features/crm/providers/crm_provider.dart';
@@ -27,6 +29,7 @@ class _CustomersTabState extends State<CustomersTab> {
   void initState() {
     super.initState();
     widget.crmProvider.addListener(_onStateChange);
+    _searchController.text = widget.crmProvider.customerSearchQuery;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
     });
@@ -41,6 +44,10 @@ class _CustomersTabState extends State<CustomersTab> {
 
   void _onStateChange() {
     if (mounted) {
+      if (_searchController.text != widget.crmProvider.customerSearchQuery &&
+          !_searchController.selection.isValid) {
+        _searchController.text = widget.crmProvider.customerSearchQuery;
+      }
       setState(() {});
     }
   }
@@ -79,7 +86,7 @@ class _CustomersTabState extends State<CustomersTab> {
   Widget build(BuildContext context) {
     String strings(String key) => AppStrings.get(key, context);
     final provider = widget.crmProvider;
-    final customers = provider.customers;
+    final customers = provider.filteredCustomers;
 
     return Scaffold(
       backgroundColor: AppColors.surfaceCanvas,
@@ -97,7 +104,9 @@ class _CustomersTabState extends State<CustomersTab> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             color: AppColors.surfaceCanvas,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Search Field
                 TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
@@ -138,12 +147,26 @@ class _CustomersTabState extends State<CustomersTab> {
                       ),
                     ),
                   ),
+                  onChanged: (value) {
+                    provider.setCustomerSearchQuery(value);
+                  },
                   onSubmitted: (value) {
                     provider.setCustomerSearchQuery(value);
                     provider.loadCustomers(widget.businessId, search: value);
                   },
                 ),
                 const SizedBox(height: 8),
+
+                // 1. Channel Filter Bar (WhatsApp, Facebook, Telegram, etc.)
+                ChannelFilterBar(
+                  selectedChannel: provider.customerChannelFilter,
+                  onChannelSelected: (channel) {
+                    provider.setCustomerChannelFilter(channel);
+                  },
+                ),
+                const SizedBox(height: 8),
+
+                // 2. Status Filter Chips
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -168,6 +191,18 @@ class _CustomersTabState extends State<CustomersTab> {
                     ],
                   ),
                 ),
+
+                // 3. Active Filters Header & Clear action
+                if (provider.activeCustomerFiltersCount > 0) ...[
+                  const SizedBox(height: 6),
+                  ActiveFiltersHeader(
+                    activeCount: provider.activeCustomerFiltersCount,
+                    onClear: () {
+                      _searchController.clear();
+                      provider.clearCustomerFilters(widget.businessId);
+                    },
+                  ),
+                ],
               ],
             ),
           ),
@@ -217,7 +252,17 @@ class _CustomersTabState extends State<CustomersTab> {
               child: provider.isLoadingCustomers && customers.isEmpty
                   ? const Center(child: CircularProgressIndicator())
                   : customers.isEmpty
-                  ? _buildEmptyState(strings)
+                  ? (provider.activeCustomerFiltersCount > 0
+                      ? FilterEmptyState(
+                          title: strings('no_filtered_results'),
+                          subtitle: strings('no_filtered_results_hint'),
+                          onClearFilters: () {
+                            _searchController.clear();
+                            provider.clearCustomerFilters(widget.businessId);
+                          },
+                          clearButtonText: strings('reset_all_filters'),
+                        )
+                      : _buildEmptyState(strings))
                   : ListView.separated(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
                       itemCount: customers.length,
@@ -278,6 +323,7 @@ class _CustomersTabState extends State<CustomersTab> {
     final phone = customer.primaryPhone;
     final email = customer.primaryEmail;
     final isActive = customer.status == 'active';
+    final contactPoints = customer.contactPoints ?? [];
 
     return InkWell(
       onTap: onTap,
@@ -408,6 +454,22 @@ class _CustomersTabState extends State<CustomersTab> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
+
+                  // Display Channel badges for contact points if any
+                  if (contactPoints.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: contactPoints.map((cp) {
+                        final meta = ChannelPresentation.getMeta(cp.kind);
+                        return ChannelBadge(
+                          channel: meta.key,
+                          size: 10,
+                        );
+                      }).toList(),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -421,29 +483,29 @@ class _CustomersTabState extends State<CustomersTab> {
 
   Widget _buildEmptyState(String Function(String) strings) {
     return Center(
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.people_outline_rounded,
-                size: 64,
-                color: AppColors.textMuted.withValues(alpha: 0.5),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                strings('no_customers_found'),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.onSurface,
-                ),
-              ),
-            ],
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.people_outline_rounded,
+            size: 64,
+            color: AppColors.textMuted,
           ),
-        ),
+          const SizedBox(height: 16),
+          Text(
+            strings('no_customers_found'),
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            strings('create_customer_prompt'),
+            style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+          ),
+        ],
       ),
     );
   }

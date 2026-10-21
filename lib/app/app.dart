@@ -9,6 +9,8 @@ import 'package:mujeeb24_app/core/catalog/catalog_repository.dart';
 import 'package:mujeeb24_app/core/channels/channel_automation_repository.dart';
 import 'package:mujeeb24_app/core/crm/crm_repository.dart';
 import 'package:mujeeb24_app/core/merchant/merchant_repository.dart';
+import 'package:mujeeb24_app/core/platform/platform_repository.dart';
+import 'package:mujeeb24_app/core/team/team_audit_repository.dart';
 import 'package:mujeeb24_app/core/transactions/transaction_repository.dart';
 import 'package:mujeeb24_app/features/auth/presentation/invitation_screen.dart';
 import 'package:mujeeb24_app/features/auth/presentation/login_screen.dart';
@@ -18,6 +20,8 @@ import 'package:mujeeb24_app/features/channels/providers/channel_automation_prov
 import 'package:mujeeb24_app/features/crm/providers/crm_provider.dart';
 import 'package:mujeeb24_app/features/merchant/presentation/merchant_home_screen.dart';
 import 'package:mujeeb24_app/features/merchant/providers/merchant_provider.dart';
+import 'package:mujeeb24_app/features/platform/providers/platform_provider.dart';
+import 'package:mujeeb24_app/features/team/providers/team_audit_provider.dart';
 import 'package:mujeeb24_app/features/transactions/providers/transaction_provider.dart';
 import 'package:mujeeb24_app/features/workspace/presentation/business_selection_screen.dart';
 
@@ -47,6 +51,10 @@ class _MujeebAppState extends State<MujeebApp> {
   late final CatalogProvider _catalogProvider;
   late final ChannelAutomationRepository _channelAutomationRepository;
   late final ChannelAutomationProvider _channelAutomationProvider;
+  late final TeamAuditRepository _teamAuditRepository;
+  late final TeamAuditProvider _teamAuditProvider;
+  late final PlatformRepository _platformRepository;
+  late final PlatformProvider _platformProvider;
   final AppLocaleProvider _localeProvider = AppLocaleProvider();
 
   AppRoute _currentRoute = AppRoute.login;
@@ -62,6 +70,8 @@ class _MujeebAppState extends State<MujeebApp> {
     _transactionRepository = TransactionRepository(apiClient: _apiClient);
     _catalogRepository = CatalogRepository(apiClient: _apiClient);
     _channelAutomationRepository = ChannelAutomationRepository(apiClient: _apiClient);
+    _teamAuditRepository = TeamAuditRepository(apiClient: _apiClient);
+    _platformRepository = PlatformRepository(apiClient: _apiClient);
     _authProvider = AuthProvider(
       authRepository: _authRepository,
       workspaceRepository: _workspaceRepository,
@@ -79,6 +89,12 @@ class _MujeebAppState extends State<MujeebApp> {
     _channelAutomationProvider = ChannelAutomationProvider(
       repository: _channelAutomationRepository,
     );
+    _teamAuditProvider = TeamAuditProvider(
+      repository: _teamAuditRepository,
+    );
+    _platformProvider = PlatformProvider(
+      repository: _platformRepository,
+    );
 
     _authProvider.addListener(_handleAuthStateChange);
     _localeProvider.addListener(() => setState(() {}));
@@ -93,6 +109,8 @@ class _MujeebAppState extends State<MujeebApp> {
     _transactionProvider.dispose();
     _catalogProvider.dispose();
     _channelAutomationProvider.dispose();
+    _teamAuditProvider.dispose();
+    _platformProvider.dispose();
     _localeProvider.dispose();
     super.dispose();
   }
@@ -162,6 +180,8 @@ class _MujeebAppState extends State<MujeebApp> {
           transactionProvider: _transactionProvider,
           catalogProvider: _catalogProvider,
           channelAutomationProvider: _channelAutomationProvider,
+          teamAuditProvider: _teamAuditProvider,
+          platformProvider: _platformProvider,
           localeProvider: _localeProvider,
           onSwitchBusiness: () {
             setState(() => _currentRoute = AppRoute.businessSelection);

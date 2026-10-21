@@ -40,6 +40,7 @@ class AuthProvider extends ChangeNotifier {
   String? get lastRequestId => _lastRequestId;
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _status == AuthStatus.authenticated;
+  bool get isPlatformAdmin => _authResponse?.isPlatformAdmin ?? false;
 
   void clearError() {
     _errorMessage = null;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mujeeb24_app/app/localization/app_localizations.dart';
 import 'package:mujeeb24_app/app/theme/app_theme.dart';
+import 'package:mujeeb24_app/core/channels/channel_presentation.dart';
 import 'package:mujeeb24_app/core/models/auth_models.dart';
 import 'package:mujeeb24_app/features/merchant/providers/merchant_provider.dart';
 
@@ -14,6 +15,8 @@ class DashboardTab extends StatefulWidget {
   final VoidCallback? onNavigateToReviews;
   final VoidCallback? onNavigateToCatalogs;
   final VoidCallback? onNavigateToChannels;
+  final VoidCallback? onNavigateToTeam;
+  final VoidCallback? onNavigateToAuditLogs;
 
   const DashboardTab({
     super.key,
@@ -26,6 +29,8 @@ class DashboardTab extends StatefulWidget {
     this.onNavigateToReviews,
     this.onNavigateToCatalogs,
     this.onNavigateToChannels,
+    this.onNavigateToTeam,
+    this.onNavigateToAuditLogs,
   });
 
   @override
@@ -203,6 +208,55 @@ class _DashboardTabState extends State<DashboardTab> {
                       Expanded(
                         child: Text(
                           strings('catalogs_title'),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.onSurface,
+                          ),
+                        ),
+                      ),
+                      const Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 14,
+                        color: AppColors.textMuted,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+            if (widget.onNavigateToTeam != null) ...[
+              const SizedBox(height: 12),
+              InkWell(
+                key: const Key('quick_link_team'),
+                onTap: widget.onNavigateToTeam,
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceCanvas,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.borderHairline),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6B21A8).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.groups_rounded,
+                          color: Color(0xFF6B21A8),
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          strings('team_and_audit'),
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -613,37 +667,24 @@ class _DashboardTabState extends State<DashboardTab> {
             itemBuilder: (context, index) {
               final key = connections.keys.elementAt(index);
               final count = connections[key] ?? 0;
-              final isWhatsApp = key.toLowerCase().contains('whatsapp');
-              final isInstagram = key.toLowerCase().contains('instagram');
+              final meta = ChannelPresentation.getMeta(key);
 
               return ListTile(
                 leading: Container(
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: isWhatsApp
-                        ? const Color(0x1F25D366)
-                        : (isInstagram
-                              ? const Color(0x1FE1306C)
-                              : AppColors.surfaceContainerLow),
+                    color: meta.backgroundColor,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
-                    isWhatsApp
-                        ? Icons.chat_rounded
-                        : (isInstagram
-                              ? Icons.camera_alt_rounded
-                              : Icons.public_rounded),
-                    color: isWhatsApp
-                        ? AppColors.channelWhatsapp
-                        : (isInstagram
-                              ? AppColors.channelInstagram
-                              : AppColors.primary),
+                    meta.icon,
+                    color: meta.brandColor,
                     size: 20,
                   ),
                 ),
                 title: Text(
-                  key,
+                  meta.key == 'other' ? key : meta.localizedName(context),
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 14,

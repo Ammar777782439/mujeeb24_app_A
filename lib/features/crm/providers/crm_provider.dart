@@ -25,6 +25,7 @@ class CrmProvider extends ChangeNotifier {
   String? _customerTransactionsError;
   String _customerFilterStatus = 'all';
   String _customerSearchQuery = '';
+  String _customerChannelFilter = 'all';
 
   // Leads state
   List<Lead> _leads = [];
@@ -44,6 +45,8 @@ class CrmProvider extends ChangeNotifier {
   String _leadFilterStatus = 'all';
   String _leadFilterScoreBand = 'all';
   String? _leadFilterCustomerId;
+  String _leadChannelFilter = 'all';
+  String _leadSearchQuery = '';
 
   // Actions & Diagnostics
   bool _isPerformingAction = false;
@@ -69,6 +72,59 @@ class CrmProvider extends ChangeNotifier {
   String? get customerTransactionsError => _customerTransactionsError;
   String get customerFilterStatus => _customerFilterStatus;
   String get customerSearchQuery => _customerSearchQuery;
+  String get customerChannelFilter => _customerChannelFilter;
+
+  int get activeCustomerFiltersCount {
+    int count = 0;
+    if (_customerFilterStatus != 'all') count++;
+    if (_customerChannelFilter != 'all') count++;
+    if (_customerSearchQuery.trim().isNotEmpty) count++;
+    return count;
+  }
+
+  /// Filtered customers list taking into account channel, search, and status
+  List<Customer> get filteredCustomers {
+    return _customers.where((customer) {
+      // Channel filter matching on contact points
+      if (_customerChannelFilter != 'all') {
+        final target = _customerChannelFilter.toLowerCase();
+        final points = customer.contactPoints ?? [];
+        final matchesChannel = points.any((p) {
+          final kind = p.kind.toLowerCase();
+          if (kind == target) return true;
+          if (target == 'whatsapp' && (kind == 'phone' || kind == 'mobile')) {
+            return true;
+          }
+          if (target == 'facebook' && kind.contains('meta')) return true;
+          return false;
+        });
+        if (!matchesChannel) return false;
+      }
+
+      // Status filter safety check
+      if (_customerFilterStatus != 'all' &&
+          customer.status != _customerFilterStatus) {
+        return false;
+      }
+
+      // Search query safety check
+      if (_customerSearchQuery.trim().isNotEmpty) {
+        final q = _customerSearchQuery.trim().toLowerCase();
+        final name = (customer.displayName ?? '').toLowerCase();
+        final id = customer.id.toLowerCase();
+        final phone = (customer.primaryPhone ?? '').toLowerCase();
+        final email = (customer.primaryEmail ?? '').toLowerCase();
+        if (!name.contains(q) &&
+            !id.contains(q) &&
+            !phone.contains(q) &&
+            !email.contains(q)) {
+          return false;
+        }
+      }
+
+      return true;
+    }).toList();
+  }
 
   // Getters - Leads
   List<Lead> get leads => _leads;
@@ -88,6 +144,39 @@ class CrmProvider extends ChangeNotifier {
   String get leadFilterStatus => _leadFilterStatus;
   String get leadFilterScoreBand => _leadFilterScoreBand;
   String? get leadFilterCustomerId => _leadFilterCustomerId;
+  String get leadChannelFilter => _leadChannelFilter;
+  String get leadSearchQuery => _leadSearchQuery;
+
+  int get activeLeadFiltersCount {
+    int count = 0;
+    if (_leadFilterStatus != 'all') count++;
+    if (_leadFilterScoreBand != 'all') count++;
+    if (_leadChannelFilter != 'all') count++;
+    if (_leadSearchQuery.trim().isNotEmpty) count++;
+    return count;
+  }
+
+  /// Filtered leads list
+  List<Lead> get filteredLeads {
+    return _leads.where((lead) {
+      if (_leadFilterStatus != 'all' && lead.status != _leadFilterStatus) {
+        return false;
+      }
+      if (_leadFilterScoreBand != 'all' &&
+          lead.scoreBand != _leadFilterScoreBand) {
+        return false;
+      }
+      if (_leadSearchQuery.trim().isNotEmpty) {
+        final q = _leadSearchQuery.trim().toLowerCase();
+        final id = lead.id.toLowerCase();
+        final custId = lead.customerId.toLowerCase();
+        if (!id.contains(q) && !custId.contains(q)) {
+          return false;
+        }
+      }
+      return true;
+    }).toList();
+  }
 
   // Actions
   bool get isPerformingAction => _isPerformingAction;
@@ -149,6 +238,21 @@ class CrmProvider extends ChangeNotifier {
   void setCustomerSearchQuery(String query) {
     _customerSearchQuery = query;
     notifyListeners();
+  }
+
+  void setCustomerChannelFilter(String channel) {
+    _customerChannelFilter = channel;
+    notifyListeners();
+  }
+
+  void clearCustomerFilters(String businessId) {
+    _customerFilterStatus = 'all';
+    _customerSearchQuery = '';
+    _customerChannelFilter = 'all';
+    notifyListeners();
+    if (businessId.isNotEmpty) {
+      loadCustomers(businessId, search: '', status: 'all');
+    }
   }
 
   Future<void> loadCustomers(
@@ -344,6 +448,28 @@ class CrmProvider extends ChangeNotifier {
   void setLeadFilterCustomerId(String? customerId) {
     _leadFilterCustomerId = customerId;
     notifyListeners();
+  }
+
+  void setLeadChannelFilter(String channel) {
+    _leadChannelFilter = channel;
+    notifyListeners();
+  }
+
+  void setLeadSearchQuery(String query) {
+    _leadSearchQuery = query;
+    notifyListeners();
+  }
+
+  void clearLeadFilters(String businessId) {
+    _leadFilterStatus = 'all';
+    _leadFilterScoreBand = 'all';
+    _leadFilterCustomerId = null;
+    _leadChannelFilter = 'all';
+    _leadSearchQuery = '';
+    notifyListeners();
+    if (businessId.isNotEmpty) {
+      loadLeads(businessId, status: 'all', scoreBand: 'all');
+    }
   }
 
   Future<void> loadLeads(
