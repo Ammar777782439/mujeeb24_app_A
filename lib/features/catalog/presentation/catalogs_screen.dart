@@ -9,11 +9,13 @@ import 'catalog_items_screen.dart';
 class CatalogsScreen extends StatefulWidget {
   final CatalogProvider catalogProvider;
   final String businessId;
+  final String? businessCurrency;
 
   const CatalogsScreen({
     super.key,
     required this.catalogProvider,
     required this.businessId,
+    this.businessCurrency,
   });
 
   @override
@@ -467,6 +469,7 @@ class _CatalogsScreenState extends State<CatalogsScreen> {
                 catalogProvider: widget.catalogProvider,
                 businessId: widget.businessId,
                 catalog: catalog,
+                businessCurrency: widget.businessCurrency,
               ),
             ),
           );
