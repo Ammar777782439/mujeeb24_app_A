@@ -6,6 +6,27 @@ import '../providers/catalog_provider.dart';
 import 'catalog_item_form_screen.dart';
 import 'catalog_specification_input.dart';
 
+class _VariantAttributeRow {
+  final TextEditingController name;
+  final TextEditingController text;
+  final String? originalKey;
+  final dynamic originalValue;
+  bool changed = false;
+
+  _VariantAttributeRow({
+    String name = '',
+    String text = '',
+    this.originalKey,
+    this.originalValue,
+  }) : name = TextEditingController(text: name),
+       text = TextEditingController(text: text);
+
+  void dispose() {
+    name.dispose();
+    text.dispose();
+  }
+}
+
 /// Screen displaying complete details for a CatalogItem, its Variants, and Offers.
 class CatalogItemDetailScreen extends StatefulWidget {
   final CatalogProvider catalogProvider;
@@ -133,233 +154,279 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
   // Variant Dialogs
   // ==========================================
 
-  void _showAddVariantDialog() {
-    final nameController = TextEditingController();
-    final attrKeyController = TextEditingController();
-    final attrValueController = TextEditingController();
+  void _showAddVariantDialog() => _showVariantDialog();
+
+  void _showEditVariantDialog(Variant variant) =>
+      _showVariantDialog(existing: variant);
+
+  Future<void> _showVariantDialog({Variant? existing}) async {
     final formKey = GlobalKey<FormState>();
-
-    showDialog(
+    final nameController = TextEditingController(text: existing?.name ?? '');
+    final initialValues = Map<String, dynamic>.from(existing?.attributes ?? {});
+    final values = Map<String, dynamic>.from(initialValues);
+    final removed = <String>{};
+    final rows = <_VariantAttributeRow>[];
+    final managedDefinitions = _schema?.definitions ?? <AttributeDefinition>[];
+    final managedKeys = managedDefinitions.map((d) => d.key).toSet();
+    for (final entry in initialValues.entries) {
+      if (managedKeys.contains(entry.key) || entry.key.startsWith('attr_')) continue;
+      rows.add(_VariantAttributeRow(
+        name: entry.key, originalKey: entry.key,
+        text: entry.value is String ? entry.value as String : '',
+        originalValue: entry.value,
+      ));
+    }
+    String selectedStatus = existing?.status ?? 'active';
+    bool busy = false;
+    String? error;
+    bool attributesDirty = false;
+    final result = await showDialog<bool>(
       context: context,
-      builder: (ctx) {
-        String strings(String key) => AppStrings.get(key, context);
-        return AlertDialog(
-          title: Text(strings('add_variant')),
-          content: Form(
-            key: formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: nameController,
-                    decoration: InputDecoration(
-                      labelText: '${strings('variant_name')} *',
-                      border: const OutlineInputBorder(),
-                    ),
-                    validator: (val) {
-                      if (val == null || val.trim().isEmpty) {
-                        return strings('required_field');
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: attrKeyController,
-                          decoration: InputDecoration(
-                            labelText: strings('attribute_key'),
-                            hintText: 'e.g. size',
-                            border: const OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: TextFormField(
-                          controller: attrValueController,
-                          decoration: InputDecoration(
-                            labelText: strings('attribute_value'),
-                            hintText: 'e.g. XL',
-                            border: const OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(strings('cancel_action')),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (!formKey.currentState!.validate()) return;
-                Navigator.of(ctx).pop();
-
-                final attributes = <String, dynamic>{};
-                if (attrKeyController.text.trim().isNotEmpty) {
-                  attributes[attrKeyController.text.trim()] =
-                      attrValueController.text.trim();
-                }
-
-                final created = await widget.catalogProvider.createVariant(
-                  widget.businessId,
-                  widget.itemId,
-                  CreateVariantRequest(
-                    name: nameController.text.trim(),
-                    attributes: attributes,
-                  ),
-                );
-
-                if (mounted) {
-                  if (created != null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(strings('variant_created_success')),
-                        backgroundColor: AppColors.statusSuccess,
-                      ),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          widget.catalogProvider.actionError ??
-                              strings('request_failed'),
-                        ),
-                        backgroundColor: AppColors.statusError,
-                      ),
-                    );
-                  }
-                }
-              },
-              child: Text(strings('add_variant')),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showEditVariantDialog(Variant variant) {
-    final nameController = TextEditingController(text: variant.name);
-    String selectedStatus = variant.status;
-    final formKey = GlobalKey<FormState>();
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        String strings(String key) => AppStrings.get(key, context);
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text(strings('edit_variant')),
-              content: Form(
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        final contract = widget.catalogProvider.entityContract;
+        return StatefulBuilder(builder: (dialogContext, setDialogState) {
+          final chosen = values.keys.toSet();
+          final notChosen = managedDefinitions
+              .where((definition) => !chosen.contains(definition.key)).toList();
+          return AlertDialog(
+            title: Text(existing == null ? 'إضافة خيار للمنتج' : 'تعديل خيار المنتج'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: Form(
                 key: formKey,
                 child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       TextFormField(
                         controller: nameController,
-                        decoration: InputDecoration(
-                          labelText: '${strings('variant_name')} *',
-                          border: const OutlineInputBorder(),
+                        enabled: !busy,
+                        decoration: const InputDecoration(
+                          labelText: 'اسم الخيار *',
+                          hintText: 'مثل: كبير - أزرق',
+                          border: OutlineInputBorder(),
                         ),
-                        validator: (val) {
-                          if (val == null || val.trim().isEmpty) {
-                            return strings('required_field');
-                          }
-                          return null;
-                        },
+                        validator: (val) =>
+                          val == null || val.trim().isEmpty ? 'اكتب اسم الخيار' : null,
                       ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        initialValue: selectedStatus,
-                        decoration: InputDecoration(
-                          labelText: strings('customer_status'),
-                          border: const OutlineInputBorder(),
+                      if (existing != null) ...[
+                        const SizedBox(height: 14),
+                        DropdownButtonFormField<String>(
+                          initialValue: selectedStatus,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            labelText: 'حالة الخيار'),
+                          items: [
+                            for (final item in contract.variantStatuses.entries)
+                              DropdownMenuItem<String>(
+                                value: item.key,
+                                child: Text(item.value,
+                                  overflow: TextOverflow.ellipsis)),
+                            if (!contract.variantStatuses.containsKey(selectedStatus))
+                              DropdownMenuItem(value: selectedStatus,
+                                child: const Text('حالة محفوظة')),
+                          ],
+                          onChanged: busy ? null : (val) {
+                            if (val != null) setDialogState(() => selectedStatus = val);
+                          },
                         ),
-                        items: [
-                          DropdownMenuItem(
-                            value: 'active',
-                            child: Text(strings('status_active')),
+                      ],
+                      if (_schema != null) ...[
+                        const SizedBox(height: 16),
+                        const Text('معلومات من قالب المواصفات',
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                        for (final def in managedDefinitions)
+                          if (values.containsKey(def.key))
+                            CatalogSpecificationInput(
+                              key: ValueKey('variant-'+def.key),
+                              definition: def,
+                              value: values[def.key],
+                              enabled: !busy,
+                              onChanged: (value) => setDialogState(() {
+                                if (value == null) {
+                                  values.remove(def.key);
+                                } else {
+                                  values[def.key] = value;
+                                }
+                                attributesDirty = true;
+                              }),
+                            ),
+                        if (notChosen.isNotEmpty)
+                          DropdownButtonFormField<String>(
+                            key: ValueKey('variant-add-'+notChosen.length.toString()),
+                            isExpanded: true,
+                            decoration: const InputDecoration(
+                              labelText: 'إضافة معلومة من القالب'),
+                            items: [
+                              for (final definition in notChosen)
+                                DropdownMenuItem(
+                                  value: definition.key,
+                                  child: Text(definition.label,
+                                    overflow: TextOverflow.ellipsis)),
+                            ],
+                            onChanged: busy ? null : (key) {
+                              if (key == null) return;
+                              setDialogState(() {
+                                // Null marks a selected but not answered attribute.
+                                values[key] = null;
+                                attributesDirty = true;
+                              });
+                            },
                           ),
-                          DropdownMenuItem(
-                            value: 'inactive',
-                            child: Text(strings('status_inactive')),
-                          ),
-                          DropdownMenuItem(
-                            value: 'archived',
-                            child: Text(strings('status_archived')),
-                          ),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) {
-                            setDialogState(() => selectedStatus = val);
-                          }
-                        },
+                      ],
+                      const SizedBox(height: 16),
+                      const Text('معلومات إضافية', style: TextStyle(
+                        fontWeight: FontWeight.w600)),
+                      for (var index = 0; index < rows.length; index++) ...[
+                        Builder(builder: (_) {
+                          final row = rows[index];
+                          final complex = row.originalKey != null &&
+                            row.originalValue is! String;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Column(children: [
+                              Row(children: [
+                                Expanded(child: TextFormField(
+                                  controller: row.name,
+                                  enabled: !busy && row.originalKey == null,
+                                  textDirection: TextDirection.rtl,
+                                  decoration: const InputDecoration(
+                                    labelText: 'اسم المعلومة',
+                                    hintText: 'مثل: اللون أو المقاس',
+                                  ),
+                                )),
+                                IconButton(
+                                  tooltip: 'حذف المعلومة',
+                                  onPressed: busy ? null : () => setDialogState(() {
+                                    if (row.originalKey != null) {
+                                      removed.add(row.originalKey!);
+                                    }
+                                    rows.removeAt(index);
+                                    attributesDirty = true;
+                                    row.dispose();
+                                  }),
+                                  icon: const Icon(Icons.delete_outline_rounded)),
+                              ]),
+                              const SizedBox(height: 8),
+                              if (complex)
+                                Text('القيمة المحفوظة: ${displaySpecification(row.originalValue)} (ستبقى كما هي)')
+                              else
+                                TextFormField(
+                                  controller: row.text,
+                                  enabled: !busy,
+                                  textDirection: TextDirection.rtl,
+                                  decoration: const InputDecoration(
+                                    labelText: 'قيمة المعلومة',
+                                    hintText: 'اكتب القيمة بالعربية'),
+                                  onChanged: (_) { row.changed = true; attributesDirty = true; },
+                                ),
+                            ]),
+                          );
+                        }),
+                      ],
+                      OutlinedButton.icon(
+                        onPressed: busy ? null : () => setDialogState(() {
+                          rows.add(_VariantAttributeRow());
+                        }),
+                        icon: const Icon(Icons.add),
+                        label: const Text('إضافة معلومة'),
                       ),
+                      if (_schema == null && initialValues.keys
+                          .any((key) => key.startsWith('attr_')))
+                        const Text('المواصفات المحفوظة من القالب ستبقى كما هي.',
+                          style: TextStyle(fontSize: 12)),
+                      if (error != null) ...[
+                        const SizedBox(height: 8),
+                        Text(error!, style: const TextStyle(
+                          color: AppColors.statusError)),
+                      ],
                     ],
                   ),
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: Text(strings('cancel_action')),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    if (!formKey.currentState!.validate()) return;
-                    Navigator.of(ctx).pop();
-                    final messenger = ScaffoldMessenger.of(context);
-
-                    final updated = await widget.catalogProvider.updateVariant(
-                      widget.businessId,
-                      variant.id,
-                      UpdateVariantRequest(
-                        name: nameController.text.trim(),
-                        status: selectedStatus,
-                      ),
-                      ifMatch: variant.resourceVersion,
-                    );
-
-                    if (!mounted) return;
-                    if (updated != null) {
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text(strings('variant_updated_success')),
-                          backgroundColor: AppColors.statusSuccess,
-                        ),
-                      );
-                    } else {
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            widget.catalogProvider.actionError ??
-                                strings('request_failed'),
-                          ),
-                          backgroundColor: AppColors.statusError,
-                        ),
-                      );
+            ),
+            actions: [
+              TextButton(
+                onPressed: busy ? null : () => Navigator.of(dialogContext).pop(false),
+                child: const Text('إلغاء')),
+              ElevatedButton(
+                onPressed: busy ? null : () async {
+                  if (!formKey.currentState!.validate()) return;
+                  final next = Map<String, dynamic>.from(values);
+                  for (final key in removed) { next.remove(key); }
+                  final labels = managedDefinitions.map((d) => d.label.trim()).toSet();
+                  for (final row in rows) {
+                    final name = row.name.text.trim();
+                    final value = row.text.text.trim();
+                    final untouched = row.originalKey != null && !row.changed;
+                    if (name.isEmpty || (!untouched && value.isEmpty)) {
+                      setDialogState(() => error = 'أدخل اسم المعلومة وقيمتها.');
+                      return;
                     }
-                  },
-                  child: Text(strings('save_changes')),
-                ),
-              ],
-            );
-          },
-        );
+                    if (name.startsWith('attr_') || labels.contains(name) ||
+                        next.containsKey(name) && row.originalKey != name) {
+                      setDialogState(() => error = 'استخدم اسم معلومة واضحًا وغير مكرر.');
+                      return;
+                    }
+                    if (row.originalKey != null) next.remove(row.originalKey);
+                    next[name] = untouched ? row.originalValue : value;
+                    labels.add(name);
+                  }
+                  for (final def in managedDefinitions) {
+                    if (!next.containsKey(def.key)) continue;
+                    final message = validateSpecification(def, next[def.key]);
+                    if (message != null) {
+                      setDialogState(() => error = message);
+                      return;
+                    }
+                  }
+                  if (!widget.catalogProvider.hasLoadedContract) {
+                    setDialogState(() => error = 'تعذر تحميل اختيارات الكتالوج، أعد المحاولة.');
+                    return;
+                  }
+                  setDialogState(() { busy = true; error = null; });
+                  final success = existing == null
+                    ? await widget.catalogProvider.createVariant(
+                        widget.businessId, widget.itemId,
+                        CreateVariantRequest(
+                          name: nameController.text.trim(),
+                          attributes: next..removeWhere((_, v) => v == null),
+                        ))
+                    : await widget.catalogProvider.updateVariant(
+                        widget.businessId, existing.id,
+                        UpdateVariantRequest(
+                          name: nameController.text.trim(),
+                          status: selectedStatus,
+                          attributes: attributesDirty ? (next..removeWhere((_, v) => v == null)) : null,
+                        ),
+                        ifMatch: existing.resourceVersion,
+                      );
+                  if (!dialogContext.mounted) return;
+                  if (success != null) {
+                    Navigator.of(dialogContext).pop(true);
+                  } else {
+                    setDialogState(() {
+                      busy = false;
+                      error = widget.catalogProvider.actionError ??
+                        'تعذر حفظ الخيار. تحقق من الاتصال.';
+                    });
+                  }
+                },
+                child: Text(busy ? 'جاري الحفظ...' : 'حفظ'),
+              ),
+            ],
+          );
+        });
       },
     );
+    for (final row in rows) { row.dispose(); }
+    nameController.dispose();
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم حفظ خيار المنتج')));
+    }
   }
 
   // ==========================================
