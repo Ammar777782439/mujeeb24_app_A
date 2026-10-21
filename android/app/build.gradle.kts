@@ -12,6 +12,10 @@ val requireReleaseSignature = System.getenv("MUJEEB_PRODUCTION_RELEASE") == "tru
 if (keystorePropertiesFile.exists()) {
     keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
+val productionSigningReady = listOf("keyAlias", "keyPassword", "storePassword", "storeFile")
+    .all { !keystoreProperties.getProperty(it).isNullOrBlank() } &&
+    keystoreProperties.getProperty("storeFile")?.let { file(it).isFile } == true
+
 
 android {
     namespace = "com.mujeeb24.mujeeb24_app"
