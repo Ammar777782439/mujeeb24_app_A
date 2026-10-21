@@ -66,10 +66,16 @@ class CatalogProvider extends ChangeNotifier {
   List<AttributeSchema> _attributeSchemas = [];
   CatalogEntityContract _entityContract = CatalogEntityContract.defaults();
   bool _isLoadingContract = false;
+  bool _hasLoadedContract = false;
+  String? _contractError;
+  String? _schemasError;
 
   List<AttributeSchema> get attributeSchemas => _attributeSchemas;
   CatalogEntityContract get entityContract => _entityContract;
   bool get isLoadingContract => _isLoadingContract;
+  bool get hasLoadedContract => _hasLoadedContract;
+  String? get contractError => _contractError;
+  String? get schemasError => _schemasError;
 
   // ==========================================
   // Action State (Mutations)
@@ -603,15 +609,25 @@ class CatalogProvider extends ChangeNotifier {
   Future<void> fetchEntityContract(String businessId) async {
     if (businessId.isEmpty) return;
     _isLoadingContract = true;
+    _hasLoadedContract = false;
+    _contractError = null;
     notifyListeners();
 
     try {
       final contract = await catalogRepository.getCatalogEntityContract(
         businessId: businessId,
       );
+      if (contract.pricingModes.isEmpty ||
+          contract.availabilityStatuses.isEmpty ||
+          contract.fulfillmentModes.isEmpty) {
+        throw StateError('incomplete catalog entity contract');
+      }
       _entityContract = contract;
+      _hasLoadedContract = true;
     } catch (_) {
-      // Keep defaults
+      // Defaults may explain existing records; never use them to authorize saves.
+      _hasLoadedContract = false;
+      _contractError = 'تعذر تحميل اختيارات الكتالوج. أعد المحاولة.';
     } finally {
       _isLoadingContract = false;
       notifyListeners();
@@ -620,6 +636,7 @@ class CatalogProvider extends ChangeNotifier {
 
   Future<void> fetchAttributeSchemas(String businessId) async {
     if (businessId.isEmpty) return;
+    _schemasError = null;
     try {
       final schemas = await catalogRepository.listAttributeSchemas(
         businessId: businessId,
@@ -627,7 +644,8 @@ class CatalogProvider extends ChangeNotifier {
       _attributeSchemas = schemas;
       notifyListeners();
     } catch (_) {
-      // Non-critical, ignore
+      _schemasError = 'تعذر تحميل قوالب المواصفات. أعد المحاولة.';
+      notifyListeners();
     }
   }
 }
