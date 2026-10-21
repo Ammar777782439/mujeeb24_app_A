@@ -15,6 +15,9 @@ if (keystorePropertiesFile.exists()) {
 val productionSigningReady = listOf("keyAlias", "keyPassword", "storePassword", "storeFile")
     .all { !keystoreProperties.getProperty(it).isNullOrBlank() } &&
     keystoreProperties.getProperty("storeFile")?.let { file(it).isFile } == true
+if (requireReleaseSignature && !productionSigningReady) {
+    throw GradleException("Production Android build requires a valid release signing keystore.")
+}
 
 
 android {
