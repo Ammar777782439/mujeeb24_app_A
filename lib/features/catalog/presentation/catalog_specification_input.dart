@@ -5,7 +5,7 @@ import '../../../core/models/catalog_models.dart';
 /// constraint notes (for example `amount + pricing_unit`) from customer copy.
 String merchantCatalogOptionLabel(String label) {
   final readable = label.replaceAll(
-    RegExp(r'\\s*\\([^)]*(?:amount|pricing_unit|attribute_schema_id)[^)]*\\)'),
+    RegExp(r'\s*\([^)]*(?:amount|pricing_unit|attribute_schema_id)[^)]*\)'),
     '',
   ).trim();
   return readable.isEmpty ? label : readable;
