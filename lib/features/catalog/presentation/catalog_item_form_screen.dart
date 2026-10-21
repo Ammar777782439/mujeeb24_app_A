@@ -436,7 +436,8 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
       ),
-      body: Form(
+      body: SafeArea(
+        child: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -974,6 +975,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
             const SizedBox(height: 32),
           ],
         ),
+      ),
       ),
     );
   }
