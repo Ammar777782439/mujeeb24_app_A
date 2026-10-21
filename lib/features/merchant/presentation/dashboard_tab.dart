@@ -17,6 +17,7 @@ class DashboardTab extends StatefulWidget {
   final VoidCallback? onNavigateToChannels;
   final VoidCallback? onNavigateToTeam;
   final VoidCallback? onNavigateToAuditLogs;
+  final VoidCallback? onSessionExpired;
 
   const DashboardTab({
     super.key,
@@ -31,6 +32,7 @@ class DashboardTab extends StatefulWidget {
     this.onNavigateToChannels,
     this.onNavigateToTeam,
     this.onNavigateToAuditLogs,
+    this.onSessionExpired,
   });
 
   @override
@@ -68,6 +70,79 @@ class _DashboardTabState extends State<DashboardTab> {
     final provider = widget.merchantProvider;
     final overview = provider.dashboardOverview;
     final business = widget.currentBusiness;
+
+    if (overview == null) {
+      return RefreshIndicator(
+        onRefresh: () async => _loadData(),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          children: [
+            _buildWelcomeBanner(business, strings),
+            const SizedBox(height: 20),
+            Card(
+              elevation: 0,
+              color: AppColors.surfaceCanvas,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+                side: const BorderSide(color: AppColors.borderHairline),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20, vertical: 28),
+                child: Column(
+                  children: [
+                    Icon(
+                      provider.dashboardRequiresLogin
+                          ? Icons.lock_outline_rounded
+                          : provider.isLoadingDashboard
+                              ? Icons.sync_rounded
+                              : Icons.cloud_off_outlined,
+                      size: 40,
+                      color: provider.dashboardRequiresLogin
+                          ? AppColors.statusWarning : AppColors.primary,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      provider.dashboardRequiresLogin
+                          ? 'يلزم تسجيل الدخول'
+                          : provider.isLoadingDashboard
+                              ? 'جاري تحميل بيانات نشاطك'
+                              : 'تعذر تحديث لوحة النشاط',
+                      style: Theme.of(context).textTheme.titleMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      provider.dashboardError ??
+                          'سيتم عرض مؤشرات الأداء بعد استلام البيانات من الخادم.',
+                      style: const TextStyle(color: AppColors.textMuted),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (provider.isLoadingDashboard) ...[
+                      const SizedBox(height: 16),
+                      const CircularProgressIndicator(),
+                    ] else ...[
+                      const SizedBox(height: 18),
+                      FilledButton.icon(
+                        onPressed: provider.dashboardRequiresLogin
+                            ? widget.onSessionExpired
+                            : _loadData,
+                        icon: Icon(provider.dashboardRequiresLogin
+                            ? Icons.login_rounded : Icons.refresh_rounded),
+                        label: Text(provider.dashboardRequiresLogin
+                            ? 'تسجيل الدخول من جديد'
+                            : 'إعادة المحاولة'),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return RefreshIndicator(
       onRefresh: () async => _loadData(),
