@@ -4,6 +4,7 @@ import '../../../app/theme/app_theme.dart';
 import '../../../core/models/catalog_models.dart';
 import '../providers/catalog_provider.dart';
 import 'catalog_specification_input.dart';
+import 'catalog_currency_select.dart';
 
 /// Form screen for creating or editing a CatalogItem.
 class CatalogItemFormScreen extends StatefulWidget {
@@ -827,14 +828,10 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                   ),
                   const SizedBox(height: 12),
                 ],
-                TextField(
-                  controller: _currencyController,
-                  maxLength: 3,
-                  textCapitalization: TextCapitalization.characters,
-                  decoration: const InputDecoration(
-                    labelText: 'عملة النشاط *', hintText: 'YER أو SAR',
-                  ),
-                ),
+                if (_selectedPricingMode != 'quote_required')
+                  CatalogCurrencySelect(
+                    controller: _currencyController, enabled: !isBusy),
+
                 if (['per_unit', 'per_person', 'per_day'].contains(_selectedPricingMode))
                   TextField(
                     controller: _unitController,
