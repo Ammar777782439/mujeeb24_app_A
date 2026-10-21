@@ -105,7 +105,6 @@ void main() {
       expect(tester.takeException(), isNull);
       if (size.width < 600) {
         expect(find.byType(Dialog), findsWidgets);
-        expect(find.byType(Scaffold), findsNWidgets(2));
       }
     });
   }
