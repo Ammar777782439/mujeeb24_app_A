@@ -248,6 +248,16 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
     return map;
   }
 
+  String _itemTypeName(String type) {
+    const types = {
+      'product': 'منتج', 'physical_good': 'منتج',
+      'service': 'خدمة', 'consultation': 'استشارة',
+      'booking': 'حجز', 'real_estate': 'عقار',
+      'course': 'دورة', 'subscription': 'اشتراك',
+    };
+    return types[type] ?? type;
+  }
+
   void _nextStep() {
     if (_step == 0 && !_formKey.currentState!.validate()) return;
     if (_step == 0 && _itemTypeController.text.trim().isEmpty) {
@@ -685,6 +695,19 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
             const SizedBox(height: 20),
             ],
             if (_isEditing || _step == 1) ...[
+            if (widget.catalogProvider.isLoadingContract)
+              const LinearProgressIndicator(),
+            if (widget.catalogProvider.contractError != null)
+              Card(child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(children: [
+                  Text(widget.catalogProvider.contractError!,
+                    style: const TextStyle(color: AppColors.statusError)),
+                  TextButton(
+                    onPressed: () => widget.catalogProvider.fetchEntityContract(widget.businessId),
+                    child: const Text('إعادة تحميل الاختيارات')),
+                ]),
+              )),
             // Pricing Mode Dropdown
             DropdownButtonFormField<String>(
               initialValue: _selectedPricingMode,
@@ -698,7 +721,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                 return DropdownMenuItem(
                   value: e.key,
                   child: Text(
-                    '${e.key} - ${e.value}',
+                    e.value,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 13),
                   ),
@@ -723,7 +746,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                 return DropdownMenuItem(
                   value: e.key,
                   child: Text(
-                    '${e.key} - ${e.value}',
+                    e.value,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 13),
                   ),
@@ -748,7 +771,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                 return DropdownMenuItem(
                   value: e.key,
                   child: Text(
-                    '${e.key} - ${e.value}',
+                    e.value,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 13),
                   ),
@@ -773,7 +796,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                 items: contract.itemStatuses.entries.map((e) {
                   return DropdownMenuItem(
                     value: e.key,
-                    child: Text('${e.key} - ${e.value}'),
+                    child: Text(e.value),
                   );
                 }).toList(),
                 onChanged: isBusy ? null : (val) {
@@ -857,7 +880,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
               ],
             ],
             if (!_isEditing && _step == 2) ...[
-              Text('راجع المعلومات قبل الحفظ',
+              Text('راجع جميع المعلومات قبل الحفظ',
                 style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 12),
               Card(child: Padding(
@@ -866,23 +889,57 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(_nameController.text.trim(),
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                    Text(_itemTypeController.text.trim()),
+                      style: const TextStyle(fontWeight: FontWeight.bold,
+                        fontSize: 18)),
+                    const SizedBox(height: 6),
+                    Text('النوع: ' + _itemTypeName(_itemTypeController.text.trim())),
+                    if (_shortDescController.text.trim().isNotEmpty)
+                      Text('الوصف المختصر: ' + _shortDescController.text.trim()),
+                    if (_longDescController.text.trim().isNotEmpty)
+                      Text('الوصف التفصيلي: ' + _longDescController.text.trim()),
+                    if (_selectedSchema != null)
+                      Text('قالب المواصفات: ' + _selectedSchema!.name),
+                    for (final entry in _collectAttributes().entries)
+                      Padding(padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          specificationName(entry.key,
+                            _selectedSchema?.definitions ?? <AttributeDefinition>[]) +
+                          ': ' + displaySpecification(entry.value),
+                        )),
                     const Divider(),
+                    Text('طريقة التسعير: ' + contract.labelPricingMode(_selectedPricingMode)),
                     if (_saveInitialOffer) ...[
-                      Text('السعر: ' +
-                        (_amountController.text.trim().isEmpty
-                          ? 'حسب الطلب' : _amountController.text.trim()) +
-                        ' ' + _currencyController.text.trim().toUpperCase()),
-                      Text('التوفر: ' + contract.labelAvailabilityStatus(
-                        _availabilityStatus ?? 'unknown')),
+                      Text('السعر: ' + (_selectedPricingMode == 'quote_required'
+                        ? 'يحدد بعد معرفة الطلب'
+                        : _amountController.text.trim().isEmpty
+                          ? 'سعر متغير يحتاج تأكدًا'
+                          : _amountController.text.trim() + ' ' +
+                            _currencyController.text.trim().toUpperCase())),
+                      if (['per_unit', 'per_person', 'per_day']
+                        .contains(_selectedPricingMode))
+                        Text('وحدة التسعير: ' + (_unitController.text.trim().isEmpty
+                          ? (_selectedPricingMode == 'per_person'
+                            ? 'شخص' : 'يوم')
+                          : _unitController.text.trim())),
+                      Text('التوفر الحالي: ' +
+                        contract.labelAvailabilityStatus(_availabilityStatus ?? 'unknown')),
                     ] else
-                      const Text('لم يضف السعر الآن'),
-                    const Text('يحفظ المنتج مسودة. التنشيط إجراء منفصل.',
-                      style: TextStyle(color: AppColors.textMuted)),
+                      const Text('السعر والتوفر سيُضافان لاحقًا'),
+                    Text('طريقة التأكد من التوفر: ' +
+                      contract.labelAvailabilityMode(_selectedAvailabilityMode)),
+                    Text('طريقة الحصول عليه: ' +
+                      contract.labelFulfillmentMode(_selectedFulfillmentMode)),
+                    Text('موافقة الموظف: ' +
+                      (_requiresConfirmation ? 'مطلوبة قبل التأكيد' : 'حسب سياسات النشاط')),
                   ],
                 ),
               )),
+              const SizedBox(height: 10),
+              const Text('سيُحفظ المنتج كمسودة. الحفظ لا يفعّل الرد الآلي عليه تلقائيًا.',
+                style: TextStyle(color: AppColors.textMuted)),
+              const SizedBox(height: 6),
+              const Text('يمكن إضافة المقاسات والألوان وخيارات المنتج بعد الحفظ.',
+                style: TextStyle(color: AppColors.textMuted)),
               const SizedBox(height: 20),
             ],
             // Submit Button
