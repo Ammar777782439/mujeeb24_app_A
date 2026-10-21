@@ -512,6 +512,12 @@ void main() {
 
   group('Phase 5 CatalogItemFormScreen Widget Tests', () {
     testWidgets('Renders item creation form with validation', (tester) async {
+      tester.view.physicalSize = const Size(800, 1800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
       final fakeRepo = FakeCatalogRepository(
         mockCatalogs: [sampleCatalog],
         mockItems: [],
