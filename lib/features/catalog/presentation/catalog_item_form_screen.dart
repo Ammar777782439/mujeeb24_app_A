@@ -248,6 +248,12 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
     return map;
   }
 
+  String _reviewPrice() {
+    if (_selectedPricingMode == 'quote_required') return 'يحدد بعد معرفة الطلب';
+    if (_amountController.text.trim().isEmpty) return 'سعر متغير يحتاج تأكدًا';
+    return '${_amountController.text.trim()} ${_currencyController.text.trim().toUpperCase()}';
+  }
+
   String _itemTypeName(String type) {
     const types = {
       'product': 'منتج', 'physical_good': 'منتج',
@@ -913,7 +919,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                     const Divider(),
                     Text('طريقة التسعير: ${contract.labelPricingMode(_selectedPricingMode)}'),
                     if (_saveInitialOffer) ...[
-                      Text('السعر: ${_selectedPricingMode == 'quote_required' ? 'يحدد بعد معرفة الطلب' : _amountController.text.trim().isEmpty ? 'سعر متغير يحتاج تأكدًا' : _amountController.text.trim() + ' ' + _currencyController.text.trim().toUpperCase()}'),
+                      Text('السعر: ${_reviewPrice()}'),
                       if (['per_unit', 'per_person', 'per_day']
                         .contains(_selectedPricingMode))
                         Text('وحدة التسعير: ${_unitController.text.trim().isEmpty ? (_selectedPricingMode == 'per_person' ? 'شخص' : 'يوم') : _unitController.text.trim()}'),
