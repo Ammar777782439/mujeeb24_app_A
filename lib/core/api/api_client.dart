@@ -21,6 +21,12 @@ class ApiClient {
   String baseUrl;
   String? _accessToken;
   String? _refreshCookie;
+  int _sessionEpoch = 0;
+  Future<bool?>? _refreshInFlight;
+
+  /// Called only after the server rejects the refresh cookie (or none exists).
+  /// Never called for an ordinary network outage or server 5xx.
+  void Function()? onSessionExpired;
 
   ApiClient({http.Client? client, String? baseUrl})
     : baseUrl = normalizeBaseUrl(baseUrl ?? defaultBaseUrl),
@@ -43,6 +49,9 @@ class ApiClient {
   String? get refreshCookie => _refreshCookie;
 
   void setAccessToken(String? token) {
+    // A deliberate login replaces any previously in-flight refresh generation.
+    _sessionEpoch++;
+    _refreshInFlight = null;
     _accessToken = token;
   }
 
@@ -51,6 +60,9 @@ class ApiClient {
   }
 
   void clearSession() {
+    // A late refresh response must never log the user back in after logout.
+    _sessionEpoch++;
+    _refreshInFlight = null;
     _accessToken = null;
     _refreshCookie = null;
   }
@@ -97,22 +109,128 @@ class ApiClient {
   }
 
   void _extractCookies(http.Response response) {
-    final setCookie =
-        response.headers['set-cookie'] ?? response.headers['Set-Cookie'];
-    if (setCookie != null && setCookie.isNotEmpty) {
-      // Find mujeeb_refresh cookie
-      final parts = setCookie.split(';');
-      for (final part in parts) {
-        final trimmed = part.trim();
-        if (trimmed.startsWith('mujeeb_refresh=')) {
-          _refreshCookie = trimmed;
-          break;
+    final header = response.headers['set-cookie'] ??
+        response.headers['Set-Cookie'];
+    if (header == null) return;
+    // Never copy another website/backend cookie into a refresh request.
+    final match = RegExp(r'(?:^|,\s*)mujeeb_refresh=([^;,]*)')
+        .firstMatch(header);
+    if (match == null) return;
+    final value = match.group(1) ?? '';
+    if (value.isEmpty || RegExp(r'max-age=0', caseSensitive: false)
+        .hasMatch(header)) {
+      _refreshCookie = null;
+    } else {
+      _refreshCookie = 'mujeeb_refresh=$value';
+    }
+  }
+
+  void _expireAuthenticatedSession(int requestEpoch) {
+    if (requestEpoch != _sessionEpoch) return;
+    clearSession();
+    onSessionExpired?.call();
+  }
+
+  Future<bool?> _rotateSession(int requestEpoch) async {
+    final cookie = _refreshCookie;
+    if (cookie == null || cookie.isEmpty) {
+      _expireAuthenticatedSession(requestEpoch);
+      return false;
+    }
+    try {
+      final response = await _client.post(
+        _resolveUri('/auth/refresh'),
+        headers: _buildHeaders(requiresAuth: false, sendCookie: true),
+      ).timeout(const Duration(seconds: 20));
+      if (requestEpoch != _sessionEpoch) return false;
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        _expireAuthenticatedSession(requestEpoch);
+        return false;
+      }
+      final result = _processResponse(response);
+      if (requestEpoch != _sessionEpoch) return false;
+      if (result is! Map || result['data'] is! Map) {
+        return null; // malformed refresh response; keep existing session
+      }
+      final data = result['data'] as Map;
+      final access = data['access_token'];
+      if (access is! String || access.isEmpty) return null;
+      _accessToken = access;
+      return true;
+    } on ApiErrorEnvelope catch (error) {
+      if (error.statusCode == 401 || error.statusCode == 403) {
+        _expireAuthenticatedSession(requestEpoch);
+        return false;
+      }
+      return null;
+    } catch (_) {
+      // Never erase a valid session on a temporary timeout or 503.
+      return null;
+    }
+  }
+
+  Future<bool?> _refreshAfter401(int requestEpoch, String? usedToken) async {
+    if (requestEpoch != _sessionEpoch) return false;
+    if (_accessToken != null && _accessToken != usedToken) return true;
+    final active = _refreshInFlight;
+    if (active != null) return active;
+    final attempt = _rotateSession(requestEpoch);
+    _refreshInFlight = attempt;
+    try {
+      return await attempt;
+    } finally {
+      if (identical(_refreshInFlight, attempt)) _refreshInFlight = null;
+    }
+  }
+
+  Future<dynamic> _sendWithSessionRecovery(
+    String path,
+    Future<http.Response> Function() send, {
+    required bool requiresAuth,
+    required Duration timeout,
+  }) async {
+    final requestEpoch = _sessionEpoch;
+    final usedToken = _accessToken;
+    try {
+      var response = await send().timeout(timeout);
+      // A 401 from a protected endpoint is safe to retry exactly once
+      // *after* the backend confirmed refresh-token rotation.
+      if (requiresAuth && response.statusCode == 401 &&
+          !path.startsWith('/auth/')) {
+        final recovered = await _refreshAfter401(requestEpoch, usedToken);
+        if (recovered == true && requestEpoch == _sessionEpoch) {
+          response = await send().timeout(timeout);
+          if (response.statusCode == 401) {
+            _expireAuthenticatedSession(requestEpoch);
+          }
+        } else if (recovered == null) {
+          throw const NetworkException(
+            message: 'تعذر تجديد الجلسة مؤقتًا. تحقق من الاتصال ثم أعد المحاولة.',
+          );
         }
       }
-      if (_refreshCookie == null && setCookie.contains('=')) {
-        // Fallback: save raw cookie if formatted directly
-        _refreshCookie = setCookie.split(';').first.trim();
+      if (requestEpoch != _sessionEpoch) {
+        throw ApiErrorEnvelope.fromRaw(
+          code: 'SESSION_CHANGED',
+          message: 'انتهت الجلسة السابقة. أعد تسجيل الدخول.',
+          statusCode: 401,
+        );
       }
+      return _processResponse(response);
+    } on ApiErrorEnvelope {
+      rethrow;
+    } on NetworkException {
+      rethrow;
+    } on TimeoutException catch (e) {
+      throw NetworkException(
+        message: 'انتهت مهلة الاتصال بالخادم. حاول مرة أخرى.',
+        originalError: e.toString(), isTimeout: true,
+      );
+    } catch (e) {
+      throw NetworkException(
+        message: 'تعذر الاتصال بالخادم. تحقق من الشبكة.',
+        originalError: e.toString(),
+      );
     }
   }
 
@@ -194,35 +312,14 @@ class ApiClient {
     Map<String, dynamic>? queryParameters,
     bool requiresAuth = true,
     Duration timeout = const Duration(seconds: 45),
-  }) async {
-    try {
-      final uri = _resolveUri(path, queryParameters);
-      final response = await _client
-          .get(
-            uri,
-            headers: _buildHeaders(
-              extraHeaders: headers,
-              requiresAuth: requiresAuth,
-            ),
-          )
-          .timeout(timeout);
-      return _processResponse(response);
-    } on ApiErrorEnvelope {
-      rethrow;
-    } on TimeoutException catch (e) {
-      throw NetworkException(
-        message:
-            'Connection timed out while fetching $path. Server may be waking up.',
-        originalError: e.toString(),
-        isTimeout: true,
-      );
-    } catch (e) {
-      throw NetworkException(
-        message: 'Network connection failed while fetching $path',
-        originalError: e.toString(),
-      );
-    }
-  }
+  }) => _sendWithSessionRecovery(
+    path,
+    () => _client.get(
+      _resolveUri(path, queryParameters),
+      headers: _buildHeaders(extraHeaders: headers, requiresAuth: requiresAuth),
+    ),
+    requiresAuth: requiresAuth, timeout: timeout,
+  );
 
   Future<dynamic> post(
     String path, {
@@ -231,37 +328,16 @@ class ApiClient {
     bool requiresAuth = false,
     bool sendCookie = false,
     Duration timeout = const Duration(seconds: 45),
-  }) async {
-    try {
-      final uri = _resolveUri(path);
-      final response = await _client
-          .post(
-            uri,
-            headers: _buildHeaders(
-              extraHeaders: headers,
-              requiresAuth: requiresAuth,
-              sendCookie: sendCookie,
-            ),
-            body: body != null ? jsonEncode(body) : null,
-          )
-          .timeout(timeout);
-      return _processResponse(response);
-    } on ApiErrorEnvelope {
-      rethrow;
-    } on TimeoutException catch (e) {
-      throw NetworkException(
-        message:
-            'Connection timed out while posting to $path. Server may be waking up.',
-        originalError: e.toString(),
-        isTimeout: true,
-      );
-    } catch (e) {
-      throw NetworkException(
-        message: 'Network connection failed while posting to $path',
-        originalError: e.toString(),
-      );
-    }
-  }
+  }) => _sendWithSessionRecovery(
+    path,
+    () => _client.post(
+      _resolveUri(path),
+      headers: _buildHeaders(extraHeaders: headers,
+        requiresAuth: requiresAuth, sendCookie: sendCookie),
+      body: body == null ? null : jsonEncode(body),
+    ),
+    requiresAuth: requiresAuth, timeout: timeout,
+  );
 
   Future<dynamic> patch(
     String path, {
@@ -269,36 +345,15 @@ class ApiClient {
     Map<String, String>? headers,
     bool requiresAuth = true,
     Duration timeout = const Duration(seconds: 45),
-  }) async {
-    try {
-      final uri = _resolveUri(path);
-      final response = await _client
-          .patch(
-            uri,
-            headers: _buildHeaders(
-              extraHeaders: headers,
-              requiresAuth: requiresAuth,
-            ),
-            body: body != null ? jsonEncode(body) : null,
-          )
-          .timeout(timeout);
-      return _processResponse(response);
-    } on ApiErrorEnvelope {
-      rethrow;
-    } on TimeoutException catch (e) {
-      throw NetworkException(
-        message:
-            'Connection timed out while updating $path. Server may be waking up.',
-        originalError: e.toString(),
-        isTimeout: true,
-      );
-    } catch (e) {
-      throw NetworkException(
-        message: 'Network connection failed while updating $path',
-        originalError: e.toString(),
-      );
-    }
-  }
+  }) => _sendWithSessionRecovery(
+    path,
+    () => _client.patch(
+      _resolveUri(path),
+      headers: _buildHeaders(extraHeaders: headers, requiresAuth: requiresAuth),
+      body: body == null ? null : jsonEncode(body),
+    ),
+    requiresAuth: requiresAuth, timeout: timeout,
+  );
 
   void close() {
     _client.close();

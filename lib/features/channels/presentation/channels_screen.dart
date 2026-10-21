@@ -545,6 +545,27 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
     }
   }
 
+  String _channelStatusLabel(String status) => switch (status.toLowerCase()) {
+    'active' => 'متصل ونشط',
+    'degraded' => 'الاتصال يحتاج مراجعة',
+    'disconnected' => 'غير متصل',
+    'failed' => 'فشل الربط',
+    'pending' => 'جارٍ الربط',
+    'connecting' => 'جارٍ الاتصال',
+    _ => 'حالة غير معروفة',
+  };
+
+  String _channelName(String channel) => switch (channel.toLowerCase()) {
+    'whatsapp' => 'واتساب للأعمال',
+    'instagram' => 'إنستغرام',
+    'facebook' => 'فيسبوك مسنجر',
+    'messenger' => 'فيسبوك مسنجر',
+    'telegram' => 'تليجرام',
+    'sms' => 'الرسائل النصية',
+    'webhook' => 'تكامل مخصص',
+    _ => 'قناة تواصل',
+  };
+
   IconData _getChannelIcon(String channel) {
     final ch = channel.toLowerCase();
     if (ch.contains('whatsapp')) return Icons.chat;
@@ -665,7 +686,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                       ),
                       const SizedBox(width: 8),
                       FilterChip(
-                        label: const Text('Degraded'),
+                        label: const Text('يحتاج مراجعة'),
                         selected: provider.connectionStatusFilter == 'degraded',
                         onSelected: (_) {
                           provider.setConnectionStatusFilter('degraded');
@@ -674,7 +695,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                       ),
                       const SizedBox(width: 8),
                       FilterChip(
-                        label: const Text('Disconnected'),
+                        label: const Text('غير متصل'),
                         selected: provider.connectionStatusFilter == 'disconnected',
                         onSelected: (_) {
                           provider.setConnectionStatusFilter('disconnected');
@@ -707,14 +728,22 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.cable, size: 64, color: AppColors.textSecondary),
+                            Icon(provider.connectionsError != null
+                              ? Icons.wifi_off_outlined : Icons.cable,
+                              size: 48, color: AppColors.textSecondary),
                             const SizedBox(height: 16),
-                            Text(strings('no_channels'), style: Theme.of(context).textTheme.titleMedium),
+                            Text(provider.connectionsError == null
+                              ? strings('no_channels')
+                              : 'تعذر تحميل حالة القنوات',
+                              style: Theme.of(context).textTheme.titleMedium),
                             const SizedBox(height: 8),
                             ElevatedButton.icon(
-                              onPressed: _showConnectDialog,
-                              icon: const Icon(Icons.add_link),
-                              label: Text(strings('connect_channel')),
+                              onPressed: provider.connectionsError != null
+                                ? _loadData : _showConnectDialog,
+                              icon: Icon(provider.connectionsError != null
+                                ? Icons.refresh_rounded : Icons.add_link),
+                              label: Text(provider.connectionsError != null
+                                ? 'إعادة المحاولة' : strings('connect_channel')),
                             ),
                           ],
                         ),
@@ -755,11 +784,12 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                conn.displayName ?? conn.channel.toUpperCase(),
+                                                conn.displayName?.trim().isNotEmpty == true
+                                                    ? conn.displayName! : _channelName(conn.channel),
                                                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                                               ),
                                               Text(
-                                                'Provider: ${conn.provider} | Channel: ${conn.channel}',
+                                                'القناة: ${_channelName(conn.channel)}',
                                                 style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
                                               ),
                                             ],
@@ -772,7 +802,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                                             borderRadius: BorderRadius.circular(12),
                                           ),
                                           child: Text(
-                                            conn.status.toUpperCase(),
+                                            _channelStatusLabel(conn.status),
                                             style: TextStyle(
                                               color: statusColor,
                                               fontWeight: FontWeight.bold,

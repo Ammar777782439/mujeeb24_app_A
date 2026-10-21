@@ -101,6 +101,7 @@ class _MujeebAppState extends State<MujeebApp> {
       repository: _platformRepository,
     );
 
+    _apiClient.onSessionExpired = _authProvider.markSessionExpired;
     _authProvider.addListener(_handleAuthStateChange);
     _localeProvider.addListener(() => setState(() {}));
     unawaited(_deepLinkService.init(onInvitationReceived: (token) {
@@ -129,6 +130,7 @@ class _MujeebAppState extends State<MujeebApp> {
   }
 
   void _handleAuthStateChange() {
+    if (!mounted) return;
     setState(() {
       if (_authProvider.isAuthenticated) {
         if (_authProvider.accessibleBusinesses.length > 1 &&
@@ -183,7 +185,8 @@ class _MujeebAppState extends State<MujeebApp> {
             setState(() => _currentRoute = AppRoute.workspace);
           },
           onLogout: () {
-            setState(() => _currentRoute = AppRoute.login);
+            // Changing route alone is NOT logout. Revoke and clear credentials.
+            unawaited(_authProvider.logout());
           },
         );
 
@@ -202,7 +205,8 @@ class _MujeebAppState extends State<MujeebApp> {
             setState(() => _currentRoute = AppRoute.businessSelection);
           },
           onLogout: () {
-            setState(() => _currentRoute = AppRoute.login);
+            // Changing route alone is NOT logout. Revoke and clear credentials.
+            unawaited(_authProvider.logout());
           },
         );
 

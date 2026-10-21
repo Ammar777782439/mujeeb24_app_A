@@ -1,4 +1,5 @@
 import '../api/api_client.dart';
+import '../errors/api_error.dart';
 import '../models/auth_models.dart';
 
 /// Authentication Repository implementing:
@@ -45,16 +46,28 @@ class AuthRepository {
     return authResponse;
   }
 
-  /// POST /auth/logout
+  /// POST /auth/logout. Clear local secrets immediately after dispatch,
+  /// even when the network hangs or the server rejects the logout.
   Future<void> logout() async {
-    try {
-      await apiClient.post(
-        '/auth/logout',
-        requiresAuth: true,
-        sendCookie: true,
-      );
-    } finally {
+    final hasSession = (apiClient.accessToken?.isNotEmpty ?? false) ||
+        (apiClient.refreshCookie?.isNotEmpty ?? false);
+    if (!hasSession) {
       apiClient.clearSession();
+      return;
+    }
+    final remoteLogout = apiClient.post(
+      '/auth/logout',
+      requiresAuth: true,
+      sendCookie: true,
+      timeout: const Duration(seconds: 10),
+    );
+    apiClient.clearSession();
+    try {
+      await remoteLogout;
+    } on ApiErrorEnvelope catch (error) {
+      // Immediate local logout was already performed before awaiting the server.
+      // A late response cannot revoke the next account's newly created session.
+      if (error.error.code != 'SESSION_CHANGED') rethrow;
     }
   }
 
