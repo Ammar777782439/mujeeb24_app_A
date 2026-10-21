@@ -92,6 +92,11 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
     _longDescController =
         TextEditingController(text: item?.longDescription ?? '');
 
+    if (item != null) {
+      const known = ['product', 'physical_good', 'service',
+        'consultation', 'booking', 'real_estate', 'course', 'subscription'];
+      _customItemType = !known.contains(item.itemType);
+    }
     _selectedPricingMode = item?.pricingMode ?? 'fixed';
     _selectedAvailabilityMode = item?.availabilityMode ?? 'unknown';
     _selectedFulfillmentMode = item?.fulfillmentMode ?? 'manual';
@@ -501,56 +506,49 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Show a human-friendly item type, while preserving its API value.
-            if (_isEditing) ...[
+            // Use the same merchant vocabulary in create and edit.
+            DropdownButtonFormField<String>(
+              key: ValueKey('item-type-' + (_customItemType ? 'custom' :
+                _itemTypeController.text.trim())),
+              initialValue: _customItemType ? 'custom' :
+                _itemTypeController.text.trim(),
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'ما الذي تقدمه؟',
+                border: OutlineInputBorder()),
+              items: [
+                const DropdownMenuItem(value: 'product', child: Text('منتج')),
+                if (_isEditing && widget.existingItem?.itemType == 'physical_good')
+                  const DropdownMenuItem(value: 'physical_good', child: Text('منتج')),
+                const DropdownMenuItem(value: 'service', child: Text('خدمة')),
+                const DropdownMenuItem(value: 'consultation', child: Text('استشارة')),
+                const DropdownMenuItem(value: 'booking', child: Text('حجز')),
+                const DropdownMenuItem(value: 'real_estate', child: Text('عقار')),
+                const DropdownMenuItem(value: 'course', child: Text('دورة')),
+                const DropdownMenuItem(value: 'subscription', child: Text('اشتراك')),
+                const DropdownMenuItem(value: 'custom', child: Text('نوع آخر')),
+              ],
+              onChanged: isBusy ? null : (type) {
+                if (type == null) return;
+                setState(() {
+                  _customItemType = type == 'custom';
+                  if (!_customItemType) _itemTypeController.text = type;
+                  if (_customItemType && !_isEditing) _itemTypeController.clear();
+                });
+              },
+            ),
+            if (_customItemType) ...[
+              const SizedBox(height: 12),
               TextFormField(
                 controller: _itemTypeController,
                 enabled: !isBusy,
                 decoration: const InputDecoration(
-                  labelText: 'نوع المنتج أو الخدمة',
-                  border: OutlineInputBorder(),
-                ),
+                  labelText: 'اسم النوع',
+                  hintText: 'مثل: بطاقة حضور',
+                  border: OutlineInputBorder()),
                 validator: (v) => v == null || v.trim().isEmpty
-                    ? strings('required_field') : null,
+                  ? strings('required_field') : null,
               ),
-            ] else ...[
-              DropdownButtonFormField<String>(
-                initialValue: 'product',
-                isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'ما الذي تقدمه؟',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'product', child: Text('منتج')),
-                  DropdownMenuItem(value: 'service', child: Text('خدمة')),
-                  DropdownMenuItem(value: 'consultation', child: Text('استشارة')),
-                  DropdownMenuItem(value: 'booking', child: Text('حجز')),
-                  DropdownMenuItem(value: 'real_estate', child: Text('عقار')),
-                  DropdownMenuItem(value: 'course', child: Text('دورة')),
-                  DropdownMenuItem(value: 'subscription', child: Text('اشتراك')),
-                  DropdownMenuItem(value: 'custom', child: Text('نوع آخر')),
-                ],
-                onChanged: isBusy ? null : (value) {
-                  if (value == null) return;
-                  setState(() {
-                    _customItemType = value == 'custom';
-                    _itemTypeController.text = _customItemType ? '' : value;
-                  });
-                },
-              ),
-              if (_customItemType) ...[
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _itemTypeController,
-                  decoration: const InputDecoration(
-                    labelText: 'اسم النوع', hintText: 'اكتب النوع الذي يناسب نشاطك',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (v) => v == null || v.trim().isEmpty
-                      ? strings('required_field') : null,
-                ),
-              ],
             ],
             const SizedBox(height: 16),
 
