@@ -529,23 +529,18 @@ void main() {
 
       expect(find.text('إضافة عنصر / منتج'), findsOneWidget);
 
-      // Scroll to submit button
-      final submitBtn = find.widgetWithText(ElevatedButton, 'إضافة عنصر / منتج');
+      // Guided creation: no write until all three stages finish.
+      final nextButton = find.widgetWithText(ElevatedButton, 'التالي');
       await tester.dragUntilVisible(
-        submitBtn,
+        nextButton,
         find.byType(ListView),
         const Offset(0, -300),
       );
       await tester.pumpAndSettle();
-
-      expect(submitBtn, findsOneWidget);
-      await tester.tap(submitBtn);
+      await tester.tap(nextButton);
       await tester.pumpAndSettle();
-
-      // Name is required, so repository should NOT be called
       expect(fakeRepo.createItemCalled, isFalse);
 
-      // Scroll back up to name and type fields
       final nameField = find.widgetWithText(TextFormField, 'اسم البند *');
       await tester.dragUntilVisible(
         nameField,
@@ -554,18 +549,46 @@ void main() {
       );
       await tester.pumpAndSettle();
       await tester.enterText(nameField, 'ساعة فاخرة');
-
       final typeField = find.widgetWithText(TextFormField, 'نوع العنصر *');
-      await tester.enterText(typeField, 'physical_good');
+      await tester.enterText(typeField, 'product');
 
-      // Scroll down to submit button and tap
       await tester.dragUntilVisible(
-        submitBtn,
+        nextButton,
         find.byType(ListView),
         const Offset(0, -300),
       );
       await tester.pumpAndSettle();
-      await tester.tap(submitBtn);
+      await tester.tap(nextButton);
+      await tester.pumpAndSettle();
+
+      // Item-only draft is a supported option; no invented price or availability.
+      final skipOffer = find.text('حفظ السعر والتوفر الآن');
+      await tester.dragUntilVisible(
+        skipOffer,
+        find.byType(ListView),
+        const Offset(0, -300),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(skipOffer);
+      await tester.pumpAndSettle();
+      await tester.dragUntilVisible(
+        nextButton,
+        find.byType(ListView),
+        const Offset(0, -300),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(nextButton);
+      await tester.pumpAndSettle();
+
+      expect(fakeRepo.createItemCalled, isFalse);
+      final saveButton = find.widgetWithText(ElevatedButton, 'احفظ المنتج');
+      await tester.dragUntilVisible(
+        saveButton,
+        find.byType(ListView),
+        const Offset(0, -300),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(saveButton);
       await tester.pumpAndSettle();
 
       expect(fakeRepo.createItemCalled, isTrue);
