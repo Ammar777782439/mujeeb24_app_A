@@ -70,6 +70,9 @@ class AuthRepository {
       // Immediate local logout was already performed before awaiting the server.
       // A late response cannot revoke the next account's newly created session.
       if (error.error.code != 'SESSION_CHANGED') rethrow;
+    } finally {
+      // Finish removing the encrypted cookie, even if remote revocation fails.
+      await apiClient.flushCookiePersistence();
     }
   }
 
