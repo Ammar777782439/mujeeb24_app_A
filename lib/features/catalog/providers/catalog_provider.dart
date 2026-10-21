@@ -17,12 +17,15 @@ class CatalogProvider extends ChangeNotifier {
   bool _isLoadingCatalogs = false;
   String? _catalogsError;
   String _catalogStatusFilter = 'all';
+  bool _catalogsHasMore = false;
+  String? _catalogsNextCursor;
 
   List<Catalog> get catalogs => _catalogs;
   Catalog? get selectedCatalog => _selectedCatalog;
   bool get isLoadingCatalogs => _isLoadingCatalogs;
   String? get catalogsError => _catalogsError;
   String get catalogStatusFilter => _catalogStatusFilter;
+  bool get catalogsHasMore => _catalogsHasMore;
 
   // ==========================================
   // Catalog Items State
@@ -33,6 +36,8 @@ class CatalogProvider extends ChangeNotifier {
   String? _itemsError;
   String _itemStatusFilter = 'all';
   String _itemSearchQuery = '';
+  bool _itemsHasMore = false;
+  String? _itemsNextCursor;
 
   List<CatalogItem> get catalogItems => _catalogItems;
   CatalogItem? get selectedItem => _selectedItem;
@@ -40,6 +45,7 @@ class CatalogProvider extends ChangeNotifier {
   String? get itemsError => _itemsError;
   String get itemStatusFilter => _itemStatusFilter;
   String get itemSearchQuery => _itemSearchQuery;
+  bool get itemsHasMore => _itemsHasMore;
 
   // ==========================================
   // Item Sub-resources: Variants & Offers
@@ -88,6 +94,8 @@ class CatalogProvider extends ChangeNotifier {
   void selectCatalog(Catalog? catalog) {
     _selectedCatalog = catalog;
     _catalogItems = [];
+    _itemsHasMore = false;
+    _itemsNextCursor = null;
     _selectedItem = null;
     _variants = [];
     _offers = [];
@@ -111,6 +119,8 @@ class CatalogProvider extends ChangeNotifier {
         status: effectiveStatus != 'all' ? effectiveStatus : null,
       );
       _catalogs = page.items;
+      _catalogsHasMore = page.hasMore;
+      _catalogsNextCursor = page.nextCursor;
       if (_selectedCatalog != null) {
         _selectedCatalog = _catalogs.firstWhere(
           (c) => c.id == _selectedCatalog!.id,
@@ -119,6 +129,29 @@ class CatalogProvider extends ChangeNotifier {
       }
     } on ApiErrorEnvelope catch (e) {
       _catalogsError = e.error.message;
+    } catch (e) {
+      _catalogsError = e.toString();
+    } finally {
+      _isLoadingCatalogs = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadMoreCatalogs(String businessId) async {
+    if (_isLoadingCatalogs || !_catalogsHasMore || _catalogsNextCursor == null) return;
+    _isLoadingCatalogs = true;
+    _catalogsError = null;
+    notifyListeners();
+    try {
+      final page = await catalogRepository.listCatalogs(
+        businessId: businessId,
+        status: _catalogStatusFilter == 'all' ? null : _catalogStatusFilter,
+        cursor: _catalogsNextCursor,
+      );
+      final known = _catalogs.map((e) => e.id).toSet();
+      _catalogs.addAll(page.items.where((e) => known.add(e.id)));
+      _catalogsHasMore = page.hasMore;
+      _catalogsNextCursor = page.nextCursor;
     } catch (e) {
       _catalogsError = e.toString();
     } finally {
@@ -238,6 +271,8 @@ class CatalogProvider extends ChangeNotifier {
         search: effectiveSearch.isNotEmpty ? effectiveSearch : null,
       );
       _catalogItems = page.items;
+      _itemsHasMore = page.hasMore;
+      _itemsNextCursor = page.nextCursor;
       if (_selectedItem != null) {
         _selectedItem = _catalogItems.firstWhere(
           (i) => i.id == _selectedItem!.id,
@@ -246,6 +281,31 @@ class CatalogProvider extends ChangeNotifier {
       }
     } on ApiErrorEnvelope catch (e) {
       _itemsError = e.error.message;
+    } catch (e) {
+      _itemsError = e.toString();
+    } finally {
+      _isLoadingItems = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadMoreCatalogItems(String businessId, String catalogId) async {
+    if (_isLoadingItems || !_itemsHasMore || _itemsNextCursor == null) return;
+    _isLoadingItems = true;
+    _itemsError = null;
+    notifyListeners();
+    try {
+      final page = await catalogRepository.listCatalogItems(
+        businessId: businessId,
+        catalogId: catalogId,
+        status: _itemStatusFilter == 'all' ? null : _itemStatusFilter,
+        search: _itemSearchQuery.isEmpty ? null : _itemSearchQuery,
+        cursor: _itemsNextCursor,
+      );
+      final known = _catalogItems.map((e) => e.id).toSet();
+      _catalogItems.addAll(page.items.where((e) => known.add(e.id)));
+      _itemsHasMore = page.hasMore;
+      _itemsNextCursor = page.nextCursor;
     } catch (e) {
       _itemsError = e.toString();
     } finally {
