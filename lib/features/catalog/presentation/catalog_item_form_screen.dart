@@ -447,37 +447,6 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            if (_isEditing) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceSubtle,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.borderHairline),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.info_outline_rounded,
-                      size: 20,
-                      color: AppColors.primary,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'ID: ${widget.existingItem!.id}\nVersion: ${widget.existingItem!.resourceVersion}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-
             if (!_isEditing) ...[
               Text('الخطوة ${_step + 1} من 3',
                 style: const TextStyle(color: AppColors.primary,
