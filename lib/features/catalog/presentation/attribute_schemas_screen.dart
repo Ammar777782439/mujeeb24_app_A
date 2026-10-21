@@ -90,14 +90,14 @@ class _AttributeSchemasScreenState extends State<AttributeSchemasScreen> {
         return 'أدخل اسم المعلومة التي أضفت لها اختيارات أو احذفها.';
       }
       if (label.isEmpty) continue;
-      if (!labels.add(label)) return 'اسم المعلومة مكرر: ' + label;
+      if (!labels.add(label)) return 'اسم المعلومة مكرر: ${label}';
       if (label.startsWith('attr_') || label.length > 120) {
         return 'اختر اسم معلومة واضحًا مثل اللون أو الضمان.';
       }
       if (['select', 'multi_select'].contains(draft.dataType)) {
-        if (options.isEmpty) return 'أضف اختيارات للمعلومة ' + label;
+        if (options.isEmpty) return 'أضف اختيارات للمعلومة ${label}';
         if (options.toSet().length != options.length) {
-          return 'لا تكرر الاختيارات في ' + label;
+          return 'لا تكرر الاختيارات في ${label}';
         }
       }
     }
@@ -196,9 +196,7 @@ class _AttributeSchemasScreenState extends State<AttributeSchemasScreen> {
                           const SizedBox(height: 8),
                           for (final definition in schema.definitions)
                             Padding(padding: const EdgeInsets.only(bottom: 5),
-                              child: Text(definition.label + ' — ' +
-                                (_typeLabels[definition.dataType] ?? 'تفاصيل محفوظة') +
-                                (definition.required ? ' (مطلوب)' : ''))),
+                              child: Text('${definition.label} — ${_typeLabels[definition.dataType] ?? 'تفاصيل محفوظة'}${definition.required ? ' (مطلوب)' : ''}')),
                         ],
                       ),
                     )),
@@ -225,7 +223,7 @@ class _AttributeSchemasScreenState extends State<AttributeSchemasScreen> {
                           children: [
                             Row(children: [
                               Expanded(child: Text(
-                                'المعلومة ' + (index + 1).toString(),
+                                'المعلومة ${index + 1}',
                                 style: const TextStyle(fontWeight: FontWeight.bold))),
                               IconButton(
                                 tooltip: 'حذف المعلومة',
