@@ -167,7 +167,7 @@ class _DashboardTabState extends State<DashboardTab> {
             ],
 
             // Channel Connectivity Banner
-            _buildConnectivityBanner(overview?.connections ?? {}, strings),
+            _buildConnectivityBanner(overview.connections ?? {}, strings),
             const SizedBox(height: 16),
 
             // Section Title
@@ -198,7 +198,7 @@ class _DashboardTabState extends State<DashboardTab> {
                 Expanded(
                   child: _buildMetricCard(
                     title: strings('open_conversations'),
-                    value: overview?.openConversations.toString() ?? '-',
+                    value: overview.openConversations.toString() ?? '-',
                     icon: Icons.forum_rounded,
                     color: AppColors.primary,
                     bgColor: AppColors.primaryFixed,
@@ -209,7 +209,7 @@ class _DashboardTabState extends State<DashboardTab> {
                 Expanded(
                   child: _buildMetricCard(
                     title: strings('waiting_human'),
-                    value: overview?.waitingHuman.toString() ?? '-',
+                    value: overview.waitingHuman.toString() ?? '-',
                     icon: Icons.support_agent_rounded,
                     color: AppColors.statusWarning,
                     bgColor: AppColors.statusWarningContainer,
@@ -224,7 +224,7 @@ class _DashboardTabState extends State<DashboardTab> {
                 Expanded(
                   child: _buildMetricCard(
                     title: strings('new_customers'),
-                    value: overview?.newCustomers.toString() ?? '-',
+                    value: overview.newCustomers.toString() ?? '-',
                     icon: Icons.people_alt_rounded,
                     color: AppColors.secondary,
                     bgColor: AppColors.secondaryFixed,
@@ -235,7 +235,7 @@ class _DashboardTabState extends State<DashboardTab> {
                 Expanded(
                   child: _buildMetricCard(
                     title: strings('new_leads'),
-                    value: overview?.newLeads.toString() ?? '-',
+                    value: overview.newLeads.toString() ?? '-',
                     icon: Icons.trending_up_rounded,
                     color: AppColors.statusSuccess,
                     bgColor: AppColors.statusSuccessContainer,
@@ -249,7 +249,7 @@ class _DashboardTabState extends State<DashboardTab> {
             // Transactions Review Banner Card
             _buildReviewCard(
               title: strings('transactions_review'),
-              count: overview?.transactionsNeedingReview ?? 0,
+              count: overview.transactionsNeedingReview ?? 0,
               onTap: widget.onNavigateToReviews ?? widget.onNavigateToTransactions,
             ),
             if (widget.onNavigateToCatalogs != null) ...[
@@ -400,7 +400,7 @@ class _DashboardTabState extends State<DashboardTab> {
             const SizedBox(height: 16),
 
             // Channel List Section
-            _buildChannelsSection(overview?.connections ?? {}, strings),
+            _buildChannelsSection(overview.connections ?? {}, strings),
           ],
         ),
       ),
