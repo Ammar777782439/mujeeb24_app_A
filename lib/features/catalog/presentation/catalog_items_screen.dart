@@ -338,6 +338,7 @@ class _CatalogItemsScreenState extends State<CatalogItemsScreen> {
                 businessId: widget.businessId,
                 catalogId: widget.catalog.id,
                 itemId: item.id,
+                businessCurrency: widget.businessCurrency,
               ),
             ),
           );
