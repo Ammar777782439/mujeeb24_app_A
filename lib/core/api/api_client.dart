@@ -90,7 +90,7 @@ class ApiClient {
       final restored = await store.read();
       if (epoch != _sessionEpoch || _refreshCookie != null) return;
       if (restored != null &&
-          RegExp(r'^mujeeb_refresh=[^;\s]+).hasMatch(restored)) {
+          RegExp(r'^mujeeb_refresh=[^;\s]+$').hasMatch(restored)) {
         _refreshCookie = restored;
       } else if (restored != null) {
         _queueCookieWrite(null);
