@@ -53,12 +53,12 @@ android {
 
     buildTypes {
         release {
-            val releaseConfig = signingConfigs.getByName("release")
-            signingConfig = if (keystorePropertiesFile.exists() && releaseConfig.storeFile != null) {
-                releaseConfig
+            if (requireReleaseSignature) {
+                signingConfig = signingConfigs.getByName("release")
             } else {
-                // Preview builds only; publishing this signature is forbidden.
-                signingConfigs.getByName("debug")
+                // QA-only: use a distinct package so it cannot replace the live app.
+                applicationIdSuffix = ".preview"
+                signingConfig = signingConfigs.getByName("debug")
             }
         }
     }
