@@ -4,6 +4,7 @@ import '../../../app/theme/app_theme.dart';
 import '../../../core/models/catalog_models.dart';
 import '../providers/catalog_provider.dart';
 import 'catalog_item_form_screen.dart';
+import 'catalog_specification_input.dart';
 
 /// Screen displaying complete details for a CatalogItem, its Variants, and Offers.
 class CatalogItemDetailScreen extends StatefulWidget {
@@ -11,6 +12,7 @@ class CatalogItemDetailScreen extends StatefulWidget {
   final String businessId;
   final String catalogId;
   final String itemId;
+  final String? businessCurrency;
 
   const CatalogItemDetailScreen({
     super.key,
@@ -18,6 +20,7 @@ class CatalogItemDetailScreen extends StatefulWidget {
     required this.businessId,
     required this.catalogId,
     required this.itemId,
+    this.businessCurrency,
   });
 
   @override
@@ -28,6 +31,8 @@ class CatalogItemDetailScreen extends StatefulWidget {
 class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  AttributeSchema? _schema;
+  bool _schemaLoading = false;
 
   @override
   void initState() {
@@ -50,6 +55,21 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
       widget.catalogId,
       widget.itemId,
     );
+    final item = widget.catalogProvider.selectedItem;
+    if (!mounted || item?.attributeSchemaId == null) {
+      if (mounted) setState(() => _schema = null);
+      return;
+    }
+    setState(() => _schemaLoading = true);
+    try {
+      final schema = await widget.catalogProvider.catalogRepository.getAttributeSchema(
+        businessId: widget.businessId, schemaId: item!.attributeSchemaId!);
+      if (mounted) setState(() => _schema = schema);
+    } catch (_) {
+      if (mounted) setState(() => _schema = null);
+    } finally {
+      if (mounted) setState(() => _schemaLoading = false);
+    }
   }
 
   Color _getStatusColor(String status) {
@@ -349,14 +369,14 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
   void _showAddOfferDialog() {
     final nameController = TextEditingController();
     final amountController = TextEditingController();
-    final currencyController = TextEditingController(text: 'SAR');
+    final currencyController = TextEditingController(text: widget.businessCurrency ?? '');
     final pricingUnitController = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
     String pricingMode = widget.catalogProvider.selectedItem?.pricingMode ?? 'fixed';
     String availabilityMode =
         widget.catalogProvider.selectedItem?.availabilityMode ?? 'stock';
-    String availabilityStatus = 'available';
+    String? availabilityStatus;
     String fulfillmentMode =
         widget.catalogProvider.selectedItem?.fulfillmentMode ?? 'delivery';
     String? selectedVariantId;
@@ -470,9 +490,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                           );
                         }).toList(),
                         onChanged: (val) {
-                          if (val != null) {
-                            setDialogState(() => availabilityStatus = val);
-                          }
+                          setDialogState(() => availabilityStatus = val);
                         },
                       ),
                     ],
@@ -487,10 +505,23 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                 ElevatedButton(
                   onPressed: () async {
                     if (!formKey.currentState!.validate()) return;
+                    final amount = double.tryParse(amountController.text.trim());
+                    final requiresAmount = pricingMode != 'quote_required' &&
+                        pricingMode != 'dynamic';
+                    final hasAmount = amountController.text.trim().isNotEmpty;
+                    if (availabilityStatus == null ||
+                        (requiresAmount && (amount == null || amount < 0)) ||
+                        (hasAmount && amount == null) ||
+                        (hasAmount && !RegExp(r'^[A-Za-z]{3}$')
+                          .hasMatch(currencyController.text.trim())) ||
+                        (['per_unit', 'per_person', 'per_day']
+                          .contains(pricingMode) && pricingUnitController.text.trim().isEmpty)) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('راجع المبلغ والعملة والتوفر قبل الحفظ.')));
+                      return;
+                    }
                     Navigator.of(ctx).pop();
                     final messenger = ScaffoldMessenger.of(context);
-
-                    final amount = double.tryParse(amountController.text.trim());
                     final created = await widget.catalogProvider.createOffer(
                       widget.businessId,
                       widget.itemId,
@@ -498,14 +529,13 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                         name: nameController.text.trim(),
                         pricingMode: pricingMode,
                         amount: amount,
-                        currency: currencyController.text.trim().isNotEmpty
-                            ? currencyController.text.trim()
-                            : 'SAR',
+                        currency: amount != null && pricingMode != 'quote_required'
+                            ? currencyController.text.trim().toUpperCase() : null,
                         pricingUnit: pricingUnitController.text.trim().isNotEmpty
                             ? pricingUnitController.text.trim()
                             : null,
                         availabilityMode: availabilityMode,
-                        availabilityStatus: availabilityStatus,
+                        availabilityStatus: availabilityStatus!,
                         fulfillmentMode: fulfillmentMode,
                         variantId: selectedVariantId,
                         status: 'active',
@@ -720,6 +750,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                           businessId: widget.businessId,
                           catalogId: widget.catalogId,
                           existingItem: item,
+                          businessCurrency: widget.businessCurrency,
                         ),
                       ),
                     );
@@ -971,7 +1002,8 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              e.key,
+                              specificationName(e.key,
+                                _schema?.definitions ?? <AttributeDefinition>[]),
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
@@ -982,7 +1014,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              e.value?.toString() ?? '',
+                              displaySpecification(e.value),
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: AppColors.textMuted,
@@ -1073,9 +1105,18 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
             )
           : ListView.separated(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
-              itemCount: variants.length,
+              itemCount: variants.length + (widget.catalogProvider.variantsHasMore ? 1 : 0),
               separatorBuilder: (_, index) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
+                if (index == variants.length) {
+                  return OutlinedButton(
+                    onPressed: widget.catalogProvider.loadingMoreVariants ? null
+                      : () => widget.catalogProvider.loadMoreVariants(
+                        widget.businessId, widget.itemId),
+                    child: Text(widget.catalogProvider.loadingMoreVariants
+                      ? 'جاري التحميل...' : 'عرض المزيد من الخيارات'),
+                  );
+                }
                 final v = variants[index];
                 final statusColor = _getStatusColor(v.status);
                 final statusBg = _getStatusBgColor(v.status);
@@ -1140,7 +1181,9 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                             children: v.attributes.entries.map((attr) {
                               return Chip(
                                 label: Text(
-                                  '${attr.key}: ${attr.value}',
+                                  specificationName(attr.key,
+                                    _schema?.definitions ?? <AttributeDefinition>[]) +
+                                  ': ' + displaySpecification(attr.value),
                                   style: const TextStyle(fontSize: 10),
                                 ),
                                 padding: EdgeInsets.zero,
@@ -1202,9 +1245,18 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
             )
           : ListView.separated(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
-              itemCount: offers.length,
+              itemCount: offers.length + (widget.catalogProvider.offersHasMore ? 1 : 0),
               separatorBuilder: (_, index) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
+                if (index == offers.length) {
+                  return OutlinedButton(
+                    onPressed: widget.catalogProvider.loadingMoreOffers ? null
+                      : () => widget.catalogProvider.loadMoreOffers(
+                        widget.businessId, widget.itemId),
+                    child: Text(widget.catalogProvider.loadingMoreOffers
+                      ? 'جاري التحميل...' : 'عرض المزيد من الأسعار'),
+                  );
+                }
                 final offer = offers[index];
                 final statusColor = _getStatusColor(offer.status);
                 final statusBg = _getStatusBgColor(offer.status);
@@ -1278,7 +1330,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                           children: [
                             Text(
                               offer.amount != null
-                                  ? '${offer.amount!.toStringAsFixed(2)} ${offer.currency ?? 'SAR'}'
+                                  ? offer.amount!.toStringAsFixed(2) + ' ' + (offer.currency ?? '')
                                   : strings('pricing_mode'),
                               style: const TextStyle(
                                 fontSize: 16,
