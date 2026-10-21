@@ -137,6 +137,20 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Server revoked or rejected our refresh session. Shared API client
+  /// already erased the stale credentials; never keep workspace privileges.
+  void markSessionExpired() {
+    if (_status == AuthStatus.unauthenticated ||
+        _status == AuthStatus.sessionExpired) return;
+    _status = AuthStatus.sessionExpired;
+    _currentPrincipal = null;
+    _authResponse = null;
+    _accessibleBusinesses = [];
+    _selectedBusiness = null;
+    _errorMessage = 'انتهت صلاحية الجلسة. سجّل الدخول مجددًا.';
+    notifyListeners();
+  }
+
   /// Refresh session
   Future<bool> refreshSession() async {
     try {
@@ -153,24 +167,21 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  /// Logout and reset state
+  /// Explicit logout: hide the private workspace immediately.
   Future<void> logout() async {
-    _isLoading = true;
+    _status = AuthStatus.unauthenticated;
+    _currentPrincipal = null;
+    _authResponse = null;
+    _accessibleBusinesses = [];
+    _selectedBusiness = null;
+    _errorMessage = null;
+    _lastRequestId = null;
+    _isLoading = false;
     notifyListeners();
-
     try {
       await authRepository.logout();
     } catch (_) {
-      // Always clear local session even if server request fails
-    } finally {
-      _status = AuthStatus.unauthenticated;
-      _currentPrincipal = null;
-      _authResponse = null;
-      _accessibleBusinesses = [];
-      _selectedBusiness = null;
-      _errorMessage = null;
-      _isLoading = false;
-      notifyListeners();
+      // The repository clears credentials even if server revocation fails.
     }
   }
 
