@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../app/widgets/merchant_editor_dialog.dart';
 import '../../../app/localization/app_localizations.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/models/channel_automation_models.dart';
@@ -58,6 +61,22 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
   }
 
   // ===========================================================================
+  /// Open only provider-issued HTTPS authorization URLs in an external browser.
+  Future<void> _openChannelAuthorization(String? rawUrl) async {
+    final uri = rawUrl == null ? null : Uri.tryParse(rawUrl.trim());
+    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
+      _showErrorSnackBar('رابط الربط غير صالح. أعد محاولة الربط.');
+      return;
+    }
+    try {
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!mounted) return;
+      if (!opened) _showErrorSnackBar('تعذر فتح الرابط. انسخه وافتحه من المتصفح.');
+    } catch (_) {
+      if (mounted) _showErrorSnackBar('تعذر فتح الرابط. يمكنك نسخه يدويًا.');
+    }
+  }
+
   // Dialog: Begin New Channel Connection
   // ===========================================================================
   void _showConnectDialog() {
@@ -72,7 +91,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             String strings(String key) => AppStrings.get(key, context);
-            return AlertDialog(
+            return MerchantEditorDialog(
               title: Text(strings('connect_channel')),
               content: Form(
                 key: formKey,
@@ -87,10 +106,10 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                           border: const OutlineInputBorder(),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 'meta', child: Text('Meta (WhatsApp / Instagram)')),
-                          DropdownMenuItem(value: 'telegram', child: Text('Telegram')),
-                          DropdownMenuItem(value: 'twilio', child: Text('Twilio SMS')),
-                          DropdownMenuItem(value: 'custom', child: Text('Custom Webhook')),
+                          DropdownMenuItem(value: 'meta', child: Text('ميتا — واتساب وإنستغرام')),
+                          DropdownMenuItem(value: 'telegram', child: Text('تليجرام')),
+                          DropdownMenuItem(value: 'twilio', child: Text('Twilio — رسائل نصية')),
+                          DropdownMenuItem(value: 'custom', child: Text('تكامل مخصص')),
                         ],
                         onChanged: (val) {
                           if (val != null) {
@@ -113,17 +132,17 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                         ),
                         items: [
                           if (selectedProvider == 'meta') ...const [
-                            DropdownMenuItem(value: 'whatsapp', child: Text('WhatsApp')),
-                            DropdownMenuItem(value: 'instagram', child: Text('Instagram')),
+                            DropdownMenuItem(value: 'whatsapp', child: Text('واتساب للأعمال')),
+                            DropdownMenuItem(value: 'instagram', child: Text('إنستغرام')),
                           ],
                           if (selectedProvider == 'telegram') ...const [
-                            DropdownMenuItem(value: 'telegram', child: Text('Telegram Bot')),
+                            DropdownMenuItem(value: 'telegram', child: Text('تليجرام بوت')),
                           ],
                           if (selectedProvider == 'twilio') ...const [
-                            DropdownMenuItem(value: 'sms', child: Text('SMS')),
+                            DropdownMenuItem(value: 'sms', child: Text('الرسائل النصية')),
                           ],
                           if (selectedProvider == 'custom') ...const [
-                            DropdownMenuItem(value: 'webhook', child: Text('Webhook')),
+                            DropdownMenuItem(value: 'webhook', child: Text('تكامل مخصص')),
                           ],
                         ],
                         onChanged: (val) {
@@ -137,7 +156,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                         controller: nameController,
                         decoration: InputDecoration(
                           labelText: strings('channel_display_name'),
-                          hintText: 'e.g. Support WhatsApp Line',
+                          hintText: 'مثال: واتساب خدمة العملاء',
                           border: const OutlineInputBorder(),
                         ),
                       ),
@@ -192,6 +211,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
       builder: (ctx) {
         String strings(String key) => AppStrings.get(key, context);
         return AlertDialog(
+          scrollable: true,
           title: Text(strings('provisioning_started')),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -199,12 +219,38 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
             children: [
               Text('ID: ${provisioning.provisioningId}', style: const TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              Text('Status: ${provisioning.status}'),
+              Text('الحالة: ${_channelStatusLabel(provisioning.status)}'),
               if (provisioning.authorizationUrl != null) ...[
                 const SizedBox(height: 12),
-                Text(
-                  '${strings('open_authorization_url')}:\n${provisioning.authorizationUrl}',
+                Text(strings('open_authorization_url')),
+                const SizedBox(height: 8),
+                SelectableText(
+                  provisioning.authorizationUrl!,
                   style: const TextStyle(color: AppColors.primary, fontSize: 13),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FilledButton.icon(
+                      key: const Key('btn_open_channel_authorization'),
+                      onPressed: () => _openChannelAuthorization(
+                        provisioning.authorizationUrl),
+                      icon: const Icon(Icons.open_in_new_rounded),
+                      label: const Text('فتح رابط الربط'),
+                    ),
+                    OutlinedButton.icon(
+                      key: const Key('btn_copy_channel_authorization'),
+                      onPressed: () async {
+                        await Clipboard.setData(ClipboardData(
+                          text: provisioning.authorizationUrl!));
+                        if (mounted) _showSuccessSnackBar('تم نسخ رابط الربط');
+                      },
+                      icon: const Icon(Icons.copy_rounded),
+                      label: const Text('نسخ الرابط'),
+                    ),
+                  ],
                 ),
               ],
             ],
@@ -224,7 +270,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
   // Dialog: Reconnect Channel
   // ===========================================================================
   void _showReconnectDialog(ChannelConnection connection) {
-    final reasonController = TextEditingController(text: 'Routine reconnect or credential refresh');
+    final reasonController = TextEditingController(text: 'إعادة توثيق اتصال القناة');
     final formKey = GlobalKey<FormState>();
 
     showDialog(
@@ -243,7 +289,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                 TextFormField(
                   controller: reasonController,
                   decoration: const InputDecoration(
-                    labelText: 'Reason',
+                    labelText: 'سبب الإجراء',
                     border: OutlineInputBorder(),
                   ),
                   validator: (val) {
@@ -292,7 +338,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
   // Dialog: Disconnect Channel
   // ===========================================================================
   void _showDisconnectDialog(ChannelConnection connection) {
-    final reasonController = TextEditingController(text: 'Maintenance disconnect');
+    final reasonController = TextEditingController(text: 'فصل القناة مؤقتًا للصيانة');
     final formKey = GlobalKey<FormState>();
 
     showDialog(
@@ -311,7 +357,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> {
                 TextFormField(
                   controller: reasonController,
                   decoration: const InputDecoration(
-                    labelText: 'Reason',
+                    labelText: 'سبب الإجراء',
                     border: OutlineInputBorder(),
                   ),
                   validator: (val) {

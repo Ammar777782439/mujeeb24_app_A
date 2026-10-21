@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:mujeeb24_app/core/services/deep_link_service.dart';
+import 'package:mujeeb24_app/core/auth/refresh_cookie_store.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:mujeeb24_app/app/localization/app_localizations.dart';
 import 'package:mujeeb24_app/app/theme/app_theme.dart';
@@ -63,11 +64,14 @@ class _MujeebAppState extends State<MujeebApp> {
   final DeepLinkService _deepLinkService = DeepLinkService();
   String? _incomingInvitationToken;
   AppRoute _currentRoute = AppRoute.login;
+  bool _restoringSavedSession = true;
 
   @override
   void initState() {
     super.initState();
-    _apiClient = widget.apiClient ?? ApiClient();
+    _apiClient = widget.apiClient ?? ApiClient(
+      cookieStore: SecureRefreshCookieStore(),
+    );
     _authRepository = AuthRepository(apiClient: _apiClient);
     _workspaceRepository = WorkspaceRepository(apiClient: _apiClient);
     _merchantRepository = MerchantRepository(apiClient: _apiClient);
@@ -103,6 +107,7 @@ class _MujeebAppState extends State<MujeebApp> {
 
     _apiClient.onSessionExpired = _authProvider.markSessionExpired;
     _authProvider.addListener(_handleAuthStateChange);
+    unawaited(_restoreSessionAtStartup());
     _localeProvider.addListener(() => setState(() {}));
     unawaited(_deepLinkService.init(onInvitationReceived: (token) {
       if (!mounted) return;
@@ -129,6 +134,20 @@ class _MujeebAppState extends State<MujeebApp> {
     super.dispose();
   }
 
+  Future<void> _restoreSessionAtStartup() async {
+    try {
+      await _apiClient.restoreRefreshCookie();
+      if (_apiClient.refreshCookie?.isNotEmpty == true &&
+          _apiClient.accessToken == null) {
+        await _authProvider.initSession();
+      }
+    } catch (_) {
+      // An unavailable Keystore/Keychain must never crash the login screen.
+    } finally {
+      if (mounted) setState(() => _restoringSavedSession = false);
+    }
+  }
+
   void _handleAuthStateChange() {
     if (!mounted) return;
     setState(() {
@@ -151,6 +170,19 @@ class _MujeebAppState extends State<MujeebApp> {
 
   @override
   Widget build(BuildContext context) {
+    if (_restoringSavedSession) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          body: Center(
+            child: Semantics(
+              label: 'جاري التحقق من جلسة الدخول',
+              child: const CircularProgressIndicator(),
+            ),
+          ),
+        ),
+      );
+    }
     return MaterialApp(
       title: 'Mujeeb 24',
       debugShowCheckedModeBanner: false,

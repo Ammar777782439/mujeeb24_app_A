@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../app/localization/app_localizations.dart';
 import '../../../app/theme/app_theme.dart';
+import '../../../app/widgets/merchant_editor_dialog.dart';
 import '../../../core/models/team_audit_models.dart';
 import '../../../core/services/invitation_link_service.dart';
 import '../providers/team_audit_provider.dart';
@@ -240,7 +241,7 @@ class _TeamScreenState extends State<TeamScreen>
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (dialogCtx, setDialogState) => AlertDialog(
+        builder: (dialogCtx, setDialogState) => MerchantEditorDialog(
           title: Text(AppStrings.get('invite_member_title', dialogCtx)),
           content: SizedBox(
             width: 500,

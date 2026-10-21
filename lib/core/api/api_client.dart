@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../errors/api_error.dart';
+import '../auth/refresh_cookie_store.dart';
 
 /// HTTP Client wrapper handling:
 /// - Base URL and path prefixes
@@ -23,14 +24,21 @@ class ApiClient {
   String? _refreshCookie;
   int _sessionEpoch = 0;
   Future<bool?>? _refreshInFlight;
+  final RefreshCookieStore? _cookieStore;
+  Future<void> _cookieWriteQueue = Future<void>.value();
+  bool _cookiePersistenceError = false;
 
   /// Called only after the server rejects the refresh cookie (or none exists).
   /// Never called for an ordinary network outage or server 5xx.
   void Function()? onSessionExpired;
 
-  ApiClient({http.Client? client, String? baseUrl})
-    : baseUrl = normalizeBaseUrl(baseUrl ?? defaultBaseUrl),
-      _client = client ?? http.Client();
+  ApiClient({
+    http.Client? client,
+    String? baseUrl,
+    RefreshCookieStore? cookieStore,
+  }) : baseUrl = normalizeBaseUrl(baseUrl ?? defaultBaseUrl),
+       _client = client ?? http.Client(),
+       _cookieStore = cookieStore;
 
   /// Normalizes base URL ensuring no trailing slashes and appending `/api/v1`
   /// if only the root origin domain is provided.
@@ -47,6 +55,50 @@ class ApiClient {
 
   String? get accessToken => _accessToken;
   String? get refreshCookie => _refreshCookie;
+  bool get refreshCookiePersistenceFailed => _cookiePersistenceError;
+
+  /// Serialize writes to avoid restoring a revoked/rotated cookie. Storage
+  /// failures never trigger a plaintext fallback and never expose cookie data.
+  void _queueCookieWrite(String? value) {
+    final store = _cookieStore;
+    if (store == null) return;
+    _cookieWriteQueue = _cookieWriteQueue.then((_) async {
+      try {
+        if (value == null) {
+          await store.delete();
+        } else {
+          await store.write(value);
+        }
+        _cookiePersistenceError = false;
+      } catch (_) {
+        _cookiePersistenceError = true;
+      }
+    });
+  }
+
+  Future<void> flushCookiePersistence() => _cookieWriteQueue;
+
+  /// Only call during application bootstrap, before any interactive login.
+  /// An in-flight storage read cannot replace a more recent login/logout.
+  Future<void> restoreRefreshCookie() async {
+    final store = _cookieStore;
+    if (store == null) return;
+    final epoch = _sessionEpoch;
+    await _cookieWriteQueue;
+    if (epoch != _sessionEpoch || _refreshCookie != null) return;
+    try {
+      final restored = await store.read();
+      if (epoch != _sessionEpoch || _refreshCookie != null) return;
+      if (restored != null &&
+          RegExp(r'^mujeeb_refresh=[^;\s]+$').hasMatch(restored)) {
+        _refreshCookie = restored;
+      } else if (restored != null) {
+        _queueCookieWrite(null);
+      }
+    } catch (_) {
+      _cookiePersistenceError = true;
+    }
+  }
 
   void setAccessToken(String? token) {
     // A deliberate login replaces any previously in-flight refresh generation.
@@ -57,6 +109,7 @@ class ApiClient {
 
   void setRefreshCookie(String? cookie) {
     _refreshCookie = cookie;
+    _queueCookieWrite(cookie);
   }
 
   void clearSession() {
@@ -65,6 +118,7 @@ class ApiClient {
     _refreshInFlight = null;
     _accessToken = null;
     _refreshCookie = null;
+    _queueCookieWrite(null);
   }
 
   Uri _resolveUri(String path, [Map<String, dynamic>? queryParameters]) {
@@ -119,9 +173,9 @@ class ApiClient {
     final value = match.group(1) ?? '';
     if (value.isEmpty || RegExp(r'max-age=0', caseSensitive: false)
         .hasMatch(header)) {
-      _refreshCookie = null;
+      setRefreshCookie(null);
     } else {
-      _refreshCookie = 'mujeeb_refresh=$value';
+      setRefreshCookie('mujeeb_refresh=$value');
     }
   }
 
@@ -156,6 +210,8 @@ class ApiClient {
       final access = data['access_token'];
       if (access is! String || access.isEmpty) return null;
       _accessToken = access;
+      await flushCookiePersistence();
+      if (requestEpoch != _sessionEpoch) return false;
       return true;
     } on ApiErrorEnvelope catch (error) {
       if (error.statusCode == 401 || error.statusCode == 403) {
