@@ -1,7 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mujeeb24_app/core/models/catalog_models.dart';
+import 'package:mujeeb24_app/core/api/api_client.dart';
+import 'package:mujeeb24_app/core/catalog/catalog_repository.dart';
+import 'package:mujeeb24_app/features/catalog/providers/catalog_provider.dart';
+import 'package:mujeeb24_app/features/catalog/presentation/catalog_item_form_screen.dart';
 import 'package:mujeeb24_app/features/catalog/presentation/catalog_specification_input.dart';
+
+class _MerchantCatalogRepository extends CatalogRepository {
+  _MerchantCatalogRepository() : super(apiClient: ApiClient(baseUrl: 'https://mock.local'));
+
+  @override
+  Future<CatalogEntityContract> getCatalogEntityContract({
+    required String businessId,
+  }) async => CatalogEntityContract.defaults();
+
+  @override
+  Future<List<AttributeSchema>> listAttributeSchemas({
+    required String businessId,
+    String? name,
+    int? version,
+  }) async => [];
+}
 
 void main() {
   const definition = AttributeDefinition(
@@ -104,4 +124,61 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+  test('Complete Offer update includes explicit nullable fields when requested', () {
+    const request = UpdateOfferRequest(
+      name: 'سعر جديد',
+      pricingMode: 'quote_required',
+      availabilityMode: 'unknown',
+      availabilityStatus: 'requires_check',
+      fulfillmentMode: 'manual',
+      status: 'draft',
+      sendNullableFields: true,
+    );
+    final json = request.toJson();
+    expect(json['name'], 'سعر جديد');
+    expect(json.containsKey('variant_id'), isTrue);
+    expect(json['amount'], isNull);
+    expect(json['currency'], isNull);
+    expect(json.containsKey('pricing_unit'), isTrue);
+    expect(json['validity_from'], isNull);
+    expect(json['validity_until'], isNull);
+  });
+
+  for (final size in [
+    const Size(320, 640),
+    const Size(390, 844),
+    const Size(640, 360),
+  ]) {
+    testWidgets('Real Arabic catalog form scrolls at ' + size.toString(),
+        (tester) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      final provider = CatalogProvider(catalogRepository: _MerchantCatalogRepository());
+      addTearDown(provider.dispose);
+      await tester.pumpWidget(MaterialApp(
+        locale: const Locale('ar'),
+        home: MediaQuery(
+          data: MediaQueryData(
+            size: size,
+            textScaler: const TextScaler.linear(1.3),
+          ),
+          child: CatalogItemFormScreen(
+            catalogProvider: provider,
+            businessId: 'merchant',
+            catalogId: 'catalog',
+            businessCurrency: 'YER',
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.byType(CatalogItemFormScreen), findsOneWidget);
+      expect(provider.hasLoadedContract, isTrue);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
 }
