@@ -446,9 +446,19 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
         child: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
           children: [
             if (!_isEditing) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: (_step + 1) / 3,
+                  minHeight: 5,
+                  backgroundColor: AppColors.borderHairline,
+                ),
+              ),
+              const SizedBox(height: 12),
               Text('الخطوة ${_step + 1} من 3',
                 style: const TextStyle(color: AppColors.primary,
                   fontWeight: FontWeight.bold)),
@@ -526,8 +536,11 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
             TextFormField(
               controller: _shortDescController,
               enabled: !isBusy,
-              maxLines: 2,
+              minLines: 1,
+              maxLines: 3,
+              textInputAction: TextInputAction.newline,
               decoration: InputDecoration(
+                hintText: 'وصف قصير يساعد العميل يفهم ما تقدمه',
                 labelText: strings('short_description'),
                 border: const OutlineInputBorder(),
               ),
@@ -538,8 +551,11 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
             TextFormField(
               controller: _longDescController,
               enabled: !isBusy,
-              maxLines: 4,
+              minLines: 1,
+              maxLines: 5,
+              textInputAction: TextInputAction.newline,
               decoration: InputDecoration(
+                hintText: 'أضف التفاصيل التي يحتاج العميل إلى معرفتها',
                 labelText: strings('long_description'),
                 border: const OutlineInputBorder(),
               ),
@@ -905,41 +921,54 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                 style: TextStyle(color: AppColors.textMuted)),
               const SizedBox(height: 20),
             ],
-            // Submit Button
-            if (!_isEditing && _step > 0)
-              OutlinedButton(onPressed: isBusy ? null : () => setState(() => _step--),
-                child: const Text('السابق')),
-            ElevatedButton(
-              onPressed: isBusy ? null : (_isEditing || _step == 2 ? _submit : _nextStep),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: isBusy
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text(
-                      _isEditing
-                          ? strings('save_changes')
-                          : (_step == 2 ? 'احفظ المنتج' : 'التالي'),
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.bold),
-                    ),
-            ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
           ],
         ),
       ),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+          decoration: const BoxDecoration(
+            color: AppColors.surfaceCanvas,
+            border: Border(top: BorderSide(color: AppColors.borderHairline)),
+          ),
+          child: Row(
+            children: [
+              if (!_isEditing && _step > 0) ...[
+                OutlinedButton.icon(
+                  onPressed: isBusy ? null : () => setState(() => _step--),
+                  icon: const Icon(Icons.arrow_forward_rounded),
+                  label: const Text('السابق'),
+                ),
+                const SizedBox(width: 12),
+              ],
+              Expanded(
+                child: FilledButton(
+                  onPressed: isBusy
+                      ? null
+                      : (_isEditing || _step == 2 ? _submit : _nextStep),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 52),
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: isBusy
+                      ? const SizedBox(
+                          width: 21, height: 21,
+                          child: CircularProgressIndicator(strokeWidth: 2,
+                            color: Colors.white))
+                      : Text(_isEditing
+                          ? strings('save_changes')
+                          : _step == 2 ? 'حفظ المنتج' : 'متابعة',
+                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
