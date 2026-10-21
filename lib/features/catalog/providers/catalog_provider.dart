@@ -62,6 +62,8 @@ class CatalogProvider extends ChangeNotifier {
   String? _itemDetailError;
   String? _variantsError;
   String? _offersError;
+  bool _isLoadingVariants = false;
+  bool _isLoadingOffers = false;
 
   List<Variant> get variants => _variants;
   List<Offer> get offers => _offers;
@@ -73,6 +75,8 @@ class CatalogProvider extends ChangeNotifier {
   String? get itemDetailError => _itemDetailError;
   String? get variantsError => _variantsError;
   String? get offersError => _offersError;
+  bool get isLoadingVariants => _isLoadingVariants;
+  bool get isLoadingOffers => _isLoadingOffers;
 
   // ==========================================
   // Attribute Schemas & Entity Contract
@@ -456,6 +460,7 @@ class CatalogProvider extends ChangeNotifier {
   /// Separately retry product variations without reloading or losing the item.
   Future<void> refreshVariants(String businessId, String itemId) async {
     _variantsError = null;
+    _isLoadingVariants = true;
     notifyListeners();
     try {
       final page = await catalogRepository.listVariants(
@@ -468,6 +473,7 @@ class CatalogProvider extends ChangeNotifier {
       if (_selectedItem?.id != itemId) return;
       _variantsError = 'تعذر تحميل متغيرات المنتج. يمكنك إعادة المحاولة.';
     } finally {
+      _isLoadingVariants = false;
       notifyListeners();
     }
   }
@@ -475,6 +481,7 @@ class CatalogProvider extends ChangeNotifier {
   /// An offers failure must not hide the product or its variations.
   Future<void> refreshOffers(String businessId, String itemId) async {
     _offersError = null;
+    _isLoadingOffers = true;
     notifyListeners();
     try {
       final page = await catalogRepository.listOffers(
@@ -487,6 +494,7 @@ class CatalogProvider extends ChangeNotifier {
       if (_selectedItem?.id != itemId) return;
       _offersError = 'تعذر تحميل عروض وأسعار المنتج. أعد المحاولة.';
     } finally {
+      _isLoadingOffers = false;
       notifyListeners();
     }
   }
