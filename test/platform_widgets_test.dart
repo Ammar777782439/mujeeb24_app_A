@@ -558,8 +558,11 @@ void main() {
       await tester.tap(find.byKey(const Key('merchant_more_actions')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('btn_appbar_platform')), findsNothing);
+      // Close the first popup route before switching the mocked user.
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
 
-      // 2. For platform admin: platform icon in AppBar appears
+      // 2. For platform admin: platform item is available only to admins
       await tester.pumpWidget(
         _wrapWithApp(
           MerchantHomeScreen(
