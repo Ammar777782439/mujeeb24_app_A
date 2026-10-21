@@ -51,6 +51,7 @@ class ApiClient {
   void setAccessToken(String? token) {
     // A deliberate login replaces any previously in-flight refresh generation.
     _sessionEpoch++;
+    _refreshInFlight = null;
     _accessToken = token;
   }
 
@@ -61,6 +62,7 @@ class ApiClient {
   void clearSession() {
     // A late refresh response must never log the user back in after logout.
     _sessionEpoch++;
+    _refreshInFlight = null;
     _accessToken = null;
     _refreshCookie = null;
   }
@@ -206,6 +208,13 @@ class ApiClient {
             message: 'تعذر تجديد الجلسة مؤقتًا. تحقق من الاتصال ثم أعد المحاولة.',
           );
         }
+      }
+      if (requestEpoch != _sessionEpoch) {
+        throw ApiErrorEnvelope.fromRaw(
+          code: 'SESSION_CHANGED',
+          message: 'انتهت الجلسة السابقة. أعد تسجيل الدخول.',
+          statusCode: 401,
+        );
       }
       return _processResponse(response);
     } on ApiErrorEnvelope {
