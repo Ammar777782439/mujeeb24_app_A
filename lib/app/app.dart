@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:mujeeb24_app/core/services/deep_link_service.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:mujeeb24_app/app/localization/app_localizations.dart';
 import 'package:mujeeb24_app/app/theme/app_theme.dart';
@@ -57,6 +60,8 @@ class _MujeebAppState extends State<MujeebApp> {
   late final PlatformProvider _platformProvider;
   final AppLocaleProvider _localeProvider = AppLocaleProvider();
 
+  final DeepLinkService _deepLinkService = DeepLinkService();
+  String? _incomingInvitationToken;
   AppRoute _currentRoute = AppRoute.login;
 
   @override
@@ -98,6 +103,13 @@ class _MujeebAppState extends State<MujeebApp> {
 
     _authProvider.addListener(_handleAuthStateChange);
     _localeProvider.addListener(() => setState(() {}));
+    unawaited(_deepLinkService.init(onInvitationReceived: (token) {
+      if (!mounted) return;
+      setState(() {
+        _incomingInvitationToken = token;
+        _currentRoute = AppRoute.invitation;
+      });
+    }));
   }
 
   @override
@@ -111,6 +123,7 @@ class _MujeebAppState extends State<MujeebApp> {
     _channelAutomationProvider.dispose();
     _teamAuditProvider.dispose();
     _platformProvider.dispose();
+    _deepLinkService.dispose();
     _localeProvider.dispose();
     super.dispose();
   }
@@ -155,7 +168,9 @@ class _MujeebAppState extends State<MujeebApp> {
     switch (_currentRoute) {
       case AppRoute.invitation:
         return InvitationScreen(
+          key: ValueKey(_incomingInvitationToken),
           authProvider: _authProvider,
+          initialToken: _incomingInvitationToken,
           onBackToLogin: () {
             setState(() => _currentRoute = AppRoute.login);
           },
@@ -198,7 +213,10 @@ class _MujeebAppState extends State<MujeebApp> {
             _handleAuthStateChange();
           },
           onNavigateToInvitation: () {
-            setState(() => _currentRoute = AppRoute.invitation);
+            setState(() {
+              _incomingInvitationToken = null;
+              _currentRoute = AppRoute.invitation;
+            });
           },
         );
     }
