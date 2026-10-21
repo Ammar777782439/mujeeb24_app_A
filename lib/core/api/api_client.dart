@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../errors/api_error.dart';
+import '../auth/refresh_cookie_store.dart';
 
 /// HTTP Client wrapper handling:
 /// - Base URL and path prefixes
@@ -18,6 +19,8 @@ class ApiClient {
   );
 
   final http.Client _client;
+  final RefreshCookieStore? _cookieStore;
+  Future<void> _storageQueue = Future<void>.value();
   String baseUrl;
   String? _accessToken;
   String? _refreshCookie;
@@ -28,9 +31,13 @@ class ApiClient {
   /// Never called for an ordinary network outage or server 5xx.
   void Function()? onSessionExpired;
 
-  ApiClient({http.Client? client, String? baseUrl})
-    : baseUrl = normalizeBaseUrl(baseUrl ?? defaultBaseUrl),
-      _client = client ?? http.Client();
+  ApiClient({
+    http.Client? client,
+    String? baseUrl,
+    RefreshCookieStore? cookieStore,
+  })  : baseUrl = normalizeBaseUrl(baseUrl ?? defaultBaseUrl),
+        _cookieStore = cookieStore,
+        _client = client ?? http.Client();
 
   /// Normalizes base URL ensuring no trailing slashes and appending `/api/v1`
   /// if only the root origin domain is provided.
@@ -47,6 +54,46 @@ class ApiClient {
 
   String? get accessToken => _accessToken;
   String? get refreshCookie => _refreshCookie;
+
+  /// Restore only an opaque cookie from platform encrypted storage.
+  /// Never restore a previously issued access token or stale principal data.
+  Future<bool> restorePersistedRefreshCookie() async {
+    final store = _cookieStore;
+    if (store == null) return false;
+    final epoch = _sessionEpoch;
+    try {
+      await _storageQueue;
+      final saved = await store.read();
+      if (epoch != _sessionEpoch) return false;
+      if (saved == null || !saved.startsWith('mujeeb_refresh=')) return false;
+      _refreshCookie = saved;
+      return true;
+    } catch (_) {
+      // Device key might be unavailable after a backup/OS credential change.
+      // Fail closed: never attempt to recover cookies from plaintext.
+      return false;
+    }
+  }
+
+  /// Serialize storage updates so old cookie writes cannot undo a later logout.
+  Future<void> persistRefreshCookie() {
+    final store = _cookieStore;
+    if (store == null) return Future<void>.value();
+    final epoch = _sessionEpoch;
+    final cookie = _refreshCookie;
+    final operation = _storageQueue.then((_) async {
+      if (epoch != _sessionEpoch) return;
+      if (cookie == null) {
+        await store.delete();
+      } else {
+        await store.write(cookie);
+      }
+    });
+    _storageQueue = operation.catchError((Object _) {});
+    return operation;
+  }
+
+  Future<void> deletePersistedSession() => persistRefreshCookie();
 
   void setAccessToken(String? token) {
     // A deliberate login replaces any previously in-flight refresh generation.
@@ -128,6 +175,7 @@ class ApiClient {
   void _expireAuthenticatedSession(int requestEpoch) {
     if (requestEpoch != _sessionEpoch) return;
     clearSession();
+    unawaited(deletePersistedSession().catchError((Object _) {}));
     onSessionExpired?.call();
   }
 
@@ -149,6 +197,12 @@ class ApiClient {
       }
       final result = _processResponse(response);
       if (requestEpoch != _sessionEpoch) return false;
+      try {
+        await persistRefreshCookie();
+      } catch (_) {
+        // Refresh succeeded in memory, but encrypted disk persistence failed.
+        // Do not fall back to an unencrypted store.
+      }
       if (result is! Map || result['data'] is! Map) {
         return null; // malformed refresh response; keep existing session
       }
@@ -216,7 +270,16 @@ class ApiClient {
           statusCode: 401,
         );
       }
-      return _processResponse(response);
+      final previousCookie = _refreshCookie;
+      final result = _processResponse(response);
+      if (_refreshCookie != previousCookie) {
+        try {
+          await persistRefreshCookie();
+        } catch (_) {
+          // A transient secure-store failure must not leak tokens to disk.
+        }
+      }
+      return result;
     } on ApiErrorEnvelope {
       rethrow;
     } on NetworkException {
