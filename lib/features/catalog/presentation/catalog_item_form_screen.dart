@@ -52,6 +52,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
   String? _availabilityStatus;
   bool _saveInitialOffer = true;
   int _step = 0;
+  bool _customItemType = false;
 
   late String _selectedPricingMode;
   late String _selectedAvailabilityMode;
@@ -138,6 +139,11 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
 
   void _nextStep() {
     if (_step == 0 && !_formKey.currentState!.validate()) return;
+    if (_step == 0 && _itemTypeController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('اختر نوع المنتج أو الخدمة')));
+      return;
+    }
     if (_step == 1 && _saveInitialOffer) {
       final amount = double.tryParse(_amountController.text.trim());
       final needsAmount = _selectedPricingMode != 'quote_required' &&
@@ -332,23 +338,57 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Item Type
-            TextFormField(
-              controller: _itemTypeController,
-              enabled: !isBusy,
-              decoration: InputDecoration(
-                labelText: '${strings('item_type')} *',
-                hintText: strings('item_type_hint'),
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.category_rounded),
+            // Show a human-friendly item type, while preserving its API value.
+            if (_isEditing) ...[
+              TextFormField(
+                controller: _itemTypeController,
+                enabled: !isBusy,
+                decoration: const InputDecoration(
+                  labelText: 'نوع المنتج أو الخدمة',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? strings('required_field') : null,
               ),
-              validator: (val) {
-                if (val == null || val.trim().isEmpty) {
-                  return strings('required_field');
-                }
-                return null;
-              },
-            ),
+            ] else ...[
+              DropdownButtonFormField<String>(
+                initialValue: 'product',
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'ما الذي تقدمه؟',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'product', child: Text('منتج')),
+                  DropdownMenuItem(value: 'service', child: Text('خدمة')),
+                  DropdownMenuItem(value: 'consultation', child: Text('استشارة')),
+                  DropdownMenuItem(value: 'booking', child: Text('حجز')),
+                  DropdownMenuItem(value: 'real_estate', child: Text('عقار')),
+                  DropdownMenuItem(value: 'course', child: Text('دورة')),
+                  DropdownMenuItem(value: 'subscription', child: Text('اشتراك')),
+                  DropdownMenuItem(value: 'custom', child: Text('نوع آخر')),
+                ],
+                onChanged: isBusy ? null : (value) {
+                  if (value == null) return;
+                  setState(() {
+                    _customItemType = value == 'custom';
+                    _itemTypeController.text = _customItemType ? '' : value;
+                  });
+                },
+              ),
+              if (_customItemType) ...[
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _itemTypeController,
+                  decoration: const InputDecoration(
+                    labelText: 'اسم النوع', hintText: 'اكتب النوع الذي يناسب نشاطك',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (v) => v == null || v.trim().isEmpty
+                      ? strings('required_field') : null,
+                ),
+              ],
+            ],
             const SizedBox(height: 16),
 
             // Short Description
