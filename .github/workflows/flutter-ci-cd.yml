@@ -177,17 +177,23 @@ jobs:
           echo 'Release keystore and expected signing certificate verified.'
           echo 'signing_profile=production' >> "$GITHUB_OUTPUT"
 
-      - name: Determine API Base URL Argument
+      - name: Validate API endpoint without shell interpolation
         id: api_args
+        shell: bash
+        env:
+          INPUT_API_BASE_URL: ${{ inputs.api_base_url }}
+          SECRET_API_BASE_URL: ${{ secrets.API_BASE_URL }}
         run: |
-          CUSTOM_URL="${{ inputs.api_base_url }}"
-          SECRET_URL="${{ secrets.API_BASE_URL }}"
-          if [ -n "$CUSTOM_URL" ]; then
-            echo "dart_define=--dart-define=API_BASE_URL=$CUSTOM_URL" >> "$GITHUB_OUTPUT"
-          elif [ -n "$SECRET_URL" ]; then
-            echo "dart_define=--dart-define=API_BASE_URL=$SECRET_URL" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          endpoint="${INPUT_API_BASE_URL:-${SECRET_API_BASE_URL:-}}"
+          if [[ -n "$endpoint" ]]; then
+            if [[ ! "$endpoint" =~ ^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/api/v1)?/?$ ]]; then
+              echo '::error::API base URL must be HTTPS with an optional /api/v1 path.'
+              exit 1
+            fi
+            printf 'dart_define=--dart-define=API_BASE_URL=%s\n' "$endpoint" >> "$GITHUB_OUTPUT"
           else
-            echo "dart_define=" >> "$GITHUB_OUTPUT"
+            echo 'dart_define=' >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build Android Release APK
