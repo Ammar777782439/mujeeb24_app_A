@@ -16,6 +16,14 @@ class CatalogCurrencySelect extends StatefulWidget {
 }
 
 class _CatalogCurrencySelectState extends State<CatalogCurrencySelect> {
+  bool _customSelected = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _customSelected = isCustom;
+  }
+
   static const names = <String, String>{
     'AED': 'درهم إماراتي',
     'AFN': 'أفغاني',
@@ -185,7 +193,7 @@ class _CatalogCurrencySelectState extends State<CatalogCurrencySelect> {
   @override
   Widget build(BuildContext context) {
     final code = widget.controller.text.trim().toUpperCase();
-    final selected = isCustom ? '__custom' :
+    final selected = (_customSelected || isCustom) ? '__custom' :
       code.isEmpty ? null : code;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,8 +222,10 @@ class _CatalogCurrencySelectState extends State<CatalogCurrencySelect> {
             if (value == null) return;
             setState(() {
               if (value == '__custom') {
+                _customSelected = true;
                 if (!isCustom) widget.controller.clear();
               } else {
+                _customSelected = false;
                 widget.controller.text = value;
               }
             });
