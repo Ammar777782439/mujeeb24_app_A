@@ -433,21 +433,32 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
   // Offer Dialogs
   // ==========================================
 
-  void _showAddOfferDialog() {
-    final nameController = TextEditingController(text: 'السعر الأساسي');
-    final amountController = TextEditingController();
-    final currencyController = TextEditingController(text: widget.businessCurrency ?? '');
-    final pricingUnitController = TextEditingController();
+  void _showAddOfferDialog() => _showOfferDialog();
+  void _showEditOfferDialog(Offer offer) => _showOfferDialog(existing: offer);
+
+  void _showOfferDialog({Offer? existing}) {
+    final nameController = TextEditingController(
+      text: existing?.name ?? 'السعر الأساسي');
+    final amountController = TextEditingController(
+      text: existing?.amount?.toString() ?? '');
+    final currencyController = TextEditingController(
+      text: existing?.currency ?? widget.businessCurrency ?? '');
+    final pricingUnitController = TextEditingController(
+      text: existing?.pricingUnit ?? '');
+    final validityFromController = TextEditingController(
+      text: existing?.validityFrom ?? '');
+    final validityUntilController = TextEditingController(
+      text: existing?.validityUntil ?? '');
     final formKey = GlobalKey<FormState>();
 
-    String pricingMode = widget.catalogProvider.selectedItem?.pricingMode ?? 'fixed';
+    String pricingMode = existing?.pricingMode ?? widget.catalogProvider.selectedItem?.pricingMode ?? 'fixed';
     String availabilityMode =
-        widget.catalogProvider.selectedItem?.availabilityMode ?? 'unknown';
-    String? availabilityStatus;
+        existing?.availabilityMode ?? widget.catalogProvider.selectedItem?.availabilityMode ?? 'unknown';
+    String? availabilityStatus = existing?.availabilityStatus;
     String fulfillmentMode =
-        widget.catalogProvider.selectedItem?.fulfillmentMode ?? 'manual';
-    String? selectedVariantId;
-    String status = 'active';
+        existing?.fulfillmentMode ?? widget.catalogProvider.selectedItem?.fulfillmentMode ?? 'manual';
+    String? selectedVariantId = existing?.variantId;
+    String status = existing?.status ?? 'active';
     String? offerError;
     bool isSaving = false;
 
@@ -461,7 +472,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: Text(strings('add_offer')),
+              title: Text(existing == null ? strings('add_offer') : strings('edit_offer')),
               content: Form(
                 key: formKey,
                 child: SingleChildScrollView(
@@ -638,6 +649,54 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                           if (value != null) setDialogState(() => status = value);
                         },
                       ),
+                      if (existing != null) ...[
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: validityFromController,
+                          readOnly: true,
+                          decoration: const InputDecoration(
+                            labelText: 'بداية صلاحية السعر (اختياري)',
+                            suffixIcon: Icon(Icons.event_outlined)),
+                          onTap: () async {
+                            final initial = DateTime.tryParse(validityFromController.text)
+                              ?? DateTime.now();
+                            final date = await showDatePicker(
+                              context: context, initialDate: initial,
+                              firstDate: DateTime(1900), lastDate: DateTime(2100));
+                            if (date == null || !context.mounted) return;
+                            final time = await showTimePicker(
+                              context: context, initialTime: TimeOfDay.fromDateTime(initial));
+                            if (time == null) return;
+                            final selected = DateTime(date.year, date.month,
+                              date.day, time.hour, time.minute);
+                            setDialogState(() => validityFromController.text =
+                              selected.toUtc().toIso8601String());
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: validityUntilController,
+                          readOnly: true,
+                          decoration: const InputDecoration(
+                            labelText: 'نهاية صلاحية السعر (اختياري)',
+                            suffixIcon: Icon(Icons.event_outlined)),
+                          onTap: () async {
+                            final initial = DateTime.tryParse(validityUntilController.text)
+                              ?? DateTime.now();
+                            final date = await showDatePicker(
+                              context: context, initialDate: initial,
+                              firstDate: DateTime(1900), lastDate: DateTime(2100));
+                            if (date == null || !context.mounted) return;
+                            final time = await showTimePicker(
+                              context: context, initialTime: TimeOfDay.fromDateTime(initial));
+                            if (time == null) return;
+                            final selected = DateTime(date.year, date.month,
+                              date.day, time.hour, time.minute);
+                            setDialogState(() => validityUntilController.text =
+                              selected.toUtc().toIso8601String());
+                          },
+                        ),
+                      ],
                       if (offerError != null)
                         Padding(padding: const EdgeInsets.only(top: 8),
                           child: Text(offerError!,
@@ -662,6 +721,14 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                     final requiresAmount = pricingMode != 'quote_required' &&
                         pricingMode != 'dynamic';
                     final hasAmount = amountController.text.trim().isNotEmpty;
+                    final validFrom = DateTime.tryParse(validityFromController.text);
+                    final validUntil = DateTime.tryParse(validityUntilController.text);
+                    if (existing != null && validFrom != null && validUntil != null &&
+                        validFrom.isAfter(validUntil)) {
+                      setDialogState(() => offerError =
+                        'تاريخ بداية السعر لا يمكن أن يكون بعد نهايته.');
+                      return;
+                    }
                     if (availabilityStatus == null ||
                         (requiresAmount && (amount == null || amount < 0)) ||
                         (hasAmount && amount == null) ||
@@ -673,7 +740,8 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                     }
                     setDialogState(() { isSaving = true; offerError = null; });
                     final messenger = ScaffoldMessenger.of(context);
-                    final created = await widget.catalogProvider.createOffer(
+                    final result = existing == null
+                        ? await widget.catalogProvider.createOffer(
                       widget.businessId,
                       widget.itemId,
                       CreateOfferRequest(
@@ -692,14 +760,42 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                         variantId: selectedVariantId,
                         status: status,
                       ),
-                    );
+                    )
+                        : await widget.catalogProvider.updateOffer(
+                          widget.businessId,
+                          existing.id,
+                          UpdateOfferRequest(
+                            name: nameController.text.trim(),
+                            pricingMode: pricingMode,
+                            amount: pricingMode == 'quote_required' ? null : amount,
+                            currency: amount != null && pricingMode != 'quote_required'
+                              ? currencyController.text.trim().toUpperCase() : null,
+                            pricingUnit: pricingUnitController.text.trim().isNotEmpty
+                              ? pricingUnitController.text.trim()
+                              : pricingMode == 'per_person' ? 'person'
+                              : pricingMode == 'per_day' ? 'day' : null,
+                            availabilityMode: availabilityMode,
+                            availabilityStatus: availabilityStatus!,
+                            fulfillmentMode: fulfillmentMode,
+                            variantId: selectedVariantId,
+                            status: status,
+                            validityFrom: validityFromController.text.trim().isEmpty
+                              ? null : validityFromController.text.trim(),
+                            validityUntil: validityUntilController.text.trim().isEmpty
+                              ? null : validityUntilController.text.trim(),
+                            sendNullableFields: true,
+                          ),
+                          ifMatch: existing.resourceVersion,
+                        );
 
                     if (!mounted || !ctx.mounted) return;
-                    if (created != null) {
+                    if (result != null) {
                       Navigator.of(ctx).pop();
                       messenger.showSnackBar(
                         SnackBar(
-                          content: Text(strings('offer_created_success')),
+                          content: Text(existing == null
+                            ? strings('offer_created_success')
+                            : strings('offer_updated_success')),
                           backgroundColor: AppColors.statusSuccess,
                         ),
                       );
@@ -711,160 +807,22 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                       });
                     }
                   },
-                  child: Text(isSaving ? 'جاري الحفظ...' : strings('add_offer')),
+                  child: Text(isSaving ? 'جاري الحفظ...' :
+                    (existing == null ? strings('add_offer') : strings('save_changes'))),
                 ),
               ],
             );
           },
         );
       },
-    );
-  }
-
-  void _showEditOfferDialog(Offer offer) {
-    final nameController = TextEditingController(text: offer.name);
-    final amountController =
-        TextEditingController(text: offer.amount?.toString() ?? '');
-    String selectedAvailabilityStatus = offer.availabilityStatus;
-    String selectedStatus = offer.status;
-    final formKey = GlobalKey<FormState>();
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        String strings(String key) => AppStrings.get(key, context);
-        final contract = widget.catalogProvider.entityContract;
-
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text(strings('edit_offer')),
-              content: Form(
-                key: formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextFormField(
-                        controller: nameController,
-                        decoration: InputDecoration(
-                          labelText: '${strings('offer_name')} *',
-                          border: const OutlineInputBorder(),
-                        ),
-                        validator: (val) {
-                          if (val == null || val.trim().isEmpty) {
-                            return strings('required_field');
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: amountController,
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
-                        decoration: InputDecoration(
-                          labelText: strings('price_amount'),
-                          border: const OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        initialValue: selectedAvailabilityStatus,
-                        decoration: InputDecoration(
-                          labelText: strings('availability_status'),
-                          border: const OutlineInputBorder(),
-                        ),
-                        isExpanded: true,
-                        items: contract.availabilityStatuses.entries.map((e) {
-                          return DropdownMenuItem(
-                            value: e.key,
-                            child: Text('${e.key} - ${e.value}'),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) {
-                            setDialogState(
-                                () => selectedAvailabilityStatus = val);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        initialValue: selectedStatus,
-                        decoration: InputDecoration(
-                          labelText: strings('customer_status'),
-                          border: const OutlineInputBorder(),
-                        ),
-                        isExpanded: true,
-                        items: contract.offerStatuses.entries.map((e) {
-                          return DropdownMenuItem(
-                            value: e.key,
-                            child: Text('${e.key} - ${e.value}'),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) {
-                            setDialogState(() => selectedStatus = val);
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: Text(strings('cancel_action')),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    if (!formKey.currentState!.validate()) return;
-                    Navigator.of(ctx).pop();
-                    final messenger = ScaffoldMessenger.of(context);
-
-                    final amount = double.tryParse(amountController.text.trim());
-                    final updated = await widget.catalogProvider.updateOffer(
-                      widget.businessId,
-                      offer.id,
-                      UpdateOfferRequest(
-                        name: nameController.text.trim(),
-                        amount: amount,
-                        availabilityStatus: selectedAvailabilityStatus,
-                        status: selectedStatus,
-                      ),
-                      ifMatch: offer.resourceVersion,
-                    );
-
-                    if (!mounted) return;
-                    if (updated != null) {
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text(strings('offer_updated_success')),
-                          backgroundColor: AppColors.statusSuccess,
-                        ),
-                      );
-                    } else {
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            widget.catalogProvider.actionError ??
-                                strings('request_failed'),
-                          ),
-                          backgroundColor: AppColors.statusError,
-                        ),
-                      );
-                    }
-                  },
-                  child: Text(strings('save_changes')),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
+    ).whenComplete(() {
+      nameController.dispose();
+      amountController.dispose();
+      currencyController.dispose();
+      pricingUnitController.dispose();
+      validityFromController.dispose();
+      validityUntilController.dispose();
+    });
   }
 
   @override
