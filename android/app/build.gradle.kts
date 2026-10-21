@@ -37,6 +37,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["mujeebAppLabel"] = "مجيب 24 (تجريبي)"
     }
 
     signingConfigs {
@@ -54,6 +55,7 @@ android {
     buildTypes {
         release {
             if (requireReleaseSignature) {
+                manifestPlaceholders["mujeebAppLabel"] = "مجيب 24"
                 signingConfig = signingConfigs.getByName("release")
             } else {
                 // QA-only: use a distinct package so it cannot replace the live app.
