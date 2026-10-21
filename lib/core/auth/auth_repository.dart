@@ -45,14 +45,24 @@ class AuthRepository {
     return authResponse;
   }
 
-  /// POST /auth/logout
+  /// POST /auth/logout. Clear local secrets immediately after dispatch,
+  /// even when the network hangs or the server rejects the logout.
   Future<void> logout() async {
+    final hasSession = (apiClient.accessToken?.isNotEmpty ?? false) ||
+        (apiClient.refreshCookie?.isNotEmpty ?? false);
+    if (!hasSession) {
+      apiClient.clearSession();
+      return;
+    }
+    final remoteLogout = apiClient.post(
+      '/auth/logout',
+      requiresAuth: true,
+      sendCookie: true,
+      timeout: const Duration(seconds: 10),
+    );
+    apiClient.clearSession();
     try {
-      await apiClient.post(
-        '/auth/logout',
-        requiresAuth: true,
-        sendCookie: true,
-      );
+      await remoteLogout;
     } finally {
       apiClient.clearSession();
     }
