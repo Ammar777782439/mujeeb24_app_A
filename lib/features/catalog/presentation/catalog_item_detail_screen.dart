@@ -5,6 +5,7 @@ import '../../../core/models/catalog_models.dart';
 import '../providers/catalog_provider.dart';
 import 'catalog_item_form_screen.dart';
 import 'catalog_specification_input.dart';
+import 'catalog_currency_select.dart';
 
 class _VariantAttributeRow {
   final TextEditingController name;
@@ -519,16 +520,9 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                           ),
                         ),
                         const SizedBox(height: 12),
-                        TextFormField(
-                          controller: currencyController,
-                          maxLength: 3,
-                          textCapitalization: TextCapitalization.characters,
-                          decoration: const InputDecoration(
-                            labelText: 'العملة (ثلاثة أحرف)',
-                            hintText: 'YER أو SAR',
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
+                        CatalogCurrencySelect(
+                          controller: currencyController, enabled: !isSaving),
+
                         const SizedBox(height: 12),
                       ] else
                         const Text('لن يُسجل مبلغ. يحدد السعر بعد معرفة الطلب.'),
