@@ -32,12 +32,12 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="mujeeb24" android:host="invite" />
             </intent-filter>
-            <!-- Deep linking: Web URLs (https://mujeeb24.app/invite) -->
+            <!-- Deep linking: Web URLs (https://mujeeb24.com/invite) -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="mujeeb24.app" android:pathPrefix="/invite" />
+                <data android:scheme="https" android:host="mujeeb24.com" android:pathPrefix="/invite" />
                 <data android:scheme="https" android:host="mujeeb24-api.onrender.com" android:pathPrefix="/invite" />
             </intent-filter>
         </activity>

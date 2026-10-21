@@ -195,6 +195,7 @@ class CatalogItem {
 /// Request body for creating a new CatalogItem.
 @immutable
 class CreateCatalogItemRequest {
+  final CreateOfferRequest? initialOffer;
   final String? attributeSchemaId;
   final String itemType;
   final String name;
@@ -207,6 +208,7 @@ class CreateCatalogItemRequest {
   final Map<String, dynamic> attributes;
 
   const CreateCatalogItemRequest({
+    this.initialOffer,
     this.attributeSchemaId,
     required this.itemType,
     required this.name,
@@ -221,6 +223,7 @@ class CreateCatalogItemRequest {
 
   Map<String, dynamic> toJson() {
     return {
+      if (initialOffer != null) 'initial_offer': initialOffer!.toJson(),
       if (attributeSchemaId != null && attributeSchemaId!.isNotEmpty)
         'attribute_schema_id': attributeSchemaId,
       'item_type': itemType,

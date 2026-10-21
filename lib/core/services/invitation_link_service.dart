@@ -5,7 +5,7 @@ import 'package:share_plus/share_plus.dart';
 /// across mobile applications (WhatsApp, Facebook, Instagram, etc.).
 class InvitationLinkService {
   /// Default web domain used for invitation landing pages
-  static const String defaultWebBaseUrl = 'https://mujeeb24.app/invite';
+  static const String defaultWebBaseUrl = 'https://mujeeb24.com/invite';
 
   /// Custom URI scheme for direct deep linking into the mobile app
   static const String appScheme = 'mujeeb24://invite';

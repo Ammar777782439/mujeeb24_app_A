@@ -9,6 +9,7 @@ class CatalogItemFormScreen extends StatefulWidget {
   final CatalogProvider catalogProvider;
   final String businessId;
   final String catalogId;
+  final String? businessCurrency;
   final CatalogItem? existingItem;
 
   const CatalogItemFormScreen({
@@ -16,6 +17,7 @@ class CatalogItemFormScreen extends StatefulWidget {
     required this.catalogProvider,
     required this.businessId,
     required this.catalogId,
+    this.businessCurrency,
     this.existingItem,
   });
 
@@ -44,6 +46,13 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
   late final TextEditingController _itemTypeController;
   late final TextEditingController _shortDescController;
   late final TextEditingController _longDescController;
+  late final TextEditingController _amountController;
+  late final TextEditingController _currencyController;
+  late final TextEditingController _unitController;
+  String? _availabilityStatus;
+  bool _saveInitialOffer = true;
+  int _step = 0;
+  bool _customItemType = false;
 
   late String _selectedPricingMode;
   late String _selectedAvailabilityMode;
@@ -63,18 +72,21 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
 
     _nameController = TextEditingController(text: item?.name ?? '');
     _itemTypeController =
-        TextEditingController(text: item?.itemType ?? '');
+        TextEditingController(text: item?.itemType ?? 'product');
     _shortDescController =
         TextEditingController(text: item?.shortDescription ?? '');
     _longDescController =
         TextEditingController(text: item?.longDescription ?? '');
 
     _selectedPricingMode = item?.pricingMode ?? 'fixed';
-    _selectedAvailabilityMode = item?.availabilityMode ?? 'stock';
-    _selectedFulfillmentMode = item?.fulfillmentMode ?? 'delivery';
+    _selectedAvailabilityMode = item?.availabilityMode ?? 'unknown';
+    _selectedFulfillmentMode = item?.fulfillmentMode ?? 'manual';
     _selectedStatus = item?.status ?? 'draft';
     _requiresConfirmation = item?.requiresConfirmation ?? false;
     _selectedAttributeSchemaId = item?.attributeSchemaId;
+    _amountController = TextEditingController();
+    _currencyController = TextEditingController(text: widget.businessCurrency ?? '');
+    _unitController = TextEditingController();
 
     if (item != null && item.attributes.isNotEmpty) {
       item.attributes.forEach((k, v) {
@@ -91,6 +103,9 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
     _itemTypeController.dispose();
     _shortDescController.dispose();
     _longDescController.dispose();
+    _amountController.dispose();
+    _currencyController.dispose();
+    _unitController.dispose();
     for (final c in _attributeControllers) {
       c.dispose();
     }
@@ -122,7 +137,35 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
     return map;
   }
 
+  void _nextStep() {
+    if (_step == 0 && !_formKey.currentState!.validate()) return;
+    if (_step == 0 && _itemTypeController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('اختر نوع المنتج أو الخدمة')));
+      return;
+    }
+    if (_step == 1 && _saveInitialOffer) {
+      final amount = double.tryParse(_amountController.text.trim());
+      final needsAmount = _selectedPricingMode != 'quote_required' &&
+          _selectedPricingMode != 'dynamic';
+      final needsUnit = ['per_unit', 'per_person', 'per_day']
+          .contains(_selectedPricingMode);
+      if (_availabilityStatus == null ||
+          (needsAmount && (amount == null || amount <= 0)) ||
+          (_amountController.text.trim().isNotEmpty && amount == null) ||
+          (needsUnit && _unitController.text.trim().isEmpty) ||
+          !RegExp(r'^[A-Za-z]{3}$').hasMatch(_currencyController.text.trim())) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('راجع السعر والعملة وحدد حالة التوفر قبل المتابعة')),
+        );
+        return;
+      }
+    }
+    setState(() => _step++);
+  }
+
   Future<void> _submit() async {
+    if (!_isEditing && _step != 2) return;
     if (!_formKey.currentState!.validate()) return;
 
     String strings(String key) => AppStrings.get(key, context);
@@ -170,6 +213,18 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
             : null,
         attributeSchemaId: _selectedAttributeSchemaId,
         attributes: attributes,
+        initialOffer: _saveInitialOffer ? CreateOfferRequest(
+          name: 'السعر الأساسي',
+          pricingMode: _selectedPricingMode,
+          amount: double.tryParse(_amountController.text.trim()),
+          currency: _currencyController.text.trim().toUpperCase(),
+          pricingUnit: _unitController.text.trim().isEmpty
+              ? null : _unitController.text.trim(),
+          availabilityMode: _selectedAvailabilityMode,
+          availabilityStatus: _availabilityStatus!,
+          fulfillmentMode: _selectedFulfillmentMode,
+          status: 'active',
+        ) : null,
       );
 
       result = await widget.catalogProvider.createCatalogItem(
@@ -255,6 +310,16 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
               ),
             ],
 
+            if (!_isEditing) ...[
+              Text('الخطوة ' + (_step + 1).toString() + ' من 3',
+                style: const TextStyle(color: AppColors.primary,
+                  fontWeight: FontWeight.bold)),
+              Text(const [
+                'ما الذي تقدمه؟', 'السعر والتوفر', 'راجع واحفظ',
+              ][_step], style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 18),
+            ],
+            if (_isEditing || _step == 0) ...[
             // Item Name
             TextFormField(
               controller: _nameController,
@@ -273,140 +338,58 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Item Type
-            TextFormField(
-              controller: _itemTypeController,
-              enabled: !isBusy,
-              decoration: InputDecoration(
-                labelText: '${strings('item_type')} *',
-                hintText: strings('item_type_hint'),
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.category_rounded),
-              ),
-              validator: (val) {
-                if (val == null || val.trim().isEmpty) {
-                  return strings('required_field');
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Pricing Mode Dropdown
-            DropdownButtonFormField<String>(
-              initialValue: _selectedPricingMode,
-              decoration: InputDecoration(
-                labelText: strings('pricing_mode'),
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.price_change_rounded),
-              ),
-              isExpanded: true,
-              items: contract.pricingModes.entries.map((e) {
-                return DropdownMenuItem(
-                  value: e.key,
-                  child: Text(
-                    '${e.key} - ${e.value}',
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                );
-              }).toList(),
-              onChanged: isBusy ? null : (val) {
-                if (val != null) setState(() => _selectedPricingMode = val);
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Availability Mode Dropdown
-            DropdownButtonFormField<String>(
-              initialValue: _selectedAvailabilityMode,
-              decoration: InputDecoration(
-                labelText: strings('availability_mode'),
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.event_available_rounded),
-              ),
-              isExpanded: true,
-              items: contract.availabilityModes.entries.map((e) {
-                return DropdownMenuItem(
-                  value: e.key,
-                  child: Text(
-                    '${e.key} - ${e.value}',
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                );
-              }).toList(),
-              onChanged: isBusy ? null : (val) {
-                if (val != null) setState(() => _selectedAvailabilityMode = val);
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Fulfillment Mode Dropdown
-            DropdownButtonFormField<String>(
-              initialValue: _selectedFulfillmentMode,
-              decoration: InputDecoration(
-                labelText: strings('fulfillment_mode'),
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.local_shipping_rounded),
-              ),
-              isExpanded: true,
-              items: contract.fulfillmentModes.entries.map((e) {
-                return DropdownMenuItem(
-                  value: e.key,
-                  child: Text(
-                    '${e.key} - ${e.value}',
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                );
-              }).toList(),
-              onChanged: isBusy ? null : (val) {
-                if (val != null) setState(() => _selectedFulfillmentMode = val);
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Status Dropdown (when editing)
+            // Show a human-friendly item type, while preserving its API value.
             if (_isEditing) ...[
-              DropdownButtonFormField<String>(
-                initialValue: _selectedStatus,
-                decoration: InputDecoration(
-                  labelText: strings('customer_status'),
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.shield_outlined),
+              TextFormField(
+                controller: _itemTypeController,
+                enabled: !isBusy,
+                decoration: const InputDecoration(
+                  labelText: 'نوع المنتج أو الخدمة',
+                  border: OutlineInputBorder(),
                 ),
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? strings('required_field') : null,
+              ),
+            ] else ...[
+              DropdownButtonFormField<String>(
+                initialValue: 'product',
                 isExpanded: true,
-                items: contract.itemStatuses.entries.map((e) {
-                  return DropdownMenuItem(
-                    value: e.key,
-                    child: Text('${e.key} - ${e.value}'),
-                  );
-                }).toList(),
-                onChanged: isBusy ? null : (val) {
-                  if (val != null) setState(() => _selectedStatus = val);
+                decoration: const InputDecoration(
+                  labelText: 'ما الذي تقدمه؟',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'product', child: Text('منتج')),
+                  DropdownMenuItem(value: 'service', child: Text('خدمة')),
+                  DropdownMenuItem(value: 'consultation', child: Text('استشارة')),
+                  DropdownMenuItem(value: 'booking', child: Text('حجز')),
+                  DropdownMenuItem(value: 'real_estate', child: Text('عقار')),
+                  DropdownMenuItem(value: 'course', child: Text('دورة')),
+                  DropdownMenuItem(value: 'subscription', child: Text('اشتراك')),
+                  DropdownMenuItem(value: 'custom', child: Text('نوع آخر')),
+                ],
+                onChanged: isBusy ? null : (value) {
+                  if (value == null) return;
+                  setState(() {
+                    _customItemType = value == 'custom';
+                    _itemTypeController.text = _customItemType ? '' : value;
+                  });
                 },
               ),
-              const SizedBox(height: 16),
+              if (_customItemType) ...[
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _itemTypeController,
+                  decoration: const InputDecoration(
+                    labelText: 'اسم النوع', hintText: 'اكتب النوع الذي يناسب نشاطك',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (v) => v == null || v.trim().isEmpty
+                      ? strings('required_field') : null,
+                ),
+              ],
             ],
-
-            // Requires Confirmation Switch
-            SwitchListTile.adaptive(
-              value: _requiresConfirmation,
-              contentPadding: EdgeInsets.zero,
-              title: Text(
-                strings('requires_confirmation'),
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-              ),
-              subtitle: Text(
-                strings('requires_confirmation_subtitle'),
-                style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
-              ),
-              onChanged: isBusy ? null : (val) {
-                setState(() => _requiresConfirmation = val);
-              },
-            ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
             // Short Description
             TextFormField(
@@ -542,9 +525,214 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
 
             const SizedBox(height: 24),
 
+            ],
+            if (_isEditing || _step == 1) ...[
+            // Pricing Mode Dropdown
+            DropdownButtonFormField<String>(
+              initialValue: _selectedPricingMode,
+              decoration: InputDecoration(
+                labelText: strings('pricing_mode'),
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.price_change_rounded),
+              ),
+              isExpanded: true,
+              items: contract.pricingModes.entries.map((e) {
+                return DropdownMenuItem(
+                  value: e.key,
+                  child: Text(
+                    '${e.key} - ${e.value}',
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                );
+              }).toList(),
+              onChanged: isBusy ? null : (val) {
+                if (val != null) setState(() => _selectedPricingMode = val);
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Availability Mode Dropdown
+            DropdownButtonFormField<String>(
+              initialValue: _selectedAvailabilityMode,
+              decoration: InputDecoration(
+                labelText: strings('availability_mode'),
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.event_available_rounded),
+              ),
+              isExpanded: true,
+              items: contract.availabilityModes.entries.map((e) {
+                return DropdownMenuItem(
+                  value: e.key,
+                  child: Text(
+                    '${e.key} - ${e.value}',
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                );
+              }).toList(),
+              onChanged: isBusy ? null : (val) {
+                if (val != null) setState(() => _selectedAvailabilityMode = val);
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Fulfillment Mode Dropdown
+            DropdownButtonFormField<String>(
+              initialValue: _selectedFulfillmentMode,
+              decoration: InputDecoration(
+                labelText: strings('fulfillment_mode'),
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.local_shipping_rounded),
+              ),
+              isExpanded: true,
+              items: contract.fulfillmentModes.entries.map((e) {
+                return DropdownMenuItem(
+                  value: e.key,
+                  child: Text(
+                    '${e.key} - ${e.value}',
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                );
+              }).toList(),
+              onChanged: isBusy ? null : (val) {
+                if (val != null) setState(() => _selectedFulfillmentMode = val);
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Status Dropdown (when editing)
+            if (_isEditing) ...[
+              DropdownButtonFormField<String>(
+                initialValue: _selectedStatus,
+                decoration: InputDecoration(
+                  labelText: strings('customer_status'),
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.shield_outlined),
+                ),
+                isExpanded: true,
+                items: contract.itemStatuses.entries.map((e) {
+                  return DropdownMenuItem(
+                    value: e.key,
+                    child: Text('${e.key} - ${e.value}'),
+                  );
+                }).toList(),
+                onChanged: isBusy ? null : (val) {
+                  if (val != null) setState(() => _selectedStatus = val);
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Requires Confirmation Switch
+            SwitchListTile.adaptive(
+              value: _requiresConfirmation,
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                strings('requires_confirmation'),
+                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+              ),
+              subtitle: Text(
+                strings('requires_confirmation_subtitle'),
+                style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+              ),
+              onChanged: isBusy ? null : (val) {
+                setState(() => _requiresConfirmation = val);
+              },
+            ),
+            const SizedBox(height: 12),
+
+            ],
+            if (!_isEditing && _step == 1) ...[
+              SwitchListTile.adaptive(
+                title: const Text('حفظ السعر والتوفر الآن'),
+                subtitle: const Text('يمكن تأجيل السعر وسيظل المنتج مسودة'),
+                value: _saveInitialOffer,
+                onChanged: isBusy ? null : (value) =>
+                    setState(() => _saveInitialOffer = value),
+              ),
+              if (_saveInitialOffer) ...[
+                if (_selectedPricingMode != 'quote_required') ...[
+                  TextField(
+                    controller: _amountController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: _selectedPricingMode == 'dynamic'
+                          ? 'مبلغ استرشادي (اختياري)' : 'المبلغ *',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                TextField(
+                  controller: _currencyController,
+                  maxLength: 3,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(
+                    labelText: 'عملة النشاط *', hintText: 'YER أو SAR',
+                  ),
+                ),
+                if (['per_unit', 'per_person', 'per_day'].contains(_selectedPricingMode))
+                  TextField(
+                    controller: _unitController,
+                    decoration: const InputDecoration(
+                      labelText: 'السعر لكل ماذا؟ *', hintText: 'قطعة أو ساعة',
+                    ),
+                  ),
+                DropdownButtonFormField<String>(
+                  initialValue: _availabilityStatus,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'هل هو متوفر؟ اختر حالته *',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: contract.availabilityStatuses.entries.map((e) =>
+                    DropdownMenuItem(
+                      value: e.key,
+                      child: Text(e.value, overflow: TextOverflow.ellipsis),
+                    ),
+                  ).toList(),
+                  onChanged: isBusy ? null : (value) =>
+                      setState(() => _availabilityStatus = value),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ],
+            if (!_isEditing && _step == 2) ...[
+              Text('راجع المعلومات قبل الحفظ',
+                style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 12),
+              Card(child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_nameController.text.trim(),
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(_itemTypeController.text.trim()),
+                    const Divider(),
+                    if (_saveInitialOffer) ...[
+                      Text('السعر: ' +
+                        (_amountController.text.trim().isEmpty
+                          ? 'حسب الطلب' : _amountController.text.trim()) +
+                        ' ' + _currencyController.text.trim().toUpperCase()),
+                      Text('التوفر: ' + contract.labelAvailabilityStatus(
+                        _availabilityStatus ?? 'unknown')),
+                    ] else
+                      const Text('لم يضف السعر الآن'),
+                    const Text('يحفظ المنتج مسودة. التنشيط إجراء منفصل.',
+                      style: TextStyle(color: AppColors.textMuted)),
+                  ],
+                ),
+              )),
+              const SizedBox(height: 20),
+            ],
             // Submit Button
+            if (!_isEditing && _step > 0)
+              OutlinedButton(onPressed: isBusy ? null : () => setState(() => _step--),
+                child: const Text('السابق')),
             ElevatedButton(
-              onPressed: isBusy ? null : _submit,
+              onPressed: isBusy ? null : (_isEditing || _step == 2 ? _submit : _nextStep),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -565,7 +753,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                   : Text(
                       _isEditing
                           ? strings('save_changes')
-                          : strings('create_item'),
+                          : (_step == 2 ? 'احفظ المنتج' : 'التالي'),
                       style: const TextStyle(
                           fontSize: 15, fontWeight: FontWeight.bold),
                     ),

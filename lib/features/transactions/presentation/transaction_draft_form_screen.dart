@@ -311,13 +311,25 @@ class _TransactionDraftFormScreenState
                   value: 'quote',
                   child: Text(strings('tx_type_quote')),
                 ),
-                DropdownMenuItem(
-                  value: 'invoice',
-                  child: Text(strings('tx_type_invoice')),
+                const DropdownMenuItem(
+                  value: 'booking',
+                  child: Text('حجز'),
                 ),
-                DropdownMenuItem(
-                  value: 'sale',
-                  child: Text(strings('tx_type_sale')),
+                const DropdownMenuItem(
+                  value: 'appointment',
+                  child: Text('موعد'),
+                ),
+                const DropdownMenuItem(
+                  value: 'service_request',
+                  child: Text('طلب خدمة'),
+                ),
+                const DropdownMenuItem(
+                  value: 'reservation',
+                  child: Text('حجز مورد'),
+                ),
+                const DropdownMenuItem(
+                  value: 'subscription',
+                  child: Text('اشتراك'),
                 ),
               ],
               onChanged: _isEditing || isBusy

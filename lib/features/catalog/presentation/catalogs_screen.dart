@@ -9,11 +9,13 @@ import 'catalog_items_screen.dart';
 class CatalogsScreen extends StatefulWidget {
   final CatalogProvider catalogProvider;
   final String businessId;
+  final String? businessCurrency;
 
   const CatalogsScreen({
     super.key,
     required this.catalogProvider,
     required this.businessId,
+    this.businessCurrency,
   });
 
   @override
@@ -400,10 +402,15 @@ class _CatalogsScreenState extends State<CatalogsScreen> {
                                 onRefresh: _loadCatalogs,
                                 child: ListView.separated(
                                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
-                                  itemCount: catalogs.length,
-                                  separatorBuilder: (_, index) =>
-                                      const SizedBox(height: 12),
+                                  itemCount: catalogs.length + (provider.catalogsHasMore ? 1 : 0),
+                                  separatorBuilder: (_, index) => const SizedBox(height: 12),
                                   itemBuilder: (context, index) {
+                                    if (index == catalogs.length) {
+                                      return OutlinedButton(
+                                        onPressed: provider.isLoadingCatalogs ? null : () => provider.loadMoreCatalogs(widget.businessId),
+                                        child: Text(provider.isLoadingCatalogs ? 'جاري التحميل...' : 'عرض المزيد من الكتالوجات'),
+                                      );
+                                    }
                                     final catalog = catalogs[index];
                                     return _buildCatalogCard(catalog, strings);
                                   },
@@ -462,6 +469,7 @@ class _CatalogsScreenState extends State<CatalogsScreen> {
                 catalogProvider: widget.catalogProvider,
                 businessId: widget.businessId,
                 catalog: catalog,
+                businessCurrency: widget.businessCurrency,
               ),
             ),
           );

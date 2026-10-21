@@ -11,12 +11,14 @@ class CatalogItemsScreen extends StatefulWidget {
   final CatalogProvider catalogProvider;
   final String businessId;
   final Catalog catalog;
+  final String? businessCurrency;
 
   const CatalogItemsScreen({
     super.key,
     required this.catalogProvider,
     required this.businessId,
     required this.catalog,
+    this.businessCurrency,
   });
 
   @override
@@ -119,6 +121,7 @@ class _CatalogItemsScreenState extends State<CatalogItemsScreen> {
                     catalogProvider: provider,
                     businessId: widget.businessId,
                     catalogId: widget.catalog.id,
+                    businessCurrency: widget.businessCurrency,
                   ),
                 ),
               );
@@ -245,6 +248,7 @@ class _CatalogItemsScreenState extends State<CatalogItemsScreen> {
                                               catalogProvider: provider,
                                               businessId: widget.businessId,
                                               catalogId: widget.catalog.id,
+                                              businessCurrency: widget.businessCurrency,
                                             ),
                                           ),
                                         );
@@ -262,10 +266,15 @@ class _CatalogItemsScreenState extends State<CatalogItemsScreen> {
                                 onRefresh: _loadItems,
                                 child: ListView.separated(
                                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
-                                  itemCount: items.length,
-                                  separatorBuilder: (_, index) =>
-                                      const SizedBox(height: 12),
+                                  itemCount: items.length + (provider.itemsHasMore ? 1 : 0),
+                                  separatorBuilder: (_, index) => const SizedBox(height: 12),
                                   itemBuilder: (context, index) {
+                                    if (index == items.length) {
+                                      return OutlinedButton(
+                                        onPressed: provider.isLoadingItems ? null : () => provider.loadMoreCatalogItems(widget.businessId, widget.catalog.id),
+                                        child: Text(provider.isLoadingItems ? 'جاري التحميل...' : 'عرض المزيد من المنتجات'),
+                                      );
+                                    }
                                     final item = items[index];
                                     return _buildItemCard(item, strings);
                                   },
