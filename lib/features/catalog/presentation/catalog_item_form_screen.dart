@@ -9,6 +9,7 @@ class CatalogItemFormScreen extends StatefulWidget {
   final CatalogProvider catalogProvider;
   final String businessId;
   final String catalogId;
+  final String? businessCurrency;
   final CatalogItem? existingItem;
 
   const CatalogItemFormScreen({
@@ -16,6 +17,7 @@ class CatalogItemFormScreen extends StatefulWidget {
     required this.catalogProvider,
     required this.businessId,
     required this.catalogId,
+    this.businessCurrency,
     this.existingItem,
   });
 
