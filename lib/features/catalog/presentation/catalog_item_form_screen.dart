@@ -707,6 +707,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                     child: const Text('إعادة تحميل الاختيارات')),
                 ]),
               )),
+            if (widget.catalogProvider.hasLoadedContract) ...[
             // Pricing Mode Dropdown
             DropdownButtonFormField<String>(
               initialValue: _selectedPricingMode,
@@ -824,7 +825,8 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
             const SizedBox(height: 12),
 
             ],
-            if (!_isEditing && _step == 1) ...[
+            ],
+            if (!_isEditing && _step == 1 && widget.catalogProvider.hasLoadedContract) ...[
               SwitchListTile.adaptive(
                 title: const Text('حفظ السعر والتوفر الآن'),
                 subtitle: const Text('يمكن تأجيل السعر وسيظل المنتج مسودة'),
