@@ -69,7 +69,9 @@ class _MujeebAppState extends State<MujeebApp> {
     _crmRepository = CrmRepository(apiClient: _apiClient);
     _transactionRepository = TransactionRepository(apiClient: _apiClient);
     _catalogRepository = CatalogRepository(apiClient: _apiClient);
-    _channelAutomationRepository = ChannelAutomationRepository(apiClient: _apiClient);
+    _channelAutomationRepository = ChannelAutomationRepository(
+      apiClient: _apiClient,
+    );
     _teamAuditRepository = TeamAuditRepository(apiClient: _apiClient);
     _platformRepository = PlatformRepository(apiClient: _apiClient);
     _authProvider = AuthProvider(
@@ -83,18 +85,12 @@ class _MujeebAppState extends State<MujeebApp> {
     _transactionProvider = TransactionProvider(
       transactionRepository: _transactionRepository,
     );
-    _catalogProvider = CatalogProvider(
-      catalogRepository: _catalogRepository,
-    );
+    _catalogProvider = CatalogProvider(catalogRepository: _catalogRepository);
     _channelAutomationProvider = ChannelAutomationProvider(
       repository: _channelAutomationRepository,
     );
-    _teamAuditProvider = TeamAuditProvider(
-      repository: _teamAuditRepository,
-    );
-    _platformProvider = PlatformProvider(
-      repository: _platformRepository,
-    );
+    _teamAuditProvider = TeamAuditProvider(repository: _teamAuditRepository);
+    _platformProvider = PlatformProvider(repository: _platformRepository);
 
     _authProvider.addListener(_handleAuthStateChange);
     _localeProvider.addListener(() => setState(() {}));

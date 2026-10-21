@@ -55,9 +55,7 @@ class ChannelAutomationRepository {
     String? cursor,
     int limit = 25,
   }) async {
-    final queryParams = <String, dynamic>{
-      'limit': limit.toString(),
-    };
+    final queryParams = <String, dynamic>{'limit': limit.toString()};
     if (status != null && status.isNotEmpty && status != 'all') {
       queryParams['status'] = status;
     }
@@ -263,9 +261,7 @@ class ChannelAutomationRepository {
     String? cursor,
     int limit = 25,
   }) async {
-    final queryParams = <String, dynamic>{
-      'limit': limit.toString(),
-    };
+    final queryParams = <String, dynamic>{'limit': limit.toString()};
     if (status != null && status.isNotEmpty && status != 'all') {
       queryParams['status'] = status;
     }
@@ -360,9 +356,7 @@ class ChannelAutomationRepository {
     String? cursor,
     int limit = 25,
   }) async {
-    final queryParams = <String, dynamic>{
-      'limit': limit.toString(),
-    };
+    final queryParams = <String, dynamic>{'limit': limit.toString()};
     if (lifecycle != null && lifecycle.isNotEmpty && lifecycle != 'all') {
       queryParams['lifecycle'] = lifecycle;
     }
@@ -423,8 +417,7 @@ class ChannelAutomationRepository {
     String? idempotencyKey,
   }) async {
     final headers = <String, String>{
-      'Idempotency-Key':
-          idempotencyKey ?? _generateIdempotencyKey('req_human'),
+      'Idempotency-Key': idempotencyKey ?? _generateIdempotencyKey('req_human'),
     };
     if (ifMatch != null && ifMatch.isNotEmpty) {
       headers['If-Match'] = ifMatch;
@@ -453,9 +446,7 @@ class ChannelAutomationRepository {
     String? cursor,
     int limit = 50,
   }) async {
-    final queryParams = <String, dynamic>{
-      'limit': limit.toString(),
-    };
+    final queryParams = <String, dynamic>{'limit': limit.toString()};
     if (status != null && status.isNotEmpty && status != 'all') {
       queryParams['status'] = status;
     }

@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -76,7 +77,7 @@ void main() {
                   'expires_at': '2026-10-30T10:00:00Z',
                   'created_at': '2026-10-22T10:00:00Z',
                   'updated_at': '2026-10-22T10:00:00Z',
-                }
+                },
               ],
               'pagination': {'has_more': false},
               'request_id': 'req-inv-test',
@@ -91,9 +92,9 @@ void main() {
       final repo = TeamAuditRepository(apiClient: ApiClient(client: mock));
       final provider = TeamAuditProvider(repository: repo);
 
-      await tester.pumpWidget(_createTestApp(
-        TeamScreen(provider: provider, businessId: 'biz-1'),
-      ));
+      await tester.pumpWidget(
+        _createTestApp(TeamScreen(provider: provider, businessId: 'biz-1')),
+      );
 
       await tester.pumpAndSettle();
 
@@ -120,82 +121,84 @@ void main() {
       expect(find.byKey(const Key('btn_revoke_inv_inv-1')), findsOneWidget);
     });
 
-    testWidgets('opens invite member dialog, submits, and displays token modal',
-        (tester) async {
-      final mock = MockClient((request) async {
-        if (request.url.path.contains('/team/invitations') &&
-            request.method == 'POST') {
+    testWidgets(
+      'opens invite member dialog, submits, and displays token modal',
+      (tester) async {
+        final mock = MockClient((request) async {
+          if (request.url.path.contains('/team/invitations') &&
+              request.method == 'POST') {
+            return http.Response(
+              jsonEncode({
+                'data': {
+                  'invitation': {
+                    'id': 'inv-99',
+                    'business_id': 'biz-1',
+                    'email': 'newcomer@alufuq.com',
+                    'display_name': 'New Colleague',
+                    'role': 'agent',
+                    'permissions': ['conversations:reply'],
+                    'status': 'pending',
+                    'invited_by': 'owner-1',
+                    'expires_at': '2026-10-25T10:00:00Z',
+                    'created_at': '2026-10-22T10:00:00Z',
+                    'updated_at': '2026-10-22T10:00:00Z',
+                  },
+                  'acceptance_token': 'magic-token-abc-777',
+                },
+                'request_id': 'req-create-inv-test',
+              }),
+              201,
+              headers: {'content-type': 'application/json'},
+            );
+          }
           return http.Response(
             jsonEncode({
-              'data': {
-                'invitation': {
-                  'id': 'inv-99',
-                  'business_id': 'biz-1',
-                  'email': 'newcomer@alufuq.com',
-                  'display_name': 'New Colleague',
-                  'role': 'agent',
-                  'permissions': ['conversations:reply'],
-                  'status': 'pending',
-                  'invited_by': 'owner-1',
-                  'expires_at': '2026-10-25T10:00:00Z',
-                  'created_at': '2026-10-22T10:00:00Z',
-                  'updated_at': '2026-10-22T10:00:00Z',
-                },
-                'acceptance_token': 'magic-token-abc-777',
-              },
-              'request_id': 'req-create-inv-test',
+              'data': [],
+              'pagination': {'has_more': false},
+              'request_id': 'req-empty',
             }),
-            201,
+            200,
             headers: {'content-type': 'application/json'},
           );
-        }
-        return http.Response(
-          jsonEncode({
-            'data': [],
-            'pagination': {'has_more': false},
-            'request_id': 'req-empty',
-          }),
-          200,
-          headers: {'content-type': 'application/json'},
+        });
+
+        final repo = TeamAuditRepository(apiClient: ApiClient(client: mock));
+        final provider = TeamAuditProvider(repository: repo);
+
+        await tester.pumpWidget(
+          _createTestApp(TeamScreen(provider: provider, businessId: 'biz-1')),
         );
-      });
+        await tester.pumpAndSettle();
 
-      final repo = TeamAuditRepository(apiClient: ApiClient(client: mock));
-      final provider = TeamAuditProvider(repository: repo);
+        // Tap FAB Invite Member
+        await tester.tap(find.byKey(const Key('fab_invite_member')));
+        await tester.pumpAndSettle();
 
-      await tester.pumpWidget(_createTestApp(
-        TeamScreen(provider: provider, businessId: 'biz-1'),
-      ));
-      await tester.pumpAndSettle();
+        // Enter fields
+        await tester.enterText(
+          find.byKey(const Key('input_invite_email')),
+          'newcomer@alufuq.com',
+        );
+        await tester.enterText(
+          find.byKey(const Key('input_invite_name')),
+          'New Colleague',
+        );
 
-      // Tap FAB Invite Member
-      await tester.tap(find.byKey(const Key('fab_invite_member')));
-      await tester.pumpAndSettle();
+        // Submit invitation
+        await tester.tap(find.byKey(const Key('btn_submit_invite')));
+        await tester.pumpAndSettle();
 
-      // Enter fields
-      await tester.enterText(
-        find.byKey(const Key('input_invite_email')),
-        'newcomer@alufuq.com',
-      );
-      await tester.enterText(
-        find.byKey(const Key('input_invite_name')),
-        'New Colleague',
-      );
+        // Token modal should appear
+        expect(find.text('magic-token-abc-777'), findsOneWidget);
+        expect(find.byKey(const Key('btn_copy_token')), findsOneWidget);
 
-      // Submit invitation
-      await tester.tap(find.byKey(const Key('btn_submit_invite')));
-      await tester.pumpAndSettle();
+        // Close modal
+        await tester.tap(find.byKey(const Key('btn_close_token_modal')));
+        await tester.pumpAndSettle();
 
-      // Token modal should appear
-      expect(find.text('magic-token-abc-777'), findsOneWidget);
-      expect(find.byKey(const Key('btn_copy_token')), findsOneWidget);
-
-      // Close modal
-      await tester.tap(find.byKey(const Key('btn_close_token_modal')));
-      await tester.pumpAndSettle();
-
-      expect(find.text('magic-token-abc-777'), findsNothing);
-    });
+        expect(find.text('magic-token-abc-777'), findsNothing);
+      },
+    );
   });
 
   group('Phase 7 Widget Tests: AuditLogsScreen', () {
@@ -212,12 +215,9 @@ void main() {
                 'action': 'team.member.role_updated',
                 'resource_type': 'team_member',
                 'resource_id': 'user-88',
-                'metadata': {
-                  'old_role': 'agent',
-                  'new_role': 'manager',
-                },
+                'metadata': {'old_role': 'agent', 'new_role': 'manager'},
                 'occurred_at': '2026-10-22T16:00:00Z',
-              }
+              },
             ],
             'pagination': {'has_more': false},
             'request_id': 'req-audit-view',
@@ -230,9 +230,11 @@ void main() {
       final repo = TeamAuditRepository(apiClient: ApiClient(client: mock));
       final provider = TeamAuditProvider(repository: repo);
 
-      await tester.pumpWidget(_createTestApp(
-        AuditLogsScreen(provider: provider, businessId: 'biz-1'),
-      ));
+      await tester.pumpWidget(
+        _createTestApp(
+          AuditLogsScreen(provider: provider, businessId: 'biz-1'),
+        ),
+      );
       await tester.pumpAndSettle();
 
       // Event card should render action
@@ -253,52 +255,57 @@ void main() {
 
   group('Phase 7 Widget Tests: Settings & Home Navigation Integration', () {
     testWidgets(
-        'BusinessSettingsTab renders Team and Audit tiles and calls navigation',
-        (tester) async {
-      bool navigatedToTeam = false;
-      bool navigatedToAudit = false;
+      'BusinessSettingsTab renders Team and Audit tiles and calls navigation',
+      (tester) async {
+        bool navigatedToTeam = false;
+        bool navigatedToAudit = false;
 
-      final mock = MockClient((req) async => http.Response('{}', 200));
-      final merchantProvider = MerchantProvider(
-        merchantRepository: MerchantRepository(
-          apiClient: ApiClient(client: mock),
-        ),
-      );
-
-      const business = Business(
-        id: 'biz-1',
-        name: 'Al-Ufuq Electronics',
-        slug: 'alufuq',
-      );
-
-      await tester.pumpWidget(_createTestApp(
-        Scaffold(
-          body: BusinessSettingsTab(
-            merchantProvider: merchantProvider,
-            currentBusiness: business,
-            onSwitchBusiness: () {},
-            onLogout: () {},
-            onToggleLanguage: () {},
-            onNavigateToTeam: () => navigatedToTeam = true,
-            onNavigateToAuditLogs: () => navigatedToAudit = true,
+        final mock = MockClient((req) async => http.Response('{}', 200));
+        final merchantProvider = MerchantProvider(
+          merchantRepository: MerchantRepository(
+            apiClient: ApiClient(client: mock),
           ),
-        ),
-      ));
-      await tester.pumpAndSettle();
+        );
 
-      // Find Team tile and tap
-      expect(find.byKey(const Key('tile_team_management')), findsOneWidget);
-      await tester.ensureVisible(find.byKey(const Key('tile_team_management')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('tile_team_management')));
-      expect(navigatedToTeam, isTrue);
+        const business = Business(
+          id: 'biz-1',
+          name: 'Al-Ufuq Electronics',
+          slug: 'alufuq',
+        );
 
-      // Find Audit tile and tap
-      expect(find.byKey(const Key('tile_audit_logs')), findsOneWidget);
-      await tester.ensureVisible(find.byKey(const Key('tile_audit_logs')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('tile_audit_logs')));
-      expect(navigatedToAudit, isTrue);
-    });
+        await tester.pumpWidget(
+          _createTestApp(
+            Scaffold(
+              body: BusinessSettingsTab(
+                merchantProvider: merchantProvider,
+                currentBusiness: business,
+                onSwitchBusiness: () {},
+                onLogout: () {},
+                onToggleLanguage: () {},
+                onNavigateToTeam: () => navigatedToTeam = true,
+                onNavigateToAuditLogs: () => navigatedToAudit = true,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Find Team tile and tap
+        expect(find.byKey(const Key('tile_team_management')), findsOneWidget);
+        await tester.ensureVisible(
+          find.byKey(const Key('tile_team_management')),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('tile_team_management')));
+        expect(navigatedToTeam, isTrue);
+
+        // Find Audit tile and tap
+        expect(find.byKey(const Key('tile_audit_logs')), findsOneWidget);
+        await tester.ensureVisible(find.byKey(const Key('tile_audit_logs')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('tile_audit_logs')));
+        expect(navigatedToAudit, isTrue);
+      },
+    );
   });
 }

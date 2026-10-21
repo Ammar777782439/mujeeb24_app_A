@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../../../core/channels/channel_automation_repository.dart';
 import '../../../core/errors/api_error.dart';
 import '../../../core/models/channel_automation_models.dart';
@@ -103,7 +104,10 @@ class ChannelAutomationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchConnections(String businessId, {bool refresh = false}) async {
+  Future<void> fetchConnections(
+    String businessId, {
+    bool refresh = false,
+  }) async {
     _isLoadingConnections = true;
     _connectionsError = null;
     notifyListeners();
@@ -111,7 +115,9 @@ class ChannelAutomationProvider extends ChangeNotifier {
     try {
       final page = await repository.listChannelConnections(
         businessId: businessId,
-        status: _connectionStatusFilter != 'all' ? _connectionStatusFilter : null,
+        status: _connectionStatusFilter != 'all'
+            ? _connectionStatusFilter
+            : null,
       );
       _connections = page.items;
     } on ApiErrorEnvelope catch (e) {
@@ -127,7 +133,10 @@ class ChannelAutomationProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> fetchConnectionDetail(String businessId, String connectionId) async {
+  Future<void> fetchConnectionDetail(
+    String businessId,
+    String connectionId,
+  ) async {
     _isLoadingConnectionDetail = true;
     _connectionsError = null;
     notifyListeners();
@@ -344,7 +353,10 @@ class ChannelAutomationProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> fetchAutomationRules(String businessId, {bool refresh = false}) async {
+  Future<void> fetchAutomationRules(
+    String businessId, {
+    bool refresh = false,
+  }) async {
     _isLoadingRules = true;
     _rulesError = null;
     notifyListeners();
@@ -453,7 +465,10 @@ class ChannelAutomationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchAIDecisions(String businessId, {bool refresh = false}) async {
+  Future<void> fetchAIDecisions(
+    String businessId, {
+    bool refresh = false,
+  }) async {
     _isLoadingDecisions = true;
     _decisionsError = null;
     notifyListeners();
@@ -525,7 +540,10 @@ class ChannelAutomationProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> fetchCannedReplies(String businessId, {bool refresh = false}) async {
+  Future<void> fetchCannedReplies(
+    String businessId, {
+    bool refresh = false,
+  }) async {
     _isLoadingCannedReplies = true;
     _cannedRepliesError = null;
     notifyListeners();

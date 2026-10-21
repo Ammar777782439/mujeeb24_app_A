@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../app/localization/app_localizations.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/models/catalog_models.dart';
@@ -131,8 +132,9 @@ class _CatalogsScreenState extends State<CatalogsScreen> {
 
   void _showEditCatalogDialog(Catalog catalog) {
     final nameController = TextEditingController(text: catalog.name);
-    final descriptionController =
-        TextEditingController(text: catalog.description ?? '');
+    final descriptionController = TextEditingController(
+      text: catalog.description ?? '',
+    );
     String selectedStatus = catalog.status;
     final formKey = GlobalKey<FormState>();
 
@@ -219,7 +221,8 @@ class _CatalogsScreenState extends State<CatalogsScreen> {
                       catalog.id,
                       UpdateCatalogRequest(
                         name: nameController.text.trim(),
-                        description: descriptionController.text.trim().isNotEmpty
+                        description:
+                            descriptionController.text.trim().isNotEmpty
                             ? descriptionController.text.trim()
                             : null,
                         status: selectedStatus,
@@ -320,16 +323,35 @@ class _CatalogsScreenState extends State<CatalogsScreen> {
               // Status Filters Bar
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
-                    _buildFilterChip('all', strings('all_catalogs'), currentFilter),
+                    _buildFilterChip(
+                      'all',
+                      strings('all_catalogs'),
+                      currentFilter,
+                    ),
                     const SizedBox(width: 8),
-                    _buildFilterChip('active', strings('status_active'), currentFilter),
+                    _buildFilterChip(
+                      'active',
+                      strings('status_active'),
+                      currentFilter,
+                    ),
                     const SizedBox(width: 8),
-                    _buildFilterChip('draft', strings('status_draft'), currentFilter),
+                    _buildFilterChip(
+                      'draft',
+                      strings('status_draft'),
+                      currentFilter,
+                    ),
                     const SizedBox(width: 8),
-                    _buildFilterChip('archived', strings('status_archived'), currentFilter),
+                    _buildFilterChip(
+                      'archived',
+                      strings('status_archived'),
+                      currentFilter,
+                    ),
                   ],
                 ),
               ),
@@ -342,73 +364,75 @@ class _CatalogsScreenState extends State<CatalogsScreen> {
                 child: provider.isLoadingCatalogs && catalogs.isEmpty
                     ? const Center(child: CircularProgressIndicator())
                     : provider.catalogsError != null && catalogs.isEmpty
-                        ? Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(
-                                    Icons.error_outline_rounded,
-                                    size: 48,
-                                    color: AppColors.statusError,
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    provider.catalogsError!,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(color: AppColors.textMuted),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  ElevatedButton(
-                                    onPressed: _loadCatalogs,
-                                    child: Text(strings('retry')),
-                                  ),
-                                ],
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.error_outline_rounded,
+                                size: 48,
+                                color: AppColors.statusError,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                provider.catalogsError!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: _loadCatalogs,
+                                child: Text(strings('retry')),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : catalogs.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.inventory_2_outlined,
+                              size: 56,
+                              color: AppColors.textMuted,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              strings('no_catalogs'),
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textMuted,
                               ),
                             ),
-                          )
-                        : catalogs.isEmpty
-                            ? Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(
-                                      Icons.inventory_2_outlined,
-                                      size: 56,
-                                      color: AppColors.textMuted,
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      strings('no_catalogs'),
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.textMuted,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    ElevatedButton.icon(
-                                      onPressed: _showCreateCatalogDialog,
-                                      icon: const Icon(Icons.add_rounded),
-                                      label: Text(strings('create_catalog')),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : RefreshIndicator(
-                                onRefresh: _loadCatalogs,
-                                child: ListView.separated(
-                                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
-                                  itemCount: catalogs.length,
-                                  separatorBuilder: (_, index) =>
-                                      const SizedBox(height: 12),
-                                  itemBuilder: (context, index) {
-                                    final catalog = catalogs[index];
-                                    return _buildCatalogCard(catalog, strings);
-                                  },
-                                ),
-                              ),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed: _showCreateCatalogDialog,
+                              icon: const Icon(Icons.add_rounded),
+                              label: Text(strings('create_catalog')),
+                            ),
+                          ],
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadCatalogs,
+                        child: ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
+                          itemCount: catalogs.length,
+                          separatorBuilder: (_, index) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final catalog = catalogs[index];
+                            return _buildCatalogCard(catalog, strings);
+                          },
+                        ),
+                      ),
               ),
             ],
           ),
@@ -436,14 +460,11 @@ class _CatalogsScreenState extends State<CatalogsScreen> {
     );
   }
 
-  Widget _buildCatalogCard(
-    Catalog catalog,
-    String Function(String) strings,
-  ) {
+  Widget _buildCatalogCard(Catalog catalog, String Function(String) strings) {
     final statusColor = _getStatusColor(catalog.status);
     final statusBg = _getStatusBgColor(catalog.status);
-    final statusLabel =
-        widget.catalogProvider.entityContract.labelCatalogStatus(catalog.status);
+    final statusLabel = widget.catalogProvider.entityContract
+        .labelCatalogStatus(catalog.status);
 
     return Card(
       elevation: 0,
@@ -530,8 +551,10 @@ class _CatalogsScreenState extends State<CatalogsScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: statusBg,
                       borderRadius: BorderRadius.circular(12),

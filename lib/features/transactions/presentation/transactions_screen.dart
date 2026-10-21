@@ -193,15 +193,35 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _buildStateFilterChip('all', strings('tx_state_all'), provider),
+                      _buildStateFilterChip(
+                        'all',
+                        strings('tx_state_all'),
+                        provider,
+                      ),
                       const SizedBox(width: 8),
-                      _buildStateFilterChip('review', strings('tx_state_review'), provider),
+                      _buildStateFilterChip(
+                        'review',
+                        strings('tx_state_review'),
+                        provider,
+                      ),
                       const SizedBox(width: 8),
-                      _buildStateFilterChip('draft', strings('tx_state_draft'), provider),
+                      _buildStateFilterChip(
+                        'draft',
+                        strings('tx_state_draft'),
+                        provider,
+                      ),
                       const SizedBox(width: 8),
-                      _buildStateFilterChip('confirmed', strings('tx_state_confirmed'), provider),
+                      _buildStateFilterChip(
+                        'confirmed',
+                        strings('tx_state_confirmed'),
+                        provider,
+                      ),
                       const SizedBox(width: 8),
-                      _buildStateFilterChip('cancelled', strings('tx_state_cancelled'), provider),
+                      _buildStateFilterChip(
+                        'cancelled',
+                        strings('tx_state_cancelled'),
+                        provider,
+                      ),
                     ],
                   ),
                 ),
@@ -212,15 +232,35 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _buildTypeFilterChip('all', strings('tx_type_all'), provider),
+                      _buildTypeFilterChip(
+                        'all',
+                        strings('tx_type_all'),
+                        provider,
+                      ),
                       const SizedBox(width: 8),
-                      _buildTypeFilterChip('order', strings('tx_type_order'), provider),
+                      _buildTypeFilterChip(
+                        'order',
+                        strings('tx_type_order'),
+                        provider,
+                      ),
                       const SizedBox(width: 8),
-                      _buildTypeFilterChip('quote', strings('tx_type_quote'), provider),
+                      _buildTypeFilterChip(
+                        'quote',
+                        strings('tx_type_quote'),
+                        provider,
+                      ),
                       const SizedBox(width: 8),
-                      _buildTypeFilterChip('invoice', strings('tx_type_invoice'), provider),
+                      _buildTypeFilterChip(
+                        'invoice',
+                        strings('tx_type_invoice'),
+                        provider,
+                      ),
                       const SizedBox(width: 8),
-                      _buildTypeFilterChip('sale', strings('tx_type_sale'), provider),
+                      _buildTypeFilterChip(
+                        'sale',
+                        strings('tx_type_sale'),
+                        provider,
+                      ),
                     ],
                   ),
                 ),
@@ -301,7 +341,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                                 const SizedBox(height: 12),
                                 Text(
                                   provider.stateFilter == 'review'
-                                      ? strings('no_transactions_needing_review')
+                                      ? strings(
+                                          'no_transactions_needing_review',
+                                        )
                                       : strings('no_transactions'),
                                   style: const TextStyle(
                                     fontSize: 14,
@@ -346,11 +388,13 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: stateBg,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                           border: Border.all(
-                                            color:
-                                                stateColor.withValues(alpha: 0.4),
+                                            color: stateColor.withValues(
+                                              alpha: 0.4,
+                                            ),
                                           ),
                                         ),
                                         child: Text(
@@ -370,8 +414,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: AppColors.surfaceSubtle,
-                                          borderRadius:
-                                              BorderRadius.circular(6),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
                                         ),
                                         child: Text(
                                           tx.transactionType.toUpperCase(),
@@ -433,7 +478,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                     child: OutlinedButton(
                       onPressed: provider.isLoadingMore
                           ? null
-                          : () => provider.loadMoreTransactions(widget.businessId),
+                          : () => provider.loadMoreTransactions(
+                              widget.businessId,
+                            ),
                       child: provider.isLoadingMore
                           ? const SizedBox(
                               width: 20,

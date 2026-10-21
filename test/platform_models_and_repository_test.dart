@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -69,10 +70,7 @@ void main() {
 
     test('PlatformAIOverviewView & AIRuntime parse correctly', () {
       final jsonMap = {
-        'runtime': {
-          'status': 'enabled',
-          'health': 'healthy',
-        },
+        'runtime': {'status': 'enabled', 'health': 'healthy'},
         'provider': {
           'provider': 'openrouter',
           'model': 'anthropic/claude-3.5-sonnet',
@@ -212,13 +210,9 @@ void main() {
             'platform_status': 'active',
             'created_at': '2026-01-01T00:00:00Z',
             'updated_at': '2026-01-01T00:00:00Z',
-          }
+          },
         ],
-        'pagination': {
-          'limit': 20,
-          'has_more': false,
-          'cursor': null,
-        },
+        'pagination': {'limit': 20, 'has_more': false, 'cursor': null},
         'request_id': 'req_page_100',
       };
 
@@ -245,27 +239,33 @@ void main() {
               'platform_status': 'active',
               'created_at': '2026-01-01T00:00:00Z',
               'updated_at': '2026-01-01T00:00:00Z',
-            }
+            },
           ],
-          'pagination': {
-            'limit': 20,
-            'has_more': false,
-          },
+          'pagination': {'limit': 20, 'has_more': false},
           'request_id': 'req-biz-1',
         });
 
         return http.Response(
           body,
           200,
-          headers: {'content-type': 'application/json', 'x-request-id': 'req-biz-1'},
+          headers: {
+            'content-type': 'application/json',
+            'x-request-id': 'req-biz-1',
+          },
         );
       });
 
-      final apiClient = ApiClient(client: mockClient, baseUrl: 'https://api.mujeeb24.com');
+      final apiClient = ApiClient(
+        client: mockClient,
+        baseUrl: 'https://api.mujeeb24.com',
+      );
       apiClient.setAccessToken('mock_token');
       final repo = PlatformRepository(apiClient: apiClient);
 
-      final result = await repo.listBusinesses(platformStatus: 'active', limit: 20);
+      final result = await repo.listBusinesses(
+        platformStatus: 'active',
+        limit: 20,
+      );
       expect(result.items.length, 1);
       expect(result.items.first.name, 'Test Store');
       expect(result.requestId, 'req-biz-1');
@@ -273,7 +273,8 @@ void main() {
 
     test('createBusiness, suspendBusiness, reactivateBusiness, archiveBusiness work correctly', () async {
       final mockClient = MockClient((request) async {
-        if (request.method == 'POST' && request.url.path == '/api/v1/platform/businesses') {
+        if (request.method == 'POST' &&
+            request.url.path == '/api/v1/platform/businesses') {
           final payload = jsonDecode(request.body) as Map<String, dynamic>;
           expect(payload['name'], 'New Enterprise');
           expect(payload['slug'], 'new-ent');
@@ -292,7 +293,8 @@ void main() {
             201,
             headers: {'content-type': 'application/json'},
           );
-        } else if (request.method == 'POST' && request.url.path == '/api/v1/platform/businesses/biz_new/suspend') {
+        } else if (request.method == 'POST' &&
+            request.url.path == '/api/v1/platform/businesses/biz_new/suspend') {
           return http.Response(
             jsonEncode({
               'data': {
@@ -308,7 +310,9 @@ void main() {
             200,
             headers: {'content-type': 'application/json'},
           );
-        } else if (request.method == 'POST' && request.url.path == '/api/v1/platform/businesses/biz_new/reactivate') {
+        } else if (request.method == 'POST' &&
+            request.url.path ==
+                '/api/v1/platform/businesses/biz_new/reactivate') {
           return http.Response(
             jsonEncode({
               'data': {
@@ -324,7 +328,8 @@ void main() {
             200,
             headers: {'content-type': 'application/json'},
           );
-        } else if (request.method == 'POST' && request.url.path == '/api/v1/platform/businesses/biz_new/archive') {
+        } else if (request.method == 'POST' &&
+            request.url.path == '/api/v1/platform/businesses/biz_new/archive') {
           return http.Response(
             jsonEncode({
               'data': {
@@ -344,12 +349,18 @@ void main() {
         return http.Response('{"message":"not found"}', 404);
       });
 
-      final apiClient = ApiClient(client: mockClient, baseUrl: 'https://api.mujeeb24.com');
+      final apiClient = ApiClient(
+        client: mockClient,
+        baseUrl: 'https://api.mujeeb24.com',
+      );
       apiClient.setAccessToken('mock_token');
       final repo = PlatformRepository(apiClient: apiClient);
 
       final created = await repo.createBusiness(
-        const PlatformCreateBusinessRequest(name: 'New Enterprise', slug: 'new-ent'),
+        const PlatformCreateBusinessRequest(
+          name: 'New Enterprise',
+          slug: 'new-ent',
+        ),
       );
       expect(created.id, 'biz_new');
       expect(created.isPendingSetup, true);
@@ -364,210 +375,221 @@ void main() {
       expect(archived.isArchived, true);
     });
 
-    test('AI Emergency Kill Switch and Health Check endpoints work correctly', () async {
-      final mockClient = MockClient((request) async {
-        if (request.method == 'GET' && request.url.path == '/api/v1/platform/ai') {
-          return http.Response(
-            jsonEncode({
-              'data': {
-                'runtime': {
-                  'status': 'enabled',
-                  'health': 'healthy',
+    test(
+      'AI Emergency Kill Switch and Health Check endpoints work correctly',
+      () async {
+        final mockClient = MockClient((request) async {
+          if (request.method == 'GET' &&
+              request.url.path == '/api/v1/platform/ai') {
+            return http.Response(
+              jsonEncode({
+                'data': {
+                  'runtime': {'status': 'enabled', 'health': 'healthy'},
+                  'provider': {
+                    'provider': 'openrouter',
+                    'model': 'claude-3.5-sonnet',
+                    'enabled': true,
+                    'health': 'healthy',
+                  },
                 },
-                'provider': {
+                'request_id': 'req_ai_overview',
+              }),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          } else if (request.method == 'POST' &&
+              request.url.path == '/api/v1/platform/ai/disable') {
+            final payload = jsonDecode(request.body) as Map<String, dynamic>;
+            expect(payload['reason'], 'Security emergency');
+            return http.Response(
+              jsonEncode({
+                'data': {
+                  'runtime': {'status': 'disabled', 'health': 'unhealthy'},
+                  'provider': {
+                    'provider': 'openrouter',
+                    'model': 'claude-3.5-sonnet',
+                    'enabled': false,
+                    'health': 'unhealthy',
+                  },
+                },
+                'request_id': 'req_ai_disable',
+              }),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          } else if (request.method == 'POST' &&
+              request.url.path == '/api/v1/platform/ai/enable') {
+            return http.Response(
+              jsonEncode({
+                'data': {
+                  'runtime': {'status': 'enabled', 'health': 'healthy'},
+                  'provider': {
+                    'provider': 'openrouter',
+                    'model': 'claude-3.5-sonnet',
+                    'enabled': true,
+                    'health': 'healthy',
+                  },
+                },
+                'request_id': 'req_ai_enable',
+              }),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          } else if (request.method == 'POST' &&
+              request.url.path == '/api/v1/platform/ai/health-check') {
+            return http.Response(
+              jsonEncode({
+                'data': {
                   'provider': 'openrouter',
                   'model': 'claude-3.5-sonnet',
-                  'enabled': true,
-                  'health': 'healthy',
+                  'result': 'success',
+                  'latency_ms': 95,
+                  'checked_at': '2026-01-20T12:00:00Z',
                 },
-              },
-              'request_id': 'req_ai_overview',
-            }),
-            200,
-            headers: {'content-type': 'application/json'},
-          );
-        } else if (request.method == 'POST' && request.url.path == '/api/v1/platform/ai/disable') {
-          final payload = jsonDecode(request.body) as Map<String, dynamic>;
-          expect(payload['reason'], 'Security emergency');
-          return http.Response(
-            jsonEncode({
-              'data': {
-                'runtime': {
-                  'status': 'disabled',
-                  'health': 'unhealthy',
-                },
-                'provider': {
-                  'provider': 'openrouter',
-                  'model': 'claude-3.5-sonnet',
-                  'enabled': false,
-                  'health': 'unhealthy',
-                },
-              },
-              'request_id': 'req_ai_disable',
-            }),
-            200,
-            headers: {'content-type': 'application/json'},
-          );
-        } else if (request.method == 'POST' && request.url.path == '/api/v1/platform/ai/enable') {
-          return http.Response(
-            jsonEncode({
-              'data': {
-                'runtime': {
-                  'status': 'enabled',
-                  'health': 'healthy',
-                },
-                'provider': {
-                  'provider': 'openrouter',
-                  'model': 'claude-3.5-sonnet',
-                  'enabled': true,
-                  'health': 'healthy',
-                },
-              },
-              'request_id': 'req_ai_enable',
-            }),
-            200,
-            headers: {'content-type': 'application/json'},
-          );
-        } else if (request.method == 'POST' && request.url.path == '/api/v1/platform/ai/health-check') {
-          return http.Response(
-            jsonEncode({
-              'data': {
-                'provider': 'openrouter',
-                'model': 'claude-3.5-sonnet',
-                'result': 'success',
-                'latency_ms': 95,
-                'checked_at': '2026-01-20T12:00:00Z',
-              },
-              'request_id': 'req_ai_health',
-            }),
-            200,
-            headers: {'content-type': 'application/json'},
-          );
-        }
-        return http.Response('{"message":"not found"}', 404);
-      });
+                'request_id': 'req_ai_health',
+              }),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response('{"message":"not found"}', 404);
+        });
 
-      final apiClient = ApiClient(client: mockClient, baseUrl: 'https://api.mujeeb24.com');
-      apiClient.setAccessToken('mock_token');
-      final repo = PlatformRepository(apiClient: apiClient);
+        final apiClient = ApiClient(
+          client: mockClient,
+          baseUrl: 'https://api.mujeeb24.com',
+        );
+        apiClient.setAccessToken('mock_token');
+        final repo = PlatformRepository(apiClient: apiClient);
 
-      final overview = await repo.getAIOverview();
-      expect(overview.runtime.isEnabled, true);
+        final overview = await repo.getAIOverview();
+        expect(overview.runtime.isEnabled, true);
 
-      final disabledRuntime = await repo.disableAI(reason: 'Security emergency');
-      expect(disabledRuntime.runtime.isEnabled, false);
+        final disabledRuntime = await repo.disableAI(
+          reason: 'Security emergency',
+        );
+        expect(disabledRuntime.runtime.isEnabled, false);
 
-      final enabledRuntime = await repo.enableAI();
-      expect(enabledRuntime.runtime.isEnabled, true);
+        final enabledRuntime = await repo.enableAI();
+        expect(enabledRuntime.runtime.isEnabled, true);
 
-      final health = await repo.runAIHealthCheck();
-      expect(health.isSuccess, true);
-      expect(health.latencyMs, 95);
-    });
+        final health = await repo.runAIHealthCheck();
+        expect(health.isSuccess, true);
+        expect(health.latencyMs, 95);
+      },
+    );
 
-    test('Plans and Subscriptions lifecycle operations work correctly', () async {
-      final mockClient = MockClient((request) async {
-        if (request.method == 'GET' && request.url.path == '/api/v1/platform/plans') {
-          return http.Response(
-            jsonEncode({
-              'data': [
-                {
+    test(
+      'Plans and Subscriptions lifecycle operations work correctly',
+      () async {
+        final mockClient = MockClient((request) async {
+          if (request.method == 'GET' &&
+              request.url.path == '/api/v1/platform/plans') {
+            return http.Response(
+              jsonEncode({
+                'data': [
+                  {
+                    'id': 'plan_pro',
+                    'code': 'PRO',
+                    'display_name': 'الخطة الاحترافية',
+                    'price_yer': 60000,
+                    'status': 'draft',
+                    'billing_interval': 'monthly',
+                    'ai_reply_limit': 5000,
+                    'ai_catalog_limit': 1000,
+                    'channel_limit': 5,
+                    'created_at': '2026-01-01T00:00:00Z',
+                    'updated_at': '2026-01-01T00:00:00Z',
+                  },
+                ],
+                'pagination': {'limit': 20, 'has_more': false},
+                'request_id': 'req_plans',
+              }),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          } else if (request.method == 'POST' &&
+              request.url.path == '/api/v1/platform/plans/plan_pro/activate') {
+            return http.Response(
+              jsonEncode({
+                'data': {
                   'id': 'plan_pro',
                   'code': 'PRO',
                   'display_name': 'الخطة الاحترافية',
                   'price_yer': 60000,
-                  'status': 'draft',
+                  'status': 'active',
                   'billing_interval': 'monthly',
                   'ai_reply_limit': 5000,
                   'ai_catalog_limit': 1000,
                   'channel_limit': 5,
                   'created_at': '2026-01-01T00:00:00Z',
                   'updated_at': '2026-01-01T00:00:00Z',
-                }
-              ],
-              'pagination': {
-                'limit': 20,
-                'has_more': false,
-              },
-              'request_id': 'req_plans',
-            }),
-            200,
-            headers: {'content-type': 'application/json'},
-          );
-        } else if (request.method == 'POST' && request.url.path == '/api/v1/platform/plans/plan_pro/activate') {
-          return http.Response(
-            jsonEncode({
-              'data': {
-                'id': 'plan_pro',
-                'code': 'PRO',
-                'display_name': 'الخطة الاحترافية',
-                'price_yer': 60000,
-                'status': 'active',
-                'billing_interval': 'monthly',
-                'ai_reply_limit': 5000,
-                'ai_catalog_limit': 1000,
-                'channel_limit': 5,
-                'created_at': '2026-01-01T00:00:00Z',
-                'updated_at': '2026-01-01T00:00:00Z',
-              },
-              'request_id': 'req_plan_activate',
-            }),
-            200,
-            headers: {'content-type': 'application/json'},
-          );
-        } else if (request.method == 'POST' && request.url.path == '/api/v1/platform/subscriptions/sub_1/ai-cost-budget') {
-          final payload = jsonDecode(request.body) as Map<String, dynamic>;
-          expect(payload['cost_budget_override_yer'], 75000);
-          return http.Response(
-            jsonEncode({
-              'data': {
-                'id': 'sub_1',
-                'business_id': 'biz_1',
-                'plan_id': 'plan_pro',
-                'plan_code': 'PRO',
-                'plan_version': 1,
-                'period_start': '2026-01-01T00:00:00Z',
-                'period_end': '2026-02-01T00:00:00Z',
-                'status': 'active',
-                'ai_reply_limit': 5000,
-                'ai_catalog_limit': 1000,
-                'channel_limit': 5,
-                'cost_budget_override_yer': 75000,
-                'cost_budget_override_reason': 'High demand',
-                'created_at': '2026-01-01T00:00:00Z',
-              },
-              'request_id': 'req_sub_budget',
-            }),
-            200,
-            headers: {'content-type': 'application/json'},
-          );
-        }
-        return http.Response('{"message":"not found"}', 404);
-      });
+                },
+                'request_id': 'req_plan_activate',
+              }),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          } else if (request.method == 'POST' &&
+              request.url.path ==
+                  '/api/v1/platform/subscriptions/sub_1/ai-cost-budget') {
+            final payload = jsonDecode(request.body) as Map<String, dynamic>;
+            expect(payload['cost_budget_override_yer'], 75000);
+            return http.Response(
+              jsonEncode({
+                'data': {
+                  'id': 'sub_1',
+                  'business_id': 'biz_1',
+                  'plan_id': 'plan_pro',
+                  'plan_code': 'PRO',
+                  'plan_version': 1,
+                  'period_start': '2026-01-01T00:00:00Z',
+                  'period_end': '2026-02-01T00:00:00Z',
+                  'status': 'active',
+                  'ai_reply_limit': 5000,
+                  'ai_catalog_limit': 1000,
+                  'channel_limit': 5,
+                  'cost_budget_override_yer': 75000,
+                  'cost_budget_override_reason': 'High demand',
+                  'created_at': '2026-01-01T00:00:00Z',
+                },
+                'request_id': 'req_sub_budget',
+              }),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response('{"message":"not found"}', 404);
+        });
 
-      final apiClient = ApiClient(client: mockClient, baseUrl: 'https://api.mujeeb24.com');
-      apiClient.setAccessToken('mock_token');
-      final repo = PlatformRepository(apiClient: apiClient);
+        final apiClient = ApiClient(
+          client: mockClient,
+          baseUrl: 'https://api.mujeeb24.com',
+        );
+        apiClient.setAccessToken('mock_token');
+        final repo = PlatformRepository(apiClient: apiClient);
 
-      final plans = await repo.listPlans();
-      expect(plans.items.first.status, 'draft');
+        final plans = await repo.listPlans();
+        expect(plans.items.first.status, 'draft');
 
-      final activated = await repo.activatePlan('plan_pro');
-      expect(activated.status, 'active');
+        final activated = await repo.activatePlan('plan_pro');
+        expect(activated.status, 'active');
 
-      final updatedSub = await repo.overrideAICostBudget(
-        'sub_1',
-        const PlatformOverrideBudgetRequest(
-          costBudgetOverrideYer: 75000,
-          reason: 'High demand',
-        ),
-      );
-      expect(updatedSub.costBudgetOverrideYer, 75000);
-    });
+        final updatedSub = await repo.overrideAICostBudget(
+          'sub_1',
+          const PlatformOverrideBudgetRequest(
+            costBudgetOverrideYer: 75000,
+            reason: 'High demand',
+          ),
+        );
+        expect(updatedSub.costBudgetOverrideYer, 75000);
+      },
+    );
 
     test('Support tickets and Audit events operate properly', () async {
       final mockClient = MockClient((request) async {
-        if (request.method == 'GET' && request.url.path == '/api/v1/platform/support/tickets') {
+        if (request.method == 'GET' &&
+            request.url.path == '/api/v1/platform/support/tickets') {
           return http.Response(
             jsonEncode({
               'data': [
@@ -581,18 +603,17 @@ void main() {
                   'created_by': 'user_1',
                   'created_by_type': 'merchant',
                   'created_at': '2026-01-19T00:00:00Z',
-                }
+                },
               ],
-              'pagination': {
-                'limit': 20,
-                'has_more': false,
-              },
+              'pagination': {'limit': 20, 'has_more': false},
               'request_id': 'req_tickets',
             }),
             200,
             headers: {'content-type': 'application/json'},
           );
-        } else if (request.method == 'POST' && request.url.path == '/api/v1/platform/support/tickets/tkt_1/resolve') {
+        } else if (request.method == 'POST' &&
+            request.url.path ==
+                '/api/v1/platform/support/tickets/tkt_1/resolve') {
           return http.Response(
             jsonEncode({
               'data': {
@@ -611,7 +632,8 @@ void main() {
             200,
             headers: {'content-type': 'application/json'},
           );
-        } else if (request.method == 'GET' && request.url.path == '/api/v1/platform/audit-events') {
+        } else if (request.method == 'GET' &&
+            request.url.path == '/api/v1/platform/audit-events') {
           return http.Response(
             jsonEncode({
               'data': [
@@ -623,12 +645,9 @@ void main() {
                   'result': 'success',
                   'metadata': {},
                   'occurred_at': '2026-01-19T01:00:00Z',
-                }
+                },
               ],
-              'pagination': {
-                'limit': 20,
-                'has_more': false,
-              },
+              'pagination': {'limit': 20, 'has_more': false},
               'request_id': 'req_audit',
             }),
             200,
@@ -638,7 +657,10 @@ void main() {
         return http.Response('{"message":"not found"}', 404);
       });
 
-      final apiClient = ApiClient(client: mockClient, baseUrl: 'https://api.mujeeb24.com');
+      final apiClient = ApiClient(
+        client: mockClient,
+        baseUrl: 'https://api.mujeeb24.com',
+      );
       apiClient.setAccessToken('mock_token');
       final repo = PlatformRepository(apiClient: apiClient);
 
@@ -668,22 +690,23 @@ void main() {
         );
       });
 
-      final apiClient = ApiClient(client: mockClient, baseUrl: 'https://api.mujeeb24.com');
+      final apiClient = ApiClient(
+        client: mockClient,
+        baseUrl: 'https://api.mujeeb24.com',
+      );
       apiClient.setAccessToken('regular_merchant_token');
       final repo = PlatformRepository(apiClient: apiClient);
 
       expect(
         () async => await repo.listBusinesses(),
         throwsA(
-          isA<ApiErrorEnvelope>().having(
-            (e) => e.statusCode,
-            'statusCode',
-            403,
-          ).having(
-            (e) => e.error.message,
-            'error.message',
-            'Platform admin privileges required',
-          ),
+          isA<ApiErrorEnvelope>()
+              .having((e) => e.statusCode, 'statusCode', 403)
+              .having(
+                (e) => e.error.message,
+                'error.message',
+                'Platform admin privileges required',
+              ),
         ),
       );
     });

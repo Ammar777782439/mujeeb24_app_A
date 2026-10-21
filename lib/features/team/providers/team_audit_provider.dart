@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../../../core/errors/api_error.dart';
 import '../../../core/models/team_audit_models.dart';
 import '../../../core/team/team_audit_repository.dart';
@@ -259,8 +260,10 @@ class TeamAuditProvider extends ChangeNotifier {
   List<TeamInvitationDetails> get invitations {
     if (_invitationStatusFilter == 'all') return _invitations;
     return _invitations
-        .where((inv) =>
-            inv.status.toLowerCase() == _invitationStatusFilter.toLowerCase())
+        .where(
+          (inv) =>
+              inv.status.toLowerCase() == _invitationStatusFilter.toLowerCase(),
+        )
         .toList();
   }
 
@@ -275,7 +278,10 @@ class TeamAuditProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchInvitations(String businessId, {bool refresh = false}) async {
+  Future<void> fetchInvitations(
+    String businessId, {
+    bool refresh = false,
+  }) async {
     if (refresh) {
       _invitationsCursor = null;
       _hasMoreInvitations = false;
@@ -458,7 +464,10 @@ class TeamAuditProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchAuditEvents(String businessId, {bool refresh = false}) async {
+  Future<void> fetchAuditEvents(
+    String businessId, {
+    bool refresh = false,
+  }) async {
     if (refresh) {
       _auditCursor = null;
       _hasMoreAuditEvents = false;
@@ -474,8 +483,7 @@ class TeamAuditProvider extends ChangeNotifier {
         cursor: refresh ? null : _auditCursor,
         actorType: _actorTypeFilter != 'all' ? _actorTypeFilter : null,
         action: _actionFilter != 'all' ? _actionFilter : null,
-        resourceType:
-            _resourceTypeFilter != 'all' ? _resourceTypeFilter : null,
+        resourceType: _resourceTypeFilter != 'all' ? _resourceTypeFilter : null,
       );
 
       if (refresh) {

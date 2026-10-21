@@ -175,7 +175,8 @@ class _DashboardTabState extends State<DashboardTab> {
             _buildReviewCard(
               title: strings('transactions_review'),
               count: overview?.transactionsNeedingReview ?? 0,
-              onTap: widget.onNavigateToReviews ?? widget.onNavigateToTransactions,
+              onTap:
+                  widget.onNavigateToReviews ?? widget.onNavigateToTransactions,
             ),
             if (widget.onNavigateToCatalogs != null) ...[
               const SizedBox(height: 12),
@@ -244,7 +245,8 @@ class _DashboardTabState extends State<DashboardTab> {
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF6B21A8).withValues(alpha: 0.12),
+                          color: const Color(0xFF6B21A8)
+                              .withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(
@@ -582,56 +584,57 @@ class _DashboardTabState extends State<DashboardTab> {
               : AppColors.surfaceCanvas,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color:
-                count > 0 ? AppColors.statusWarning : AppColors.borderHairline,
+            color: count > 0
+                ? AppColors.statusWarning
+                : AppColors.borderHairline,
           ),
         ),
         child: Row(
           children: [
-          Icon(
-            count > 0
-                ? Icons.warning_amber_rounded
-                : Icons.check_circle_outline_rounded,
-            color: count > 0
-                ? AppColors.statusWarning
-                : AppColors.statusSuccess,
-            size: 24,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              title,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: count > 0
-                    ? AppColors.statusWarning
-                    : AppColors.onSurface,
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
+            Icon(
+              count > 0
+                  ? Icons.warning_amber_rounded
+                  : Icons.check_circle_outline_rounded,
               color: count > 0
                   ? AppColors.statusWarning
-                  : AppColors.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(12),
+                  : AppColors.statusSuccess,
+              size: 24,
             ),
-            child: Text(
-              count.toString(),
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: count > 0 ? Colors.white : AppColors.onSurface,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: count > 0
+                      ? AppColors.statusWarning
+                      : AppColors.onSurface,
+                ),
               ),
             ),
-          ),
-        ],
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: count > 0
+                    ? AppColors.statusWarning
+                    : AppColors.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                count.toString(),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: count > 0 ? Colors.white : AppColors.onSurface,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildChannelsSection(
     Map<String, int> connections,
@@ -677,11 +680,7 @@ class _DashboardTabState extends State<DashboardTab> {
                     color: meta.backgroundColor,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
-                    meta.icon,
-                    color: meta.brandColor,
-                    size: 20,
-                  ),
+                  child: Icon(meta.icon, color: meta.brandColor, size: 20),
                 ),
                 title: Text(
                   meta.key == 'other' ? key : meta.localizedName(context),

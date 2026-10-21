@@ -236,8 +236,9 @@ class _MerchantHomeScreenState extends State<MerchantHomeScreen> {
             ? _openChannels
             : null,
         onNavigateToTeam: widget.teamAuditProvider != null ? _openTeam : null,
-        onNavigateToAuditLogs:
-            widget.teamAuditProvider != null ? _openAuditLogs : null,
+        onNavigateToAuditLogs: widget.teamAuditProvider != null
+            ? _openAuditLogs
+            : null,
       ),
       InboxTab(
         merchantProvider: widget.merchantProvider,
@@ -261,12 +262,14 @@ class _MerchantHomeScreenState extends State<MerchantHomeScreen> {
         onLogout: widget.onLogout,
         onToggleLanguage: () => widget.localeProvider.toggleLocale(),
         onNavigateToTeam: widget.teamAuditProvider != null ? _openTeam : null,
-        onNavigateToAuditLogs:
-            widget.teamAuditProvider != null ? _openAuditLogs : null,
+        onNavigateToAuditLogs: widget.teamAuditProvider != null
+            ? _openAuditLogs
+            : null,
         onNavigateToPlatform:
-            (widget.authProvider.isPlatformAdmin && widget.platformProvider != null)
-                ? _openPlatform
-                : null,
+            (widget.authProvider.isPlatformAdmin &&
+                widget.platformProvider != null)
+            ? _openPlatform
+            : null,
       ),
     ];
 
@@ -333,7 +336,8 @@ class _MerchantHomeScreenState extends State<MerchantHomeScreen> {
               tooltip: strings('team_and_audit'),
               onPressed: _openTeam,
             ),
-          if (widget.authProvider.isPlatformAdmin && widget.platformProvider != null)
+          if (widget.authProvider.isPlatformAdmin &&
+              widget.platformProvider != null)
             IconButton(
               key: const Key('btn_appbar_platform'),
               icon: const Icon(Icons.admin_panel_settings_rounded),

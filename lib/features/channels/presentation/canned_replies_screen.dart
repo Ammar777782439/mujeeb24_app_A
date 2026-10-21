@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../app/localization/app_localizations.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/models/channel_automation_models.dart';
@@ -39,19 +40,13 @@ class _CannedRepliesScreenState extends State<CannedRepliesScreen> {
   void _showErrorSnackBar(String message, [String? requestId]) {
     final text = requestId != null ? '$message ($requestId)' : message;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(text),
-        backgroundColor: AppColors.error,
-      ),
+      SnackBar(content: Text(text), backgroundColor: AppColors.error),
     );
   }
 
   void _showSuccessSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.success,
-      ),
+      SnackBar(content: Text(message), backgroundColor: AppColors.success),
     );
   }
 
@@ -84,7 +79,9 @@ class _CannedRepliesScreenState extends State<CannedRepliesScreen> {
                       border: const OutlineInputBorder(),
                     ),
                     validator: (val) {
-                      if (val == null || val.trim().isEmpty) return strings('required_field');
+                      if (val == null || val.trim().isEmpty) {
+                        return strings('required_field');
+                      }
                       return null;
                     },
                   ),
@@ -97,7 +94,9 @@ class _CannedRepliesScreenState extends State<CannedRepliesScreen> {
                       border: const OutlineInputBorder(),
                     ),
                     validator: (val) {
-                      if (val == null || val.trim().isEmpty) return strings('required_field');
+                      if (val == null || val.trim().isEmpty) {
+                        return strings('required_field');
+                      }
                       return null;
                     },
                   ),
@@ -111,7 +110,9 @@ class _CannedRepliesScreenState extends State<CannedRepliesScreen> {
                       border: const OutlineInputBorder(),
                     ),
                     validator: (val) {
-                      if (val == null || val.trim().isEmpty) return strings('required_field');
+                      if (val == null || val.trim().isEmpty) {
+                        return strings('required_field');
+                      }
                       return null;
                     },
                   ),
@@ -185,7 +186,9 @@ class _CannedRepliesScreenState extends State<CannedRepliesScreen> {
                       border: const OutlineInputBorder(),
                     ),
                     validator: (val) {
-                      if (val == null || val.trim().isEmpty) return strings('required_field');
+                      if (val == null || val.trim().isEmpty) {
+                        return strings('required_field');
+                      }
                       return null;
                     },
                   ),
@@ -197,7 +200,9 @@ class _CannedRepliesScreenState extends State<CannedRepliesScreen> {
                       border: const OutlineInputBorder(),
                     ),
                     validator: (val) {
-                      if (val == null || val.trim().isEmpty) return strings('required_field');
+                      if (val == null || val.trim().isEmpty) {
+                        return strings('required_field');
+                      }
                       return null;
                     },
                   ),
@@ -210,7 +215,9 @@ class _CannedRepliesScreenState extends State<CannedRepliesScreen> {
                       border: const OutlineInputBorder(),
                     ),
                     validator: (val) {
-                      if (val == null || val.trim().isEmpty) return strings('required_field');
+                      if (val == null || val.trim().isEmpty) {
+                        return strings('required_field');
+                      }
                       return null;
                     },
                   ),
@@ -277,7 +284,8 @@ class _CannedRepliesScreenState extends State<CannedRepliesScreen> {
         animation: widget.channelProvider,
         builder: (context, _) {
           final provider = widget.channelProvider;
-          if (provider.isLoadingCannedReplies && provider.cannedReplies.isEmpty) {
+          if (provider.isLoadingCannedReplies &&
+              provider.cannedReplies.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
@@ -304,9 +312,16 @@ class _CannedRepliesScreenState extends State<CannedRepliesScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.reply_all, size: 64, color: AppColors.textSecondary),
+                            const Icon(
+                              Icons.reply_all,
+                              size: 64,
+                              color: AppColors.textSecondary,
+                            ),
                             const SizedBox(height: 16),
-                            Text(strings('no_canned_replies'), style: Theme.of(context).textTheme.titleMedium),
+                            Text(
+                              strings('no_canned_replies'),
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
                             const SizedBox(height: 8),
                             ElevatedButton.icon(
                               onPressed: _showCreateReplyDialog,
@@ -321,7 +336,8 @@ class _CannedRepliesScreenState extends State<CannedRepliesScreen> {
                         child: ListView.separated(
                           padding: const EdgeInsets.all(16),
                           itemCount: provider.cannedReplies.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 12),
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 12),
                           itemBuilder: (context, index) {
                             final reply = provider.cannedReplies[index];
 
@@ -339,10 +355,17 @@ class _CannedRepliesScreenState extends State<CannedRepliesScreen> {
                                     Row(
                                       children: [
                                         Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
                                           decoration: BoxDecoration(
-                                            color: AppColors.primary.withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(6),
+                                            color: AppColors.primary.withValues(
+                                              alpha: 0.1,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
                                           ),
                                           child: Text(
                                             reply.shortcut,
@@ -357,12 +380,19 @@ class _CannedRepliesScreenState extends State<CannedRepliesScreen> {
                                         Expanded(
                                           child: Text(
                                             reply.title,
-                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
                                           ),
                                         ),
                                         IconButton(
-                                          icon: const Icon(Icons.edit_outlined, size: 20),
-                                          onPressed: () => _showEditReplyDialog(reply),
+                                          icon: const Icon(
+                                            Icons.edit_outlined,
+                                            size: 20,
+                                          ),
+                                          onPressed: () =>
+                                              _showEditReplyDialog(reply),
                                         ),
                                       ],
                                     ),

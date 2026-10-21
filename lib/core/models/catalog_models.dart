@@ -61,10 +61,7 @@ class CreateCatalogRequest {
   final String name;
   final String? description;
 
-  const CreateCatalogRequest({
-    required this.name,
-    this.description,
-  });
+  const CreateCatalogRequest({required this.name, this.description});
 
   Map<String, dynamic> toJson() {
     return {
@@ -82,11 +79,7 @@ class UpdateCatalogRequest {
   final String? description;
   final String? status;
 
-  const UpdateCatalogRequest({
-    this.name,
-    this.description,
-    this.status,
-  });
+  const UpdateCatalogRequest({this.name, this.description, this.status});
 
   Map<String, dynamic> toJson() {
     final map = <String, dynamic>{};
@@ -146,8 +139,8 @@ class CatalogItem {
       attributeSchemaVersion: json['attribute_schema_version'] is int
           ? json['attribute_schema_version'] as int
           : (json['attribute_schema_version'] != null
-              ? int.tryParse(json['attribute_schema_version'].toString())
-              : null),
+                ? int.tryParse(json['attribute_schema_version'].toString())
+                : null),
       itemType: json['item_type']?.toString() ?? 'physical_good',
       name: json['name']?.toString() ?? '',
       shortDescription: json['short_description']?.toString(),
@@ -341,16 +334,10 @@ class CreateVariantRequest {
   final String name;
   final Map<String, dynamic> attributes;
 
-  const CreateVariantRequest({
-    required this.name,
-    this.attributes = const {},
-  });
+  const CreateVariantRequest({required this.name, this.attributes = const {}});
 
   Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'attributes': attributes,
-    };
+    return {'name': name, 'attributes': attributes};
   }
 }
 
@@ -361,11 +348,7 @@ class UpdateVariantRequest {
   final Map<String, dynamic>? attributes;
   final String? status;
 
-  const UpdateVariantRequest({
-    this.name,
-    this.attributes,
-    this.status,
-  });
+  const UpdateVariantRequest({this.name, this.attributes, this.status});
 
   Map<String, dynamic> toJson() {
     final map = <String, dynamic>{};
@@ -476,8 +459,7 @@ class Offer {
       'price_verification_status': priceVerificationStatus,
       if (priceCheckedAt != null) 'price_checked_at': priceCheckedAt,
       'availability_mode': availabilityMode,
-      if (availabilitySource != null)
-        'availability_source': availabilitySource,
+      if (availabilitySource != null) 'availability_source': availabilitySource,
       if (availabilityCheckedAt != null)
         'availability_checked_at': availabilityCheckedAt,
       if (availabilityValidUntil != null)
@@ -605,8 +587,8 @@ class AttributeDefinition {
       displayOrder: json['display_order'] is int
           ? json['display_order'] as int
           : (json['display_order'] != null
-              ? int.tryParse(json['display_order'].toString()) ?? 0
-              : 0),
+                ? int.tryParse(json['display_order'].toString()) ?? 0
+                : 0),
     );
   }
 
@@ -659,8 +641,8 @@ class AttributeSchema {
       version: json['version'] is int
           ? json['version'] as int
           : (json['version'] != null
-              ? int.tryParse(json['version'].toString()) ?? 1
-              : 1),
+                ? int.tryParse(json['version'].toString()) ?? 1
+                : 1),
       definitions: defs,
     );
   }
@@ -731,22 +713,31 @@ class CatalogEntityContract {
 
     return CatalogEntityContract(
       pricingModes: parseMap(source['pricing_modes'] ?? source['pricing_mode']),
-      availabilityModes:
-          parseMap(source['availability_modes'] ?? source['availability_mode']),
+      availabilityModes: parseMap(
+        source['availability_modes'] ?? source['availability_mode'],
+      ),
       availabilityStatuses: parseMap(
-          source['availability_statuses'] ?? source['availability_status']),
+        source['availability_statuses'] ?? source['availability_status'],
+      ),
       priceVerificationStatuses: parseMap(
-          source['price_verification_statuses'] ??
-              source['price_verification_status']),
-      fulfillmentModes:
-          parseMap(source['fulfillment_modes'] ?? source['fulfillment_mode']),
+        source['price_verification_statuses'] ??
+            source['price_verification_status'],
+      ),
+      fulfillmentModes: parseMap(
+        source['fulfillment_modes'] ?? source['fulfillment_mode'],
+      ),
       itemStatuses: parseMap(source['item_statuses'] ?? source['item_status']),
-      catalogStatuses: parseMap(source['catalog_statuses'] ??
-          source['catalog_status'] ??
-          source['status']),
-      variantStatuses:
-          parseMap(source['variant_statuses'] ?? source['variant_status']),
-      offerStatuses: parseMap(source['offer_statuses'] ?? source['offer_status']),
+      catalogStatuses: parseMap(
+        source['catalog_statuses'] ??
+            source['catalog_status'] ??
+            source['status'],
+      ),
+      variantStatuses: parseMap(
+        source['variant_statuses'] ?? source['variant_status'],
+      ),
+      offerStatuses: parseMap(
+        source['offer_statuses'] ?? source['offer_status'],
+      ),
     );
   }
 
@@ -791,11 +782,7 @@ class CatalogEntityContract {
         'travel': 'حجز سفر / رحلة محددة',
         'manual': 'تنفيذ يدوي / مخصص',
       },
-      catalogStatuses: {
-        'draft': 'مسودة',
-        'active': 'نشط',
-        'archived': 'مؤرشف',
-      },
+      catalogStatuses: {'draft': 'مسودة', 'active': 'نشط', 'archived': 'مؤرشف'},
       itemStatuses: {
         'draft': 'مسودة',
         'active': 'نشط',
@@ -831,24 +818,17 @@ class CatalogEntityContract {
     };
   }
 
-  String labelPricingMode(String mode) =>
-      pricingModes[mode] ?? mode;
-  String labelAvailabilityMode(String mode) =>
-      availabilityModes[mode] ?? mode;
+  String labelPricingMode(String mode) => pricingModes[mode] ?? mode;
+  String labelAvailabilityMode(String mode) => availabilityModes[mode] ?? mode;
   String labelAvailabilityStatus(String status) =>
       availabilityStatuses[status] ?? status;
   String labelPriceVerification(String status) =>
       priceVerificationStatuses[status] ?? status;
-  String labelFulfillmentMode(String mode) =>
-      fulfillmentModes[mode] ?? mode;
-  String labelItemStatus(String status) =>
-      itemStatuses[status] ?? status;
-  String labelCatalogStatus(String status) =>
-      catalogStatuses[status] ?? status;
-  String labelVariantStatus(String status) =>
-      variantStatuses[status] ?? status;
-  String labelOfferStatus(String status) =>
-      offerStatuses[status] ?? status;
+  String labelFulfillmentMode(String mode) => fulfillmentModes[mode] ?? mode;
+  String labelItemStatus(String status) => itemStatuses[status] ?? status;
+  String labelCatalogStatus(String status) => catalogStatuses[status] ?? status;
+  String labelVariantStatus(String status) => variantStatuses[status] ?? status;
+  String labelOfferStatus(String status) => offerStatuses[status] ?? status;
 
   String labelFor(String category, String code) {
     switch (category) {
@@ -907,9 +887,11 @@ class CatalogPage {
     final pagination = json['pagination'];
     return CatalogPage(
       items: list,
-      hasMore: json['has_more'] == true ||
+      hasMore:
+          json['has_more'] == true ||
           (pagination is Map && pagination['has_more'] == true),
-      nextCursor: json['next_cursor']?.toString() ??
+      nextCursor:
+          json['next_cursor']?.toString() ??
           (pagination is Map ? pagination['next_cursor']?.toString() : null),
       requestId: json['request_id']?.toString(),
     );
@@ -945,9 +927,11 @@ class CatalogItemPage {
     final pagination = json['pagination'];
     return CatalogItemPage(
       items: list,
-      hasMore: json['has_more'] == true ||
+      hasMore:
+          json['has_more'] == true ||
           (pagination is Map && pagination['has_more'] == true),
-      nextCursor: json['next_cursor']?.toString() ??
+      nextCursor:
+          json['next_cursor']?.toString() ??
           (pagination is Map ? pagination['next_cursor']?.toString() : null),
       requestId: json['request_id']?.toString(),
     );
@@ -983,9 +967,11 @@ class VariantPage {
     final pagination = json['pagination'];
     return VariantPage(
       items: list,
-      hasMore: json['has_more'] == true ||
+      hasMore:
+          json['has_more'] == true ||
           (pagination is Map && pagination['has_more'] == true),
-      nextCursor: json['next_cursor']?.toString() ??
+      nextCursor:
+          json['next_cursor']?.toString() ??
           (pagination is Map ? pagination['next_cursor']?.toString() : null),
       requestId: json['request_id']?.toString(),
     );
@@ -1021,9 +1007,11 @@ class OfferPage {
     final pagination = json['pagination'];
     return OfferPage(
       items: list,
-      hasMore: json['has_more'] == true ||
+      hasMore:
+          json['has_more'] == true ||
           (pagination is Map && pagination['has_more'] == true),
-      nextCursor: json['next_cursor']?.toString() ??
+      nextCursor:
+          json['next_cursor']?.toString() ??
           (pagination is Map ? pagination['next_cursor']?.toString() : null),
       requestId: json['request_id']?.toString(),
     );

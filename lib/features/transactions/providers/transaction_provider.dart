@@ -330,7 +330,9 @@ class TransactionProvider extends ChangeNotifier {
     try {
       final matchHeader = ifMatch ?? _selectedTransaction?.resourceVersion;
       if (matchHeader == null || matchHeader.isEmpty) {
-        throw StateError('If-Match resource version is required for draft update');
+        throw StateError(
+          'If-Match resource version is required for draft update',
+        );
       }
 
       final updated = await transactionRepository.updateTransactionDraft(
@@ -371,7 +373,9 @@ class TransactionProvider extends ChangeNotifier {
     try {
       final matchHeader = ifMatch ?? _selectedTransaction?.resourceVersion;
       if (matchHeader == null || matchHeader.isEmpty) {
-        throw StateError('If-Match resource version is required to submit review');
+        throw StateError(
+          'If-Match resource version is required to submit review',
+        );
       }
 
       final review = await transactionRepository.submitTransactionReview(
@@ -411,7 +415,9 @@ class TransactionProvider extends ChangeNotifier {
     try {
       final matchHeader = ifMatch ?? _selectedTransaction?.resourceVersion;
       if (matchHeader == null || matchHeader.isEmpty) {
-        throw StateError('If-Match resource version is required to approve review');
+        throw StateError(
+          'If-Match resource version is required to approve review',
+        );
       }
 
       final review = await transactionRepository.approveTransactionReview(
@@ -453,7 +459,9 @@ class TransactionProvider extends ChangeNotifier {
     try {
       final matchHeader = ifMatch ?? _selectedTransaction?.resourceVersion;
       if (matchHeader == null || matchHeader.isEmpty) {
-        throw StateError('If-Match resource version is required to reject review');
+        throw StateError(
+          'If-Match resource version is required to reject review',
+        );
       }
 
       final review = await transactionRepository.rejectTransactionReview(
@@ -495,7 +503,9 @@ class TransactionProvider extends ChangeNotifier {
     try {
       final matchHeader = ifMatch ?? _selectedTransaction?.resourceVersion;
       if (matchHeader == null || matchHeader.isEmpty) {
-        throw StateError('If-Match resource version is required to confirm transaction');
+        throw StateError(
+          'If-Match resource version is required to confirm transaction',
+        );
       }
 
       final confirmed = await transactionRepository.confirmTransaction(
@@ -539,7 +549,9 @@ class TransactionProvider extends ChangeNotifier {
     try {
       final matchHeader = ifMatch ?? _selectedTransaction?.resourceVersion;
       if (matchHeader == null || matchHeader.isEmpty) {
-        throw StateError('If-Match resource version is required to cancel transaction');
+        throw StateError(
+          'If-Match resource version is required to cancel transaction',
+        );
       }
 
       final cancelled = await transactionRepository.cancelTransaction(

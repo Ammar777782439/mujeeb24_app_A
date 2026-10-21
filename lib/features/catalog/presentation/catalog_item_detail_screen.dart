@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../app/localization/app_localizations.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/models/catalog_models.dart';
@@ -353,7 +354,8 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
     final pricingUnitController = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
-    String pricingMode = widget.catalogProvider.selectedItem?.pricingMode ?? 'fixed';
+    String pricingMode =
+        widget.catalogProvider.selectedItem?.pricingMode ?? 'fixed';
     String availabilityMode =
         widget.catalogProvider.selectedItem?.availabilityMode ?? 'stock';
     String availabilityStatus = 'available';
@@ -400,7 +402,8 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                               controller: amountController,
                               keyboardType:
                                   const TextInputType.numberWithOptions(
-                                      decimal: true),
+                                    decimal: true,
+                                  ),
                               decoration: InputDecoration(
                                 labelText: strings('price_amount'),
                                 border: const OutlineInputBorder(),
@@ -490,7 +493,9 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                     Navigator.of(ctx).pop();
                     final messenger = ScaffoldMessenger.of(context);
 
-                    final amount = double.tryParse(amountController.text.trim());
+                    final amount = double.tryParse(
+                      amountController.text.trim(),
+                    );
                     final created = await widget.catalogProvider.createOffer(
                       widget.businessId,
                       widget.itemId,
@@ -501,7 +506,8 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                         currency: currencyController.text.trim().isNotEmpty
                             ? currencyController.text.trim()
                             : 'SAR',
-                        pricingUnit: pricingUnitController.text.trim().isNotEmpty
+                        pricingUnit:
+                            pricingUnitController.text.trim().isNotEmpty
                             ? pricingUnitController.text.trim()
                             : null,
                         availabilityMode: availabilityMode,
@@ -544,8 +550,9 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
 
   void _showEditOfferDialog(Offer offer) {
     final nameController = TextEditingController(text: offer.name);
-    final amountController =
-        TextEditingController(text: offer.amount?.toString() ?? '');
+    final amountController = TextEditingController(
+      text: offer.amount?.toString() ?? '',
+    );
     String selectedAvailabilityStatus = offer.availabilityStatus;
     String selectedStatus = offer.status;
     final formKey = GlobalKey<FormState>();
@@ -582,8 +589,9 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: amountController,
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
                         decoration: InputDecoration(
                           labelText: strings('price_amount'),
                           border: const OutlineInputBorder(),
@@ -606,7 +614,8 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                         onChanged: (val) {
                           if (val != null) {
                             setDialogState(
-                                () => selectedAvailabilityStatus = val);
+                              () => selectedAvailabilityStatus = val,
+                            );
                           }
                         },
                       ),
@@ -645,7 +654,9 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                     Navigator.of(ctx).pop();
                     final messenger = ScaffoldMessenger.of(context);
 
-                    final amount = double.tryParse(amountController.text.trim());
+                    final amount = double.tryParse(
+                      amountController.text.trim(),
+                    );
                     final updated = await widget.catalogProvider.updateOffer(
                       widget.businessId,
                       offer.id,
@@ -713,16 +724,17 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                   icon: const Icon(Icons.edit_outlined),
                   tooltip: strings('edit_item'),
                   onPressed: () async {
-                    final updated = await Navigator.of(context).push<CatalogItem>(
-                      MaterialPageRoute(
-                        builder: (_) => CatalogItemFormScreen(
-                          catalogProvider: provider,
-                          businessId: widget.businessId,
-                          catalogId: widget.catalogId,
-                          existingItem: item,
-                        ),
-                      ),
-                    );
+                    final updated = await Navigator.of(context)
+                        .push<CatalogItem>(
+                          MaterialPageRoute(
+                            builder: (_) => CatalogItemFormScreen(
+                              catalogProvider: provider,
+                              businessId: widget.businessId,
+                              catalogId: widget.catalogId,
+                              existingItem: item,
+                            ),
+                          ),
+                        );
                     if (updated != null) {
                       _loadDetails();
                     }
@@ -746,42 +758,42 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
           body: provider.isLoadingItemDetail && item == null
               ? const Center(child: CircularProgressIndicator())
               : provider.itemDetailError != null && item == null
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.error_outline_rounded,
-                              size: 48,
-                              color: AppColors.statusError,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              provider.itemDetailError!,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: AppColors.textMuted),
-                            ),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: _loadDetails,
-                              child: Text(strings('retry')),
-                            ),
-                          ],
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.error_outline_rounded,
+                          size: 48,
+                          color: AppColors.statusError,
                         ),
-                      ),
-                    )
-                  : item == null
-                      ? Center(child: Text(strings('no_items')))
-                      : TabBarView(
-                          controller: _tabController,
-                          children: [
-                            _buildOverviewTab(item, contract, strings),
-                            _buildVariantsTab(variants, contract, strings),
-                            _buildOffersTab(offers, contract, strings),
-                          ],
+                        const SizedBox(height: 12),
+                        Text(
+                          provider.itemDetailError!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: AppColors.textMuted),
                         ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _loadDetails,
+                          child: Text(strings('retry')),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : item == null
+              ? Center(child: Text(strings('no_items')))
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildOverviewTab(item, contract, strings),
+                    _buildVariantsTab(variants, contract, strings),
+                    _buildOffersTab(offers, contract, strings),
+                  ],
+                ),
         );
       },
     );
@@ -830,7 +842,9 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: statusBg,
                         borderRadius: BorderRadius.circular(12),
@@ -955,7 +969,10 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                 if (item.attributes.isEmpty)
                   Text(
                     strings('no_attributions'),
-                    style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
                   )
                 else
                   ...item.attributes.entries.map((e) {
@@ -965,7 +982,9 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.surfaceSubtle,
                               borderRadius: BorderRadius.circular(4),
@@ -1012,7 +1031,10 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
             children: [
               Text(
                 label,
-                style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
@@ -1108,7 +1130,9 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 2),
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: statusBg,
                                     borderRadius: BorderRadius.circular(10),
@@ -1123,8 +1147,10 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                                   ),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.edit_outlined,
-                                      size: 18),
+                                  icon: const Icon(
+                                    Icons.edit_outlined,
+                                    size: 18,
+                                  ),
                                   tooltip: strings('edit_variant'),
                                   onPressed: () => _showEditVariantDialog(v),
                                 ),
@@ -1210,15 +1236,19 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                 final statusBg = _getStatusBgColor(offer.status);
                 final statusLabel = contract.labelOfferStatus(offer.status);
 
-                final availColor =
-                    _getAvailabilityColor(offer.availabilityStatus);
-                final availLabel = contract
-                    .labelAvailabilityStatus(offer.availabilityStatus);
+                final availColor = _getAvailabilityColor(
+                  offer.availabilityStatus,
+                );
+                final availLabel = contract.labelAvailabilityStatus(
+                  offer.availabilityStatus,
+                );
 
-                final priceVerifColor =
-                    _getPriceVerificationColor(offer.priceVerificationStatus);
-                final priceVerifLabel = contract
-                    .labelPriceVerification(offer.priceVerificationStatus);
+                final priceVerifColor = _getPriceVerificationColor(
+                  offer.priceVerificationStatus,
+                );
+                final priceVerifLabel = contract.labelPriceVerification(
+                  offer.priceVerificationStatus,
+                );
 
                 return Card(
                   elevation: 0,
@@ -1249,7 +1279,9 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 2),
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: statusBg,
                                     borderRadius: BorderRadius.circular(10),
@@ -1264,8 +1296,10 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                                   ),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.edit_outlined,
-                                      size: 18),
+                                  icon: const Icon(
+                                    Icons.edit_outlined,
+                                    size: 18,
+                                  ),
                                   tooltip: strings('edit_offer'),
                                   onPressed: () => _showEditOfferDialog(offer),
                                 ),
@@ -1305,7 +1339,9 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: availColor.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(6),
@@ -1321,7 +1357,9 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                             ),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: priceVerifColor.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(6),

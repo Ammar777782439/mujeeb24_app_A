@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../../../core/catalog/catalog_repository.dart';
 import '../../../core/errors/api_error.dart';
 import '../../../core/models/catalog_models.dart';

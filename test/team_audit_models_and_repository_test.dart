@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -155,7 +156,7 @@ void main() {
             'role': 'agent',
             'permissions': ['conversations:read'],
             'status': 'active',
-          }
+          },
         ],
         'pagination': {'next_cursor': 'cur_99', 'has_more': true},
         'request_id': 'req-abc-123',
@@ -188,13 +189,16 @@ void main() {
               'role': 'manager',
               'permissions': ['team:read'],
               'status': 'active',
-            }
+            },
           ],
           'pagination': {'has_more': false},
           'request_id': 'req-team-list',
         };
-        return http.Response(jsonEncode(body), 200,
-            headers: {'content-type': 'application/json'});
+        return http.Response(
+          jsonEncode(body),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
       });
 
       final repo = TeamAuditRepository(apiClient: ApiClient(client: mock));
@@ -205,85 +209,95 @@ void main() {
       expect(result.requestId, equals('req-team-list'));
     });
 
-    test('updateTeamMemberRole sends PATCH with Idempotency-Key and If-Match',
-        () async {
-      final mock = MockClient((request) async {
-        expect(request.method, equals('PATCH'));
-        expect(
-          request.url.path,
-          equals('/api/v1/businesses/biz-001/team/members/u-1/role'),
+    test(
+      'updateTeamMemberRole sends PATCH with Idempotency-Key and If-Match',
+      () async {
+        final mock = MockClient((request) async {
+          expect(request.method, equals('PATCH'));
+          expect(
+            request.url.path,
+            equals('/api/v1/businesses/biz-001/team/members/u-1/role'),
+          );
+          expect(request.headers['Idempotency-Key'], isNotEmpty);
+          expect(request.headers['If-Match'], equals('ver-3'));
+
+          final parsedBody = jsonDecode(request.body) as Map;
+          expect(parsedBody['role'], equals('admin'));
+
+          final body = {
+            'data': {
+              'principal_id': 'u-1',
+              'email': 'user1@biz.com',
+              'display_name': 'User 1',
+              'role': 'admin',
+              'permissions': ['team:manage'],
+              'status': 'active',
+            },
+            'request_id': 'req-role-patch',
+          };
+          return http.Response(
+            jsonEncode(body),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        });
+
+        final repo = TeamAuditRepository(apiClient: ApiClient(client: mock));
+        final updated = await repo.updateTeamMemberRole(
+          businessId: 'biz-001',
+          principalId: 'u-1',
+          request: const UpdateTeamMemberRoleRequest(role: 'admin'),
+          ifMatch: 'ver-3',
         );
-        expect(request.headers['Idempotency-Key'], isNotEmpty);
-        expect(request.headers['If-Match'], equals('ver-3'));
 
-        final parsedBody = jsonDecode(request.body) as Map;
-        expect(parsedBody['role'], equals('admin'));
+        expect(updated.role, equals('admin'));
+      },
+    );
 
-        final body = {
-          'data': {
-            'principal_id': 'u-1',
-            'email': 'user1@biz.com',
-            'display_name': 'User 1',
-            'role': 'admin',
-            'permissions': ['team:manage'],
-            'status': 'active',
-          },
-          'request_id': 'req-role-patch',
-        };
-        return http.Response(jsonEncode(body), 200,
-            headers: {'content-type': 'application/json'});
-      });
+    test(
+      'updateTeamMemberAccess sends PATCH with role and permissions',
+      () async {
+        final mock = MockClient((request) async {
+          expect(request.method, equals('PATCH'));
+          expect(
+            request.url.path,
+            equals('/api/v1/businesses/biz-001/team/members/u-1/access'),
+          );
+          final parsedBody = jsonDecode(request.body) as Map;
+          expect(parsedBody['role'], equals('manager'));
+          expect(parsedBody['permissions'], contains('sales:read'));
 
-      final repo = TeamAuditRepository(apiClient: ApiClient(client: mock));
-      final updated = await repo.updateTeamMemberRole(
-        businessId: 'biz-001',
-        principalId: 'u-1',
-        request: const UpdateTeamMemberRoleRequest(role: 'admin'),
-        ifMatch: 'ver-3',
-      );
+          final body = {
+            'data': {
+              'principal_id': 'u-1',
+              'email': 'user1@biz.com',
+              'display_name': 'User 1',
+              'role': 'manager',
+              'permissions': ['sales:read', 'sales:write'],
+              'status': 'active',
+            },
+            'request_id': 'req-access-patch',
+          };
+          return http.Response(
+            jsonEncode(body),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        });
 
-      expect(updated.role, equals('admin'));
-    });
-
-    test('updateTeamMemberAccess sends PATCH with role and permissions',
-        () async {
-      final mock = MockClient((request) async {
-        expect(request.method, equals('PATCH'));
-        expect(
-          request.url.path,
-          equals('/api/v1/businesses/biz-001/team/members/u-1/access'),
+        final repo = TeamAuditRepository(apiClient: ApiClient(client: mock));
+        final updated = await repo.updateTeamMemberAccess(
+          businessId: 'biz-001',
+          principalId: 'u-1',
+          request: const UpdateTeamMemberAccessRequest(
+            role: 'manager',
+            permissions: ['sales:read', 'sales:write'],
+          ),
         );
-        final parsedBody = jsonDecode(request.body) as Map;
-        expect(parsedBody['role'], equals('manager'));
-        expect(parsedBody['permissions'], contains('sales:read'));
 
-        final body = {
-          'data': {
-            'principal_id': 'u-1',
-            'email': 'user1@biz.com',
-            'display_name': 'User 1',
-            'role': 'manager',
-            'permissions': ['sales:read', 'sales:write'],
-            'status': 'active',
-          },
-          'request_id': 'req-access-patch',
-        };
-        return http.Response(jsonEncode(body), 200,
-            headers: {'content-type': 'application/json'});
-      });
-
-      final repo = TeamAuditRepository(apiClient: ApiClient(client: mock));
-      final updated = await repo.updateTeamMemberAccess(
-        businessId: 'biz-001',
-        principalId: 'u-1',
-        request: const UpdateTeamMemberAccessRequest(
-          role: 'manager',
-          permissions: ['sales:read', 'sales:write'],
-        ),
-      );
-
-      expect(updated.permissions, hasLength(2));
-    });
+        expect(updated.permissions, hasLength(2));
+      },
+    );
 
     test('revokeTeamMember sends POST and updates status to revoked', () async {
       final mock = MockClient((request) async {
@@ -305,8 +319,11 @@ void main() {
           },
           'request_id': 'req-revoke-member',
         };
-        return http.Response(jsonEncode(body), 200,
-            headers: {'content-type': 'application/json'});
+        return http.Response(
+          jsonEncode(body),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
       });
 
       final repo = TeamAuditRepository(apiClient: ApiClient(client: mock));
@@ -318,175 +335,196 @@ void main() {
       expect(member.status, equals('revoked'));
     });
 
-    test('createTeamInvitation sends POST and receives acceptance token',
-        () async {
-      final mock = MockClient((request) async {
-        expect(request.method, equals('POST'));
-        expect(
-          request.url.path,
-          equals('/api/v1/businesses/biz-001/team/invitations'),
-        );
-        expect(request.headers['Idempotency-Key'], isNotEmpty);
+    test(
+      'createTeamInvitation sends POST and receives acceptance token',
+      () async {
+        final mock = MockClient((request) async {
+          expect(request.method, equals('POST'));
+          expect(
+            request.url.path,
+            equals('/api/v1/businesses/biz-001/team/invitations'),
+          );
+          expect(request.headers['Idempotency-Key'], isNotEmpty);
 
-        final parsedBody = jsonDecode(request.body) as Map;
-        expect(parsedBody['email'], equals('agent@biz.com'));
-        expect(parsedBody['role'], equals('agent'));
-        expect(parsedBody['expires_in_hours'], equals(72));
+          final parsedBody = jsonDecode(request.body) as Map;
+          expect(parsedBody['email'], equals('agent@biz.com'));
+          expect(parsedBody['role'], equals('agent'));
+          expect(parsedBody['expires_in_hours'], equals(72));
 
-        final body = {
-          'data': {
-            'invitation': {
-              'id': 'inv-created-1',
-              'business_id': 'biz-001',
-              'email': 'agent@biz.com',
-              'display_name': 'New Agent',
-              'role': 'agent',
-              'permissions': ['conversations:reply'],
-              'status': 'pending',
-              'invited_by': 'admin-1',
-              'expires_at': '2026-10-25T12:00:00Z',
-              'created_at': '2026-10-22T12:00:00Z',
-              'updated_at': '2026-10-22T12:00:00Z',
-            },
-            'acceptance_token': 'new-token-12345',
-          },
-          'request_id': 'req-create-inv',
-        };
-        return http.Response(jsonEncode(body), 201,
-            headers: {'content-type': 'application/json'});
-      });
-
-      final repo = TeamAuditRepository(apiClient: ApiClient(client: mock));
-      final created = await repo.createTeamInvitation(
-        businessId: 'biz-001',
-        request: const CreateTeamInvitationRequest(
-          email: 'agent@biz.com',
-          displayName: 'New Agent',
-          role: 'agent',
-          permissions: ['conversations:reply'],
-          expiresInHours: 72,
-        ),
-      );
-
-      expect(created.acceptanceToken, equals('new-token-12345'));
-      expect(created.invitation.email, equals('agent@biz.com'));
-    });
-
-    test('resendTeamInvitation and revokeTeamInvitation work properly',
-        () async {
-      final mock = MockClient((request) async {
-        if (request.url.path.endsWith('/resend')) {
           final body = {
             'data': {
               'invitation': {
+                'id': 'inv-created-1',
+                'business_id': 'biz-001',
+                'email': 'agent@biz.com',
+                'display_name': 'New Agent',
+                'role': 'agent',
+                'permissions': ['conversations:reply'],
+                'status': 'pending',
+                'invited_by': 'admin-1',
+                'expires_at': '2026-10-25T12:00:00Z',
+                'created_at': '2026-10-22T12:00:00Z',
+                'updated_at': '2026-10-22T12:00:00Z',
+              },
+              'acceptance_token': 'new-token-12345',
+            },
+            'request_id': 'req-create-inv',
+          };
+          return http.Response(
+            jsonEncode(body),
+            201,
+            headers: {'content-type': 'application/json'},
+          );
+        });
+
+        final repo = TeamAuditRepository(apiClient: ApiClient(client: mock));
+        final created = await repo.createTeamInvitation(
+          businessId: 'biz-001',
+          request: const CreateTeamInvitationRequest(
+            email: 'agent@biz.com',
+            displayName: 'New Agent',
+            role: 'agent',
+            permissions: ['conversations:reply'],
+            expiresInHours: 72,
+          ),
+        );
+
+        expect(created.acceptanceToken, equals('new-token-12345'));
+        expect(created.invitation.email, equals('agent@biz.com'));
+      },
+    );
+
+    test(
+      'resendTeamInvitation and revokeTeamInvitation work properly',
+      () async {
+        final mock = MockClient((request) async {
+          if (request.url.path.endsWith('/resend')) {
+            final body = {
+              'data': {
+                'invitation': {
+                  'id': 'inv-1',
+                  'business_id': 'biz-001',
+                  'email': 'agent@biz.com',
+                  'display_name': 'Agent',
+                  'role': 'agent',
+                  'permissions': [],
+                  'status': 'pending',
+                  'invited_by': 'admin',
+                  'expires_at': '2026-10-28T12:00:00Z',
+                  'created_at': '2026-10-22T12:00:00Z',
+                  'updated_at': '2026-10-22T12:00:00Z',
+                },
+                'acceptance_token': 'renewed-token-999',
+              },
+              'request_id': 'req-resend',
+            };
+            return http.Response(
+              jsonEncode(body),
+              201,
+              headers: {'content-type': 'application/json'},
+            );
+          } else if (request.url.path.endsWith('/revoke')) {
+            final body = {
+              'data': {
                 'id': 'inv-1',
                 'business_id': 'biz-001',
                 'email': 'agent@biz.com',
                 'display_name': 'Agent',
                 'role': 'agent',
                 'permissions': [],
-                'status': 'pending',
+                'status': 'revoked',
                 'invited_by': 'admin',
                 'expires_at': '2026-10-28T12:00:00Z',
                 'created_at': '2026-10-22T12:00:00Z',
                 'updated_at': '2026-10-22T12:00:00Z',
               },
-              'acceptance_token': 'renewed-token-999',
-            },
-            'request_id': 'req-resend',
-          };
-          return http.Response(jsonEncode(body), 201,
-              headers: {'content-type': 'application/json'});
-        } else if (request.url.path.endsWith('/revoke')) {
+              'request_id': 'req-revoke',
+            };
+            return http.Response(
+              jsonEncode(body),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response('Not Found', 404);
+        });
+
+        final repo = TeamAuditRepository(apiClient: ApiClient(client: mock));
+
+        final resent = await repo.resendTeamInvitation(
+          businessId: 'biz-001',
+          invitationId: 'inv-1',
+          expiresInHours: 48,
+        );
+        expect(resent.acceptanceToken, equals('renewed-token-999'));
+
+        final revoked = await repo.revokeTeamInvitation(
+          businessId: 'biz-001',
+          invitationId: 'inv-1',
+        );
+        expect(revoked.status, equals('revoked'));
+      },
+    );
+
+    test(
+      'listAuditEvents sends filter queries and parses audit page',
+      () async {
+        final mock = MockClient((request) async {
+          expect(request.method, equals('GET'));
+          expect(
+            request.url.path,
+            equals('/api/v1/businesses/biz-001/audit-events'),
+          );
+          expect(
+            request.url.queryParameters['actor_type'],
+            equals('principal'),
+          );
+          expect(
+            request.url.queryParameters['action'],
+            equals('team.member.created'),
+          );
+          expect(
+            request.url.queryParameters['resource_type'],
+            equals('team_member'),
+          );
+
           final body = {
-            'data': {
-              'id': 'inv-1',
-              'business_id': 'biz-001',
-              'email': 'agent@biz.com',
-              'display_name': 'Agent',
-              'role': 'agent',
-              'permissions': [],
-              'status': 'revoked',
-              'invited_by': 'admin',
-              'expires_at': '2026-10-28T12:00:00Z',
-              'created_at': '2026-10-22T12:00:00Z',
-              'updated_at': '2026-10-22T12:00:00Z',
-            },
-            'request_id': 'req-revoke',
+            'data': [
+              {
+                'id': 'audit-ev-1',
+                'business_id': 'biz-001',
+                'actor_type': 'principal',
+                'actor_reference': 'admin@biz.com',
+                'action': 'team.member.created',
+                'resource_type': 'team_member',
+                'resource_id': 'u-1',
+                'metadata': {'role': 'agent'},
+                'occurred_at': '2026-10-22T15:00:00Z',
+              },
+            ],
+            'pagination': {'has_more': false},
+            'request_id': 'req-audit-list',
           };
-          return http.Response(jsonEncode(body), 200,
-              headers: {'content-type': 'application/json'});
-        }
-        return http.Response('Not Found', 404);
-      });
+          return http.Response(
+            jsonEncode(body),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        });
 
-      final repo = TeamAuditRepository(apiClient: ApiClient(client: mock));
-
-      final resent = await repo.resendTeamInvitation(
-        businessId: 'biz-001',
-        invitationId: 'inv-1',
-        expiresInHours: 48,
-      );
-      expect(resent.acceptanceToken, equals('renewed-token-999'));
-
-      final revoked = await repo.revokeTeamInvitation(
-        businessId: 'biz-001',
-        invitationId: 'inv-1',
-      );
-      expect(revoked.status, equals('revoked'));
-    });
-
-    test('listAuditEvents sends filter queries and parses audit page',
-        () async {
-      final mock = MockClient((request) async {
-        expect(request.method, equals('GET'));
-        expect(
-          request.url.path,
-          equals('/api/v1/businesses/biz-001/audit-events'),
-        );
-        expect(request.url.queryParameters['actor_type'], equals('principal'));
-        expect(
-          request.url.queryParameters['action'],
-          equals('team.member.created'),
-        );
-        expect(
-          request.url.queryParameters['resource_type'],
-          equals('team_member'),
+        final repo = TeamAuditRepository(apiClient: ApiClient(client: mock));
+        final page = await repo.listAuditEvents(
+          businessId: 'biz-001',
+          actorType: 'principal',
+          action: 'team.member.created',
+          resourceType: 'team_member',
         );
 
-        final body = {
-          'data': [
-            {
-              'id': 'audit-ev-1',
-              'business_id': 'biz-001',
-              'actor_type': 'principal',
-              'actor_reference': 'admin@biz.com',
-              'action': 'team.member.created',
-              'resource_type': 'team_member',
-              'resource_id': 'u-1',
-              'metadata': {'role': 'agent'},
-              'occurred_at': '2026-10-22T15:00:00Z',
-            }
-          ],
-          'pagination': {'has_more': false},
-          'request_id': 'req-audit-list',
-        };
-        return http.Response(jsonEncode(body), 200,
-            headers: {'content-type': 'application/json'});
-      });
-
-      final repo = TeamAuditRepository(apiClient: ApiClient(client: mock));
-      final page = await repo.listAuditEvents(
-        businessId: 'biz-001',
-        actorType: 'principal',
-        action: 'team.member.created',
-        resourceType: 'team_member',
-      );
-
-      expect(page.items, hasLength(1));
-      expect(page.items.first.action, equals('team.member.created'));
-      expect(page.requestId, equals('req-audit-list'));
-    });
+        expect(page.items, hasLength(1));
+        expect(page.items.first.action, equals('team.member.created'));
+        expect(page.requestId, equals('req-audit-list'));
+      },
+    );
 
     test('throws ApiErrorEnvelope on HTTP 409 Conflict', () async {
       final mock = MockClient((request) async {
@@ -497,8 +535,11 @@ void main() {
           },
           'request_id': 'req-err-409',
         };
-        return http.Response(jsonEncode(errorBody), 409,
-            headers: {'content-type': 'application/json'});
+        return http.Response(
+          jsonEncode(errorBody),
+          409,
+          headers: {'content-type': 'application/json'},
+        );
       });
 
       final repo = TeamAuditRepository(apiClient: ApiClient(client: mock));
@@ -507,20 +548,23 @@ void main() {
           businessId: 'biz-001',
           principalId: 'owner-principal',
         ),
-        throwsA(isA<ApiErrorEnvelope>().having(
-          (e) => e.error.message,
-          'error message',
-          contains('Cannot revoke the only active owner'),
-        )),
+        throwsA(
+          isA<ApiErrorEnvelope>().having(
+            (e) => e.error.message,
+            'error message',
+            contains('Cannot revoke the only active owner'),
+          ),
+        ),
       );
     });
   });
 
   group('Phase 7 TeamAuditProvider State Management Tests', () {
-    test('Provider safeguards owner from revocation before calling API',
-        () async {
-      final mock = MockClient((request) async {
-        return http.Response(
+    test(
+      'Provider safeguards owner from revocation before calling API',
+      () async {
+        final mock = MockClient((request) async {
+          return http.Response(
             jsonEncode({
               'data': [
                 {
@@ -530,58 +574,61 @@ void main() {
                   'role': 'owner',
                   'permissions': ['*'],
                   'status': 'active',
-                }
+                },
               ],
               'pagination': {'has_more': false},
               'request_id': 'req-1',
             }),
             200,
-            headers: {'content-type': 'application/json'});
-      });
+            headers: {'content-type': 'application/json'},
+          );
+        });
 
-      final repo = TeamAuditRepository(apiClient: ApiClient(client: mock));
-      final provider = TeamAuditProvider(repository: repo);
+        final repo = TeamAuditRepository(apiClient: ApiClient(client: mock));
+        final provider = TeamAuditProvider(repository: repo);
 
-      await provider.fetchMembers('biz-001', refresh: true);
-      expect(provider.members, hasLength(1));
+        await provider.fetchMembers('biz-001', refresh: true);
+        expect(provider.members, hasLength(1));
 
-      // Attempting to revoke owner
-      final success = await provider.revokeMember(
-        businessId: 'biz-001',
-        principalId: 'owner-1',
-      );
+        // Attempting to revoke owner
+        final success = await provider.revokeMember(
+          businessId: 'biz-001',
+          principalId: 'owner-1',
+        );
 
-      expect(success, isFalse);
-      expect(provider.actionError, contains('المالك'));
-    });
+        expect(success, isFalse);
+        expect(provider.actionError, contains('المالك'));
+      },
+    );
 
     test('Provider filters members by role and status', () async {
       final mock = MockClient((request) async {
         return http.Response(
-            jsonEncode({
-              'data': [
-                {
-                  'principal_id': 'u-1',
-                  'email': 'admin@biz.com',
-                  'display_name': 'Admin User',
-                  'role': 'admin',
-                  'permissions': ['*'],
-                  'status': 'active',
-                },
-                {
-                  'principal_id': 'u-2',
-                  'email': 'agent@biz.com',
-                  'display_name': 'Agent User',
-                  'role': 'agent',
-                  'permissions': [],
-                  'status': 'revoked',
-                }
-              ],
-              'pagination': {'has_more': false},
-              'request_id': 'req-2',
-            }),
-            200,
-            headers: {'content-type': 'application/json'});
+          jsonEncode({
+            'data': [
+              {
+                'principal_id': 'u-1',
+                'email': 'admin@biz.com',
+                'display_name': 'Admin User',
+                'role': 'admin',
+                'permissions': ['*'],
+                'status': 'active',
+              },
+              {
+                'principal_id': 'u-2',
+                'email': 'agent@biz.com',
+                'display_name': 'Agent User',
+                'role': 'agent',
+                'permissions': [],
+                'status': 'revoked',
+              },
+            ],
+            'pagination': {'has_more': false},
+            'request_id': 'req-2',
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
       });
 
       final repo = TeamAuditRepository(apiClient: ApiClient(client: mock));

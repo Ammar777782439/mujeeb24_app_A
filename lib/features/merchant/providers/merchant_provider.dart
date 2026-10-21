@@ -99,11 +99,15 @@ class MerchantProvider extends ChangeNotifier {
       }
 
       if (_conversationOwnershipFilter == 'assigned' &&
-          (c.assignment == null || c.ownership == 'none' || c.ownership == 'unassigned')) {
+          (c.assignment == null ||
+              c.ownership == 'none' ||
+              c.ownership == 'unassigned')) {
         return false;
       }
       if (_conversationOwnershipFilter == 'unassigned' &&
-          (c.assignment != null && c.ownership != 'none' && c.ownership != 'unassigned')) {
+          (c.assignment != null &&
+              c.ownership != 'none' &&
+              c.ownership != 'unassigned')) {
         return false;
       }
 
@@ -326,13 +330,16 @@ class MerchantProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final effectiveState = state ??
+      final effectiveState =
+          state ??
           (_conversationStateFilter != 'all' ? _conversationStateFilter : null);
-      final effectiveOwnership = ownership ??
+      final effectiveOwnership =
+          ownership ??
           (_conversationOwnershipFilter != 'all'
               ? _conversationOwnershipFilter
               : null);
-      final effectiveChannel = channel ??
+      final effectiveChannel =
+          channel ??
           (_conversationChannelFilter != 'all'
               ? _conversationChannelFilter
               : null);

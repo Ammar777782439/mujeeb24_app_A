@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -45,7 +46,7 @@ void main() {
         'status': 'active',
         'external_account_reference': '966500000000',
         'capabilities': [
-          {'name': 'messages', 'enabled': true}
+          {'name': 'messages', 'enabled': true},
         ],
         'resource_version': '5',
       };
@@ -84,7 +85,10 @@ void main() {
 
       final serialized = prov.toJson();
       expect(serialized['provisioning_id'], 'prov-12345');
-      expect(serialized['authorization_url'], 'https://business.facebook.com/oauth');
+      expect(
+        serialized['authorization_url'],
+        'https://business.facebook.com/oauth',
+      );
     });
 
     test('ChannelHistorySummary parses and supplies count getters', () {
@@ -154,156 +158,191 @@ void main() {
   });
 
   group('Phase 6 ChannelAutomationRepository HTTP Tests', () {
-    test('listChannelConnections makes correct GET request with query filters', () async {
-      final client = MockClient((request) async {
-        expect(request.method, 'GET');
-        expect(request.url.path, '/api/v1/businesses/$testBusinessId/channel-connections');
-        expect(request.url.queryParameters['status'], 'active');
-        expect(request.url.queryParameters['limit'], '25');
+    test(
+      'listChannelConnections makes correct GET request with query filters',
+      () async {
+        final client = MockClient((request) async {
+          expect(request.method, 'GET');
+          expect(
+            request.url.path,
+            '/api/v1/businesses/$testBusinessId/channel-connections',
+          );
+          expect(request.url.queryParameters['status'], 'active');
+          expect(request.url.queryParameters['limit'], '25');
 
-        final responseBody = {
-          'data': [
-            {
+          final responseBody = {
+            'data': [
+              {
+                'id': testConnectionId,
+                'business_id': testBusinessId,
+                'provider': 'meta',
+                'channel': 'whatsapp',
+                'status': 'active',
+                'resource_version': '1',
+              },
+            ],
+            'pagination': {'has_more': false},
+          };
+
+          return http.Response(
+            jsonEncode(responseBody),
+            200,
+            headers: {
+              'content-type': 'application/json',
+              'x-request-id': 'req-channels-list',
+            },
+          );
+        });
+
+        final apiClient = ApiClient(client: client);
+        final repo = ChannelAutomationRepository(apiClient: apiClient);
+
+        final result = await repo.listChannelConnections(
+          businessId: testBusinessId,
+          status: 'active',
+        );
+
+        expect(result.items.length, 1);
+        expect(result.items.first.id, testConnectionId);
+        expect(result.items.first.channel, 'whatsapp');
+      },
+    );
+
+    test(
+      'beginChannelConnection sends POST with Idempotency-Key and receives 202',
+      () async {
+        final client = MockClient((request) async {
+          expect(request.method, 'POST');
+          expect(
+            request.url.path,
+            '/api/v1/businesses/$testBusinessId/channel-connections',
+          );
+          expect(request.headers['Idempotency-Key'], isNotEmpty);
+
+          final body = jsonDecode(request.body);
+          expect(body['provider'], 'meta');
+          expect(body['channel'], 'whatsapp');
+
+          final responseBody = {
+            'data': {
+              'provisioning_id': 'prov-888',
+              'business_id': testBusinessId,
+              'provider': 'meta',
+              'channel': 'whatsapp',
+              'status': 'initiated',
+              'authorization_url': 'https://meta.com/auth',
+            },
+          };
+
+          return http.Response(
+            jsonEncode(responseBody),
+            202,
+            headers: {
+              'content-type': 'application/json',
+              'x-request-id': 'req-begin-conn',
+            },
+          );
+        });
+
+        final apiClient = ApiClient(client: client);
+        final repo = ChannelAutomationRepository(apiClient: apiClient);
+
+        final prov = await repo.beginChannelConnection(
+          businessId: testBusinessId,
+          request: const BeginChannelConnectionRequest(
+            provider: 'meta',
+            channel: 'whatsapp',
+          ),
+        );
+
+        expect(prov.provisioningId, 'prov-888');
+        expect(prov.status, 'initiated');
+        expect(prov.authorizationUrl, 'https://meta.com/auth');
+      },
+    );
+
+    test(
+      'reconnectChannel and disconnectChannel send If-Match header and reason',
+      () async {
+        int callCount = 0;
+        final client = MockClient((request) async {
+          callCount++;
+          expect(request.method, 'POST');
+          expect(request.headers['If-Match'], 'ver-4');
+
+          final body = jsonDecode(request.body);
+          expect(body['reason'], isNotEmpty);
+
+          final isReconnect = request.url.path.endsWith('/reconnect');
+          final responseBody = {
+            'data': {
               'id': testConnectionId,
               'business_id': testBusinessId,
               'provider': 'meta',
               'channel': 'whatsapp',
-              'status': 'active',
-              'resource_version': '1',
-            }
-          ],
-          'pagination': {'has_more': false}
-        };
+              'status': isReconnect ? 'active' : 'disconnected',
+              'resource_version': 'ver-5',
+            },
+          };
 
-        return http.Response(jsonEncode(responseBody), 200, headers: {
-          'content-type': 'application/json',
-          'x-request-id': 'req-channels-list',
+          return http.Response(
+            jsonEncode(responseBody),
+            200,
+            headers: {
+              'content-type': 'application/json',
+              'x-request-id': 'req-action-$callCount',
+            },
+          );
         });
-      });
 
-      final apiClient = ApiClient(client: client);
-      final repo = ChannelAutomationRepository(apiClient: apiClient);
+        final apiClient = ApiClient(client: client);
+        final repo = ChannelAutomationRepository(apiClient: apiClient);
 
-      final result = await repo.listChannelConnections(
-        businessId: testBusinessId,
-        status: 'active',
-      );
+        final reconnected = await repo.reconnectChannel(
+          businessId: testBusinessId,
+          connectionId: testConnectionId,
+          reason: 'Credentials updated',
+          ifMatch: 'ver-4',
+        );
+        expect(reconnected.status, 'active');
+        expect(reconnected.resourceVersion, 'ver-5');
 
-      expect(result.items.length, 1);
-      expect(result.items.first.id, testConnectionId);
-      expect(result.items.first.channel, 'whatsapp');
-    });
-
-    test('beginChannelConnection sends POST with Idempotency-Key and receives 202', () async {
-      final client = MockClient((request) async {
-        expect(request.method, 'POST');
-        expect(request.url.path, '/api/v1/businesses/$testBusinessId/channel-connections');
-        expect(request.headers['Idempotency-Key'], isNotEmpty);
-
-        final body = jsonDecode(request.body);
-        expect(body['provider'], 'meta');
-        expect(body['channel'], 'whatsapp');
-
-        final responseBody = {
-          'data': {
-            'provisioning_id': 'prov-888',
-            'business_id': testBusinessId,
-            'provider': 'meta',
-            'channel': 'whatsapp',
-            'status': 'initiated',
-            'authorization_url': 'https://meta.com/auth',
-          }
-        };
-
-        return http.Response(jsonEncode(responseBody), 202, headers: {
-          'content-type': 'application/json',
-          'x-request-id': 'req-begin-conn',
-        });
-      });
-
-      final apiClient = ApiClient(client: client);
-      final repo = ChannelAutomationRepository(apiClient: apiClient);
-
-      final prov = await repo.beginChannelConnection(
-        businessId: testBusinessId,
-        request: const BeginChannelConnectionRequest(
-          provider: 'meta',
-          channel: 'whatsapp',
-        ),
-      );
-
-      expect(prov.provisioningId, 'prov-888');
-      expect(prov.status, 'initiated');
-      expect(prov.authorizationUrl, 'https://meta.com/auth');
-    });
-
-    test('reconnectChannel and disconnectChannel send If-Match header and reason', () async {
-      int callCount = 0;
-      final client = MockClient((request) async {
-        callCount++;
-        expect(request.method, 'POST');
-        expect(request.headers['If-Match'], 'ver-4');
-
-        final body = jsonDecode(request.body);
-        expect(body['reason'], isNotEmpty);
-
-        final isReconnect = request.url.path.endsWith('/reconnect');
-        final responseBody = {
-          'data': {
-            'id': testConnectionId,
-            'business_id': testBusinessId,
-            'provider': 'meta',
-            'channel': 'whatsapp',
-            'status': isReconnect ? 'active' : 'disconnected',
-            'resource_version': 'ver-5',
-          }
-        };
-
-        return http.Response(jsonEncode(responseBody), 200, headers: {
-          'content-type': 'application/json',
-          'x-request-id': 'req-action-$callCount',
-        });
-      });
-
-      final apiClient = ApiClient(client: client);
-      final repo = ChannelAutomationRepository(apiClient: apiClient);
-
-      final reconnected = await repo.reconnectChannel(
-        businessId: testBusinessId,
-        connectionId: testConnectionId,
-        reason: 'Credentials updated',
-        ifMatch: 'ver-4',
-      );
-      expect(reconnected.status, 'active');
-      expect(reconnected.resourceVersion, 'ver-5');
-
-      final disconnected = await repo.disconnectChannel(
-        businessId: testBusinessId,
-        connectionId: testConnectionId,
-        reason: 'Maintenance pause',
-        ifMatch: 'ver-4',
-      );
-      expect(disconnected.status, 'disconnected');
-    });
+        final disconnected = await repo.disconnectChannel(
+          businessId: testBusinessId,
+          connectionId: testConnectionId,
+          reason: 'Maintenance pause',
+          ifMatch: 'ver-4',
+        );
+        expect(disconnected.status, 'disconnected');
+      },
+    );
 
     test('previewChannelHistoryPurge and purgeChannelHistory with exact confirmation string', () async {
       final client = MockClient((request) async {
         if (request.method == 'GET') {
-          expect(request.url.path, '/api/v1/businesses/$testBusinessId/channel-connections/$testConnectionId/history-purge');
+          expect(
+            request.url.path,
+            '/api/v1/businesses/$testBusinessId/channel-connections/$testConnectionId/history-purge',
+          );
           final responseBody = {
             'data': {
               'business_id': testBusinessId,
               'connection_id': testConnectionId,
               'conversations': 50,
               'messages': 400,
-            }
+            },
           };
-          return http.Response(jsonEncode(responseBody), 200, headers: {
-            'content-type': 'application/json',
-          });
+          return http.Response(
+            jsonEncode(responseBody),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
         } else {
           expect(request.method, 'POST');
-          expect(request.url.path, '/api/v1/businesses/$testBusinessId/channel-connections/$testConnectionId/history-purge');
+          expect(
+            request.url.path,
+            '/api/v1/businesses/$testBusinessId/channel-connections/$testConnectionId/history-purge',
+          );
           expect(request.headers['If-Match'], 'ver-9');
 
           final body = jsonDecode(request.body);
@@ -317,11 +356,13 @@ void main() {
               'conversations': 0,
               'messages': 0,
               'purged_at': '2026-10-18T21:00:00Z',
-            }
+            },
           };
-          return http.Response(jsonEncode(responseBody), 200, headers: {
-            'content-type': 'application/json',
-          });
+          return http.Response(
+            jsonEncode(responseBody),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
         }
       });
 
@@ -347,37 +388,40 @@ void main() {
       expect(purged.purgedAt, isNotNull);
     });
 
-    test('purgeChannelHistory throws ApiErrorEnvelope on 412 version conflict', () async {
-      final client = MockClient((request) async {
-        return http.Response(
-          jsonEncode({
-            'error': {
-              'code': 'PRECONDITION_FAILED',
-              'message': 'Resource version mismatch',
-            }
-          }),
-          412,
-          headers: {
-            'content-type': 'application/json',
-            'x-request-id': 'req-conflict-412',
-          },
+    test(
+      'purgeChannelHistory throws ApiErrorEnvelope on 412 version conflict',
+      () async {
+        final client = MockClient((request) async {
+          return http.Response(
+            jsonEncode({
+              'error': {
+                'code': 'PRECONDITION_FAILED',
+                'message': 'Resource version mismatch',
+              },
+            }),
+            412,
+            headers: {
+              'content-type': 'application/json',
+              'x-request-id': 'req-conflict-412',
+            },
+          );
+        });
+
+        final apiClient = ApiClient(client: client);
+        final repo = ChannelAutomationRepository(apiClient: apiClient);
+
+        expect(
+          () => repo.purgeChannelHistory(
+            businessId: testBusinessId,
+            connectionId: testConnectionId,
+            expectedVersion: 'ver-stale',
+            confirmation: 'DELETE_ALL_CHANNEL_HISTORY',
+            ifMatch: 'ver-stale',
+          ),
+          throwsA(isA<ApiErrorEnvelope>()),
         );
-      });
-
-      final apiClient = ApiClient(client: client);
-      final repo = ChannelAutomationRepository(apiClient: apiClient);
-
-      expect(
-        () => repo.purgeChannelHistory(
-          businessId: testBusinessId,
-          connectionId: testConnectionId,
-          expectedVersion: 'ver-stale',
-          confirmation: 'DELETE_ALL_CHANNEL_HISTORY',
-          ifMatch: 'ver-stale',
-        ),
-        throwsA(isA<ApiErrorEnvelope>()),
-      );
-    });
+      },
+    );
 
     test('Automation Rules list, create, and update flow', () async {
       final client = MockClient((request) async {
@@ -396,8 +440,8 @@ void main() {
                   'action_payload': {'user_id': 'u-123'},
                   'position': 1,
                   'resource_version': '1',
-                }
-              ]
+                },
+              ],
             }),
             200,
             headers: {'content-type': 'application/json'},
@@ -417,7 +461,7 @@ void main() {
                 'action_payload': body['action_payload'],
                 'position': 2,
                 'resource_version': '1',
-              }
+              },
             }),
             201,
             headers: {'content-type': 'application/json'},
@@ -438,7 +482,7 @@ void main() {
                 'action_payload': {},
                 'position': 1,
                 'resource_version': '2',
-              }
+              },
             }),
             200,
             headers: {'content-type': 'application/json'},
@@ -489,8 +533,8 @@ void main() {
                   'entities': {'date': 'tomorrow'},
                   'requires_human': true,
                   'lifecycle': 'suggested',
-                }
-              ]
+                },
+              ],
             }),
             200,
             headers: {'content-type': 'application/json'},
@@ -509,7 +553,7 @@ void main() {
                 'entities': {'date': 'tomorrow'},
                 'requires_human': true,
                 'lifecycle': 'human_requested',
-              }
+              },
             }),
             200,
             headers: {'content-type': 'application/json'},
@@ -550,8 +594,8 @@ void main() {
                   'body': 'أهلاً بك في متجرنا! كيف يمكننا مساعدتك؟',
                   'status': 'active',
                   'resource_version': '1',
-                }
-              ]
+                },
+              ],
             }),
             200,
             headers: {'content-type': 'application/json'},
@@ -568,7 +612,7 @@ void main() {
                 'body': body['body'],
                 'status': 'active',
                 'resource_version': '1',
-              }
+              },
             }),
             201,
             headers: {'content-type': 'application/json'},
@@ -586,7 +630,7 @@ void main() {
                 'body': 'مرحباً بك!',
                 'status': 'active',
                 'resource_version': '2',
-              }
+              },
             }),
             200,
             headers: {'content-type': 'application/json'},

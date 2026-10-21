@@ -44,15 +44,15 @@ class PlatformBusinessView {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'slug': slug,
-        'platform_status': platformStatus,
-        'owner_identity_summary': ?ownerIdentitySummary,
-        'subscription_summary': ?subscriptionSummary,
-        'created_at': createdAt,
-        'updated_at': updatedAt,
-      };
+    'id': id,
+    'name': name,
+    'slug': slug,
+    'platform_status': platformStatus,
+    'owner_identity_summary': ?ownerIdentitySummary,
+    'subscription_summary': ?subscriptionSummary,
+    'created_at': createdAt,
+    'updated_at': updatedAt,
+  };
 }
 
 class PlatformCreateBusinessRequest {
@@ -71,12 +71,12 @@ class PlatformCreateBusinessRequest {
   });
 
   Map<String, dynamic> toJson() => {
-        'name': name,
-        'slug': slug,
-        'default_currency': ?defaultCurrency,
-        'locale': ?locale,
-        'timezone': ?timezone,
-      };
+    'name': name,
+    'slug': slug,
+    'default_currency': ?defaultCurrency,
+    'locale': ?locale,
+    'timezone': ?timezone,
+  };
 }
 
 class PlatformAssignOwnerRequest {
@@ -91,10 +91,10 @@ class PlatformAssignOwnerRequest {
   });
 
   Map<String, dynamic> toJson() => {
-        'owner_email': ownerEmail,
-        'owner_display_name': ownerDisplayName,
-        'owner_password': ?ownerPassword,
-      };
+    'owner_email': ownerEmail,
+    'owner_display_name': ownerDisplayName,
+    'owner_password': ?ownerPassword,
+  };
 }
 
 // ==========================================
@@ -150,19 +150,19 @@ class PlatformChannelView {
   }
 
   Map<String, dynamic> toJson() => {
-        'business_id': businessId,
-        'connection_id': connectionId,
-        'channel': channel,
-        'provider': provider,
-        'status': status,
-        'health': health,
-        'provider_account_ref': ?providerAccountRef,
-        'provider_connection_ref': ?providerConnectionRef,
-        'last_health_check_at': ?lastHealthCheckAt,
-        'last_success': ?lastSuccess,
-        'last_failure': ?lastFailure,
-        'failure_code': ?failureCode,
-      };
+    'business_id': businessId,
+    'connection_id': connectionId,
+    'channel': channel,
+    'provider': provider,
+    'status': status,
+    'health': health,
+    'provider_account_ref': ?providerAccountRef,
+    'provider_connection_ref': ?providerConnectionRef,
+    'last_health_check_at': ?lastHealthCheckAt,
+    'last_success': ?lastSuccess,
+    'last_failure': ?lastFailure,
+    'failure_code': ?failureCode,
+  };
 }
 
 class PlatformProviderView {
@@ -191,12 +191,12 @@ class PlatformProviderView {
   }
 
   Map<String, dynamic> toJson() => {
-        'provider_id': providerId,
-        'provider_type': providerType,
-        'status': status,
-        'health': health,
-        'last_health_check_at': ?lastHealthCheckAt,
-      };
+    'provider_id': providerId,
+    'provider_type': providerType,
+    'status': status,
+    'health': health,
+    'last_health_check_at': ?lastHealthCheckAt,
+  };
 }
 
 // ==========================================
@@ -218,10 +218,7 @@ class PlatformAIRuntime {
     );
   }
 
-  Map<String, dynamic> toJson() => {
-        'status': status,
-        'health': health,
-      };
+  Map<String, dynamic> toJson() => {'status': status, 'health': health};
 }
 
 class PlatformAIProviderInfo {
@@ -247,21 +244,18 @@ class PlatformAIProviderInfo {
   }
 
   Map<String, dynamic> toJson() => {
-        'provider': provider,
-        'model': model,
-        'enabled': enabled,
-        'health': health,
-      };
+    'provider': provider,
+    'model': model,
+    'enabled': enabled,
+    'health': health,
+  };
 }
 
 class PlatformAIOverviewView {
   final PlatformAIRuntime runtime;
   final PlatformAIProviderInfo provider;
 
-  const PlatformAIOverviewView({
-    required this.runtime,
-    required this.provider,
-  });
+  const PlatformAIOverviewView({required this.runtime, required this.provider});
 
   factory PlatformAIOverviewView.fromJson(Map<String, dynamic> json) {
     return PlatformAIOverviewView(
@@ -275,9 +269,9 @@ class PlatformAIOverviewView {
   }
 
   Map<String, dynamic> toJson() => {
-        'runtime': runtime.toJson(),
-        'provider': provider.toJson(),
-      };
+    'runtime': runtime.toJson(),
+    'provider': provider.toJson(),
+  };
 }
 
 class PlatformAIHealthCheckResult {
@@ -311,13 +305,13 @@ class PlatformAIHealthCheckResult {
   }
 
   Map<String, dynamic> toJson() => {
-        'provider': provider,
-        'model': model,
-        'result': result,
-        'latency_ms': latencyMs,
-        'checked_at': checkedAt,
-        'failure_code': ?failureCode,
-      };
+    'provider': provider,
+    'model': model,
+    'result': result,
+    'latency_ms': latencyMs,
+    'checked_at': checkedAt,
+    'failure_code': ?failureCode,
+  };
 }
 
 class PlatformAIUsageOverviewView {
@@ -340,10 +334,10 @@ class PlatformAIUsageOverviewView {
   }
 
   Map<String, dynamic> toJson() => {
-        'total_invocations': totalInvocations,
-        'total_tokens': totalTokens,
-        'estimated_cost_yer': estimatedCostYer,
-      };
+    'total_invocations': totalInvocations,
+    'total_tokens': totalTokens,
+    'estimated_cost_yer': estimatedCostYer,
+  };
 }
 
 // ==========================================
@@ -396,8 +390,8 @@ class PlanView {
       aiReplyLimit: (json['ai_reply_limit'] as num?)?.toInt() ?? 0,
       aiCatalogLimit: (json['ai_catalog_limit'] as num?)?.toInt() ?? 0,
       channelLimit: (json['channel_limit'] as num?)?.toInt() ?? 0,
-      internalAiCostBudgetYer:
-          (json['internal_ai_cost_budget_yer'] as num?)?.toInt(),
+      internalAiCostBudgetYer: (json['internal_ai_cost_budget_yer'] as num?)
+          ?.toInt(),
       createdAt: json['created_at'] as String? ?? '',
       updatedAt: json['updated_at'] as String? ?? '',
       retiredAt: json['retired_at'] as String?,
@@ -405,20 +399,20 @@ class PlanView {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'code': code,
-        'display_name': displayName,
-        'price_yer': priceYer,
-        'billing_interval': billingInterval,
-        'status': status,
-        'ai_reply_limit': aiReplyLimit,
-        'ai_catalog_limit': aiCatalogLimit,
-        'channel_limit': channelLimit,
-        'internal_ai_cost_budget_yer': ?internalAiCostBudgetYer,
-        'created_at': createdAt,
-        'updated_at': updatedAt,
-        'retired_at': ?retiredAt,
-      };
+    'id': id,
+    'code': code,
+    'display_name': displayName,
+    'price_yer': priceYer,
+    'billing_interval': billingInterval,
+    'status': status,
+    'ai_reply_limit': aiReplyLimit,
+    'ai_catalog_limit': aiCatalogLimit,
+    'channel_limit': channelLimit,
+    'internal_ai_cost_budget_yer': ?internalAiCostBudgetYer,
+    'created_at': createdAt,
+    'updated_at': updatedAt,
+    'retired_at': ?retiredAt,
+  };
 }
 
 class PlatformCreatePlanRequest {
@@ -443,15 +437,15 @@ class PlatformCreatePlanRequest {
   });
 
   Map<String, dynamic> toJson() => {
-        'code': code,
-        'display_name': displayName,
-        'price_yer': priceYer,
-        'billing_interval': billingInterval,
-        'ai_reply_limit': aiReplyLimit,
-        'ai_catalog_limit': aiCatalogLimit,
-        'channel_limit': channelLimit,
-        'internal_ai_cost_budget_yer': ?internalAiCostBudgetYer,
-      };
+    'code': code,
+    'display_name': displayName,
+    'price_yer': priceYer,
+    'billing_interval': billingInterval,
+    'ai_reply_limit': aiReplyLimit,
+    'ai_catalog_limit': aiCatalogLimit,
+    'channel_limit': channelLimit,
+    'internal_ai_cost_budget_yer': ?internalAiCostBudgetYer,
+  };
 }
 
 class SubscriptionView {
@@ -511,12 +505,11 @@ class SubscriptionView {
       aiReplyLimit: (json['ai_reply_limit'] as num?)?.toInt() ?? 0,
       aiCatalogLimit: (json['ai_catalog_limit'] as num?)?.toInt() ?? 0,
       channelLimit: (json['channel_limit'] as num?)?.toInt() ?? 0,
-      internalAiCostBudgetYer:
-          (json['internal_ai_cost_budget_yer'] as num?)?.toInt(),
-      costBudgetOverrideYer:
-          (json['cost_budget_override_yer'] as num?)?.toInt(),
-      costBudgetOverrideReason:
-          json['cost_budget_override_reason'] as String?,
+      internalAiCostBudgetYer: (json['internal_ai_cost_budget_yer'] as num?)
+          ?.toInt(),
+      costBudgetOverrideYer: (json['cost_budget_override_yer'] as num?)
+          ?.toInt(),
+      costBudgetOverrideReason: json['cost_budget_override_reason'] as String?,
       cancelledAt: json['cancelled_at'] as String?,
       cancelledReason: json['cancelled_reason'] as String?,
       createdAt: json['created_at'] as String? ?? '',
@@ -525,25 +518,25 @@ class SubscriptionView {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'business_id': businessId,
-        'plan_id': planId,
-        'plan_code': planCode,
-        'plan_version': planVersion,
-        'period_start': periodStart,
-        'period_end': periodEnd,
-        'status': status,
-        'ai_reply_limit': aiReplyLimit,
-        'ai_catalog_limit': aiCatalogLimit,
-        'channel_limit': channelLimit,
-        'internal_ai_cost_budget_yer': ?internalAiCostBudgetYer,
-        'cost_budget_override_yer': ?costBudgetOverrideYer,
-        'cost_budget_override_reason': ?costBudgetOverrideReason,
-        'cancelled_at': ?cancelledAt,
-        'cancelled_reason': ?cancelledReason,
-        'created_at': createdAt,
-        'updated_at': ?updatedAt,
-      };
+    'id': id,
+    'business_id': businessId,
+    'plan_id': planId,
+    'plan_code': planCode,
+    'plan_version': planVersion,
+    'period_start': periodStart,
+    'period_end': periodEnd,
+    'status': status,
+    'ai_reply_limit': aiReplyLimit,
+    'ai_catalog_limit': aiCatalogLimit,
+    'channel_limit': channelLimit,
+    'internal_ai_cost_budget_yer': ?internalAiCostBudgetYer,
+    'cost_budget_override_yer': ?costBudgetOverrideYer,
+    'cost_budget_override_reason': ?costBudgetOverrideReason,
+    'cancelled_at': ?cancelledAt,
+    'cancelled_reason': ?cancelledReason,
+    'created_at': createdAt,
+    'updated_at': ?updatedAt,
+  };
 }
 
 class PlatformOverrideBudgetRequest {
@@ -556,9 +549,9 @@ class PlatformOverrideBudgetRequest {
   });
 
   Map<String, dynamic> toJson() => {
-        'cost_budget_override_yer': costBudgetOverrideYer,
-        'reason': reason,
-      };
+    'cost_budget_override_yer': costBudgetOverrideYer,
+    'reason': reason,
+  };
 }
 
 // ==========================================
@@ -603,16 +596,16 @@ class PaymentView {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'subscription_id': subscriptionId,
-        'business_id': businessId,
-        'amount_yer': amountYer,
-        'method': method,
-        'reference': reference,
-        'paid_at': paidAt,
-        'recorded_by': recordedBy,
-        'created_at': ?createdAt,
-      };
+    'id': id,
+    'subscription_id': subscriptionId,
+    'business_id': businessId,
+    'amount_yer': amountYer,
+    'method': method,
+    'reference': reference,
+    'paid_at': paidAt,
+    'recorded_by': recordedBy,
+    'created_at': ?createdAt,
+  };
 }
 
 class PlatformRecordPaymentRequest {
@@ -629,11 +622,11 @@ class PlatformRecordPaymentRequest {
   });
 
   Map<String, dynamic> toJson() => {
-        'amount_yer': amountYer,
-        'method': method,
-        'reference': reference,
-        'paid_at': ?paidAt,
-      };
+    'amount_yer': amountYer,
+    'method': method,
+    'reference': reference,
+    'paid_at': ?paidAt,
+  };
 }
 
 // ==========================================
@@ -701,22 +694,22 @@ class SupportTicketView {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'business_id': businessId,
-        'subject': subject,
-        'status': status,
-        'priority': priority,
-        'category': category,
-        'created_by': createdBy,
-        'created_by_type': createdByType,
-        'resolved_by': ?resolvedBy,
-        'resolved_at': ?resolvedAt,
-        'closed_by': ?closedBy,
-        'closed_at': ?closedAt,
-        'last_message_at': ?lastMessageAt,
-        'created_at': ?createdAt,
-        'updated_at': ?updatedAt,
-      };
+    'id': id,
+    'business_id': businessId,
+    'subject': subject,
+    'status': status,
+    'priority': priority,
+    'category': category,
+    'created_by': createdBy,
+    'created_by_type': createdByType,
+    'resolved_by': ?resolvedBy,
+    'resolved_at': ?resolvedAt,
+    'closed_by': ?closedBy,
+    'closed_at': ?closedAt,
+    'last_message_at': ?lastMessageAt,
+    'created_at': ?createdAt,
+    'updated_at': ?updatedAt,
+  };
 }
 
 class PlatformCreateTicketRequest {
@@ -733,11 +726,11 @@ class PlatformCreateTicketRequest {
   });
 
   Map<String, dynamic> toJson() => {
-        'subject': subject,
-        'category': category,
-        'priority': priority,
-        'initial_message': initialMessage,
-      };
+    'subject': subject,
+    'category': category,
+    'priority': priority,
+    'initial_message': initialMessage,
+  };
 }
 
 class PlatformTicketMessageRequest {
@@ -745,9 +738,7 @@ class PlatformTicketMessageRequest {
 
   const PlatformTicketMessageRequest({required this.body});
 
-  Map<String, dynamic> toJson() => {
-        'body': body,
-      };
+  Map<String, dynamic> toJson() => {'body': body};
 }
 
 // ==========================================
@@ -795,17 +786,17 @@ class PlatformAuditEventView {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'action': action,
-        'target_type': targetType,
-        'target_id': ?targetId,
-        'business_id': ?businessId,
-        'actor_platform_admin_id': ?actorPlatformAdminId,
-        'result': result,
-        'failure_code': ?failureCode,
-        'metadata': metadata,
-        'occurred_at': occurredAt,
-      };
+    'id': id,
+    'action': action,
+    'target_type': targetType,
+    'target_id': ?targetId,
+    'business_id': ?businessId,
+    'actor_platform_admin_id': ?actorPlatformAdminId,
+    'result': result,
+    'failure_code': ?failureCode,
+    'metadata': metadata,
+    'occurred_at': occurredAt,
+  };
 }
 
 // ==========================================
@@ -977,7 +968,9 @@ class PlatformAuditPage {
     final list = json['data'] as List<dynamic>? ?? [];
     return PlatformAuditPage(
       items: list
-          .map((e) => PlatformAuditEventView.fromJson(e as Map<String, dynamic>))
+          .map(
+            (e) => PlatformAuditEventView.fromJson(e as Map<String, dynamic>),
+          )
           .toList(),
       pagination: PaginationPage.fromJson(
         json['pagination'] as Map<String, dynamic>? ?? {},

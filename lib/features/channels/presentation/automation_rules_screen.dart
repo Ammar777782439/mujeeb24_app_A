@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../app/localization/app_localizations.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/models/channel_automation_models.dart';
@@ -38,19 +39,13 @@ class _AutomationRulesScreenState extends State<AutomationRulesScreen> {
   void _showErrorSnackBar(String message, [String? requestId]) {
     final text = requestId != null ? '$message ($requestId)' : message;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(text),
-        backgroundColor: AppColors.error,
-      ),
+      SnackBar(content: Text(text), backgroundColor: AppColors.error),
     );
   }
 
   void _showSuccessSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.success,
-      ),
+      SnackBar(content: Text(message), backgroundColor: AppColors.success),
     );
   }
 
@@ -134,8 +129,8 @@ class _AutomationRulesScreenState extends State<AutomationRulesScreen> {
                           labelText: selectedAction == 'add_label'
                               ? 'Label Name (e.g. VIP, Urgent)'
                               : selectedAction == 'set_priority'
-                                  ? 'Priority (e.g. 1, 2, high)'
-                                  : 'Assignee User ID',
+                              ? 'Priority (e.g. 1, 2, high)'
+                              : 'Assignee User ID',
                           border: const OutlineInputBorder(),
                         ),
                         validator: (val) {
@@ -152,7 +147,9 @@ class _AutomationRulesScreenState extends State<AutomationRulesScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+                  child: Text(
+                    MaterialLocalizations.of(context).cancelButtonLabel,
+                  ),
                 ),
                 ElevatedButton(
                   onPressed: () async {
@@ -168,9 +165,12 @@ class _AutomationRulesScreenState extends State<AutomationRulesScreen> {
                         conditions: conditions,
                         actionKind: selectedAction,
                         actionPayload: {
-                          if (selectedAction == 'add_label') 'label': actionParamController.text.trim(),
-                          if (selectedAction == 'set_priority') 'priority': actionParamController.text.trim(),
-                          if (selectedAction == 'assign_human') 'user_id': actionParamController.text.trim(),
+                          if (selectedAction == 'add_label')
+                            'label': actionParamController.text.trim(),
+                          if (selectedAction == 'set_priority')
+                            'priority': actionParamController.text.trim(),
+                          if (selectedAction == 'assign_human')
+                            'user_id': actionParamController.text.trim(),
                         },
                       );
 
@@ -224,7 +224,9 @@ class _AutomationRulesScreenState extends State<AutomationRulesScreen> {
                     border: const OutlineInputBorder(),
                   ),
                   validator: (val) {
-                    if (val == null || val.trim().isEmpty) return strings('required_field');
+                    if (val == null || val.trim().isEmpty) {
+                      return strings('required_field');
+                    }
                     return null;
                   },
                 ),
@@ -316,7 +318,10 @@ class _AutomationRulesScreenState extends State<AutomationRulesScreen> {
             children: [
               // Filter chips
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     FilterChip(
@@ -370,9 +375,16 @@ class _AutomationRulesScreenState extends State<AutomationRulesScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.alt_route, size: 64, color: AppColors.textSecondary),
+                            const Icon(
+                              Icons.alt_route,
+                              size: 64,
+                              color: AppColors.textSecondary,
+                            ),
                             const SizedBox(height: 16),
-                            Text(strings('no_automation_rules'), style: Theme.of(context).textTheme.titleMedium),
+                            Text(
+                              strings('no_automation_rules'),
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
                             const SizedBox(height: 8),
                             ElevatedButton.icon(
                               onPressed: _showCreateRuleDialog,
@@ -387,7 +399,8 @@ class _AutomationRulesScreenState extends State<AutomationRulesScreen> {
                         child: ListView.separated(
                           padding: const EdgeInsets.all(16),
                           itemCount: provider.automationRules.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 12),
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 12),
                           itemBuilder: (context, index) {
                             final rule = provider.automationRules[index];
                             final isActive = rule.status == 'active';
@@ -412,23 +425,34 @@ class _AutomationRulesScreenState extends State<AutomationRulesScreen> {
                                         Expanded(
                                           child: Text(
                                             rule.name,
-                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
                                           ),
                                         ),
                                         IconButton(
-                                          icon: const Icon(Icons.edit_outlined, size: 20),
-                                          onPressed: () => _showEditRuleDialog(rule),
+                                          icon: const Icon(
+                                            Icons.edit_outlined,
+                                            size: 20,
+                                          ),
+                                          onPressed: () =>
+                                              _showEditRuleDialog(rule),
                                         ),
                                         Switch(
                                           value: isActive,
-                                          onChanged: (_) => _toggleRuleStatus(rule),
+                                          onChanged: (_) =>
+                                              _toggleRuleStatus(rule),
                                         ),
                                       ],
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
                                       'Trigger: ${rule.triggerKind.isNotEmpty ? rule.triggerKind : 'inbound_message'}',
-                                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                                      style: const TextStyle(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 13,
+                                      ),
                                     ),
                                     if (rule.conditions.isNotEmpty)
                                       Padding(
@@ -440,9 +464,15 @@ class _AutomationRulesScreenState extends State<AutomationRulesScreen> {
                                       ),
                                     const SizedBox(height: 8),
                                     Chip(
-                                      label: Text('${rule.actionKind}: ${rule.actionPayload}'),
-                                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                                      labelStyle: const TextStyle(fontSize: 12, color: AppColors.primary),
+                                      label: Text(
+                                        '${rule.actionKind}: ${rule.actionPayload}',
+                                      ),
+                                      backgroundColor: AppColors.primary
+                                          .withValues(alpha: 0.1),
+                                      labelStyle: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.primary,
+                                      ),
                                     ),
                                   ],
                                 ),

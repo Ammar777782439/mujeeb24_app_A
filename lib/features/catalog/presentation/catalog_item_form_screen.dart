@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../app/localization/app_localizations.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/models/catalog_models.dart';
@@ -28,8 +29,8 @@ class _AttributeEntryController {
   final TextEditingController valueController;
 
   _AttributeEntryController({String key = '', String value = ''})
-      : keyController = TextEditingController(text: key),
-        valueController = TextEditingController(text: value);
+    : keyController = TextEditingController(text: key),
+      valueController = TextEditingController(text: value);
 
   void dispose() {
     keyController.dispose();
@@ -62,12 +63,13 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
     final item = widget.existingItem;
 
     _nameController = TextEditingController(text: item?.name ?? '');
-    _itemTypeController =
-        TextEditingController(text: item?.itemType ?? '');
-    _shortDescController =
-        TextEditingController(text: item?.shortDescription ?? '');
-    _longDescController =
-        TextEditingController(text: item?.longDescription ?? '');
+    _itemTypeController = TextEditingController(text: item?.itemType ?? '');
+    _shortDescController = TextEditingController(
+      text: item?.shortDescription ?? '',
+    );
+    _longDescController = TextEditingController(
+      text: item?.longDescription ?? '',
+    );
 
     _selectedPricingMode = item?.pricingMode ?? 'fixed';
     _selectedAvailabilityMode = item?.availabilityMode ?? 'stock';
@@ -311,9 +313,13 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                   ),
                 );
               }).toList(),
-              onChanged: isBusy ? null : (val) {
-                if (val != null) setState(() => _selectedPricingMode = val);
-              },
+              onChanged: isBusy
+                  ? null
+                  : (val) {
+                      if (val != null) {
+                        setState(() => _selectedPricingMode = val);
+                      }
+                    },
             ),
             const SizedBox(height: 16),
 
@@ -336,9 +342,13 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                   ),
                 );
               }).toList(),
-              onChanged: isBusy ? null : (val) {
-                if (val != null) setState(() => _selectedAvailabilityMode = val);
-              },
+              onChanged: isBusy
+                  ? null
+                  : (val) {
+                      if (val != null) {
+                        setState(() => _selectedAvailabilityMode = val);
+                      }
+                    },
             ),
             const SizedBox(height: 16),
 
@@ -361,9 +371,13 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                   ),
                 );
               }).toList(),
-              onChanged: isBusy ? null : (val) {
-                if (val != null) setState(() => _selectedFulfillmentMode = val);
-              },
+              onChanged: isBusy
+                  ? null
+                  : (val) {
+                      if (val != null) {
+                        setState(() => _selectedFulfillmentMode = val);
+                      }
+                    },
             ),
             const SizedBox(height: 16),
 
@@ -383,9 +397,11 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                     child: Text('${e.key} - ${e.value}'),
                   );
                 }).toList(),
-                onChanged: isBusy ? null : (val) {
-                  if (val != null) setState(() => _selectedStatus = val);
-                },
+                onChanged: isBusy
+                    ? null
+                    : (val) {
+                        if (val != null) setState(() => _selectedStatus = val);
+                      },
               ),
               const SizedBox(height: 16),
             ],
@@ -396,15 +412,23 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
               contentPadding: EdgeInsets.zero,
               title: Text(
                 strings('requires_confirmation'),
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
               ),
               subtitle: Text(
                 strings('requires_confirmation_subtitle'),
-                style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textMuted,
+                ),
               ),
-              onChanged: isBusy ? null : (val) {
-                setState(() => _requiresConfirmation = val);
-              },
+              onChanged: isBusy
+                  ? null
+                  : (val) {
+                      setState(() => _requiresConfirmation = val);
+                    },
             ),
             const SizedBox(height: 12),
 
@@ -454,9 +478,11 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                     );
                   }),
                 ],
-                onChanged: isBusy ? null : (val) {
-                  setState(() => _selectedAttributeSchemaId = val);
-                },
+                onChanged: isBusy
+                    ? null
+                    : (val) {
+                        setState(() => _selectedAttributeSchemaId = val);
+                      },
               ),
               const SizedBox(height: 16),
             ],
@@ -492,7 +518,10 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                 child: Center(
                   child: Text(
                     strings('no_scores'),
-                    style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                 ),
               )
@@ -512,7 +541,9 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                             labelText: strings('attribute_key'),
                             border: const OutlineInputBorder(),
                             contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 8),
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
                           ),
                         ),
                       ),
@@ -526,14 +557,20 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                             labelText: strings('attribute_value'),
                             border: const OutlineInputBorder(),
                             contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 8),
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
                           ),
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete_outline_rounded,
-                            color: AppColors.statusError),
-                        onPressed: isBusy ? null : () => _removeAttribute(index),
+                        icon: const Icon(
+                          Icons.delete_outline_rounded,
+                          color: AppColors.statusError,
+                        ),
+                        onPressed: isBusy
+                            ? null
+                            : () => _removeAttribute(index),
                       ),
                     ],
                   ),
@@ -567,7 +604,9 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                           ? strings('save_changes')
                           : strings('create_item'),
                       style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.bold),
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
             ),
             const SizedBox(height: 32),

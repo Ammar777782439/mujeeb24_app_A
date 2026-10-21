@@ -42,9 +42,7 @@ class TeamAuditRepository {
     int limit = 25,
     String? cursor,
   }) async {
-    final queryParams = <String, dynamic>{
-      'limit': limit.toString(),
-    };
+    final queryParams = <String, dynamic>{'limit': limit.toString()};
     if (cursor != null && cursor.isNotEmpty) {
       queryParams['cursor'] = cursor;
     }
@@ -72,8 +70,7 @@ class TeamAuditRepository {
     String? idempotencyKey,
   }) async {
     final headers = <String, String>{
-      'Idempotency-Key':
-          idempotencyKey ?? _generateIdempotencyKey('team_role'),
+      'Idempotency-Key': idempotencyKey ?? _generateIdempotencyKey('team_role'),
     };
     if (ifMatch != null && ifMatch.isNotEmpty) {
       headers['If-Match'] = ifMatch;
@@ -156,9 +153,7 @@ class TeamAuditRepository {
     int limit = 25,
     String? cursor,
   }) async {
-    final queryParams = <String, dynamic>{
-      'limit': limit.toString(),
-    };
+    final queryParams = <String, dynamic>{'limit': limit.toString()};
     if (cursor != null && cursor.isNotEmpty) {
       queryParams['cursor'] = cursor;
     }
@@ -211,9 +206,7 @@ class TeamAuditRepository {
       'Idempotency-Key':
           idempotencyKey ?? _generateIdempotencyKey('team_inv_resend'),
     };
-    final body = <String, dynamic>{
-      'expires_in_hours': ?expiresInHours,
-    };
+    final body = <String, dynamic>{'expires_in_hours': ?expiresInHours};
 
     final response = await apiClient.post(
       '/businesses/$businessId/team/invitations/$invitationId/resend',
@@ -287,9 +280,7 @@ class TeamAuditRepository {
     String? from,
     String? until,
   }) async {
-    final queryParams = <String, dynamic>{
-      'limit': limit.toString(),
-    };
+    final queryParams = <String, dynamic>{'limit': limit.toString()};
     if (cursor != null && cursor.isNotEmpty) queryParams['cursor'] = cursor;
     if (actorType != null && actorType.isNotEmpty && actorType != 'all') {
       queryParams['actor_type'] = actorType;

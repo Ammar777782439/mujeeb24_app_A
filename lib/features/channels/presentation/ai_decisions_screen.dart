@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../app/localization/app_localizations.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/models/channel_automation_models.dart';
@@ -38,19 +39,13 @@ class _AIDecisionsScreenState extends State<AIDecisionsScreen> {
   void _showErrorSnackBar(String message, [String? requestId]) {
     final text = requestId != null ? '$message ($requestId)' : message;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(text),
-        backgroundColor: AppColors.error,
-      ),
+      SnackBar(content: Text(text), backgroundColor: AppColors.error),
     );
   }
 
   void _showSuccessSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.success,
-      ),
+      SnackBar(content: Text(message), backgroundColor: AppColors.success),
     );
   }
 
@@ -58,7 +53,9 @@ class _AIDecisionsScreenState extends State<AIDecisionsScreen> {
   // Dialog: Request Human Review
   // ===========================================================================
   void _showRequestHumanDialog(AIDecision decision) {
-    final reasonController = TextEditingController(text: 'Customer requested human supervisor');
+    final reasonController = TextEditingController(
+      text: 'Customer requested human supervisor',
+    );
     final formKey = GlobalKey<FormState>();
 
     showDialog(
@@ -73,8 +70,17 @@ class _AIDecisionsScreenState extends State<AIDecisionsScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Decision ID: ${decision.id}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                Text('Intent: ${decision.intentBase}', style: const TextStyle(fontSize: 13)),
+                Text(
+                  'Decision ID: ${decision.id}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                Text(
+                  'Intent: ${decision.intentBase}',
+                  style: const TextStyle(fontSize: 13),
+                ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: reasonController,
@@ -84,7 +90,9 @@ class _AIDecisionsScreenState extends State<AIDecisionsScreen> {
                     border: const OutlineInputBorder(),
                   ),
                   validator: (val) {
-                    if (val == null || val.trim().isEmpty) return strings('required_field');
+                    if (val == null || val.trim().isEmpty) {
+                      return strings('required_field');
+                    }
                     return null;
                   },
                 ),
@@ -97,7 +105,9 @@ class _AIDecisionsScreenState extends State<AIDecisionsScreen> {
               child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.warning),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.warning,
+              ),
               onPressed: () async {
                 if (formKey.currentState?.validate() ?? false) {
                   Navigator.pop(ctx);
@@ -108,7 +118,9 @@ class _AIDecisionsScreenState extends State<AIDecisionsScreen> {
                   );
                   if (!mounted) return;
                   if (updated != null) {
-                    _showSuccessSnackBar(strings('human_review_requested_success'));
+                    _showSuccessSnackBar(
+                      strings('human_review_requested_success'),
+                    );
                   } else if (widget.channelProvider.actionError != null) {
                     _showErrorSnackBar(
                       widget.channelProvider.actionError!,
@@ -139,8 +151,14 @@ class _AIDecisionsScreenState extends State<AIDecisionsScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildDetailRow('ID', decision.id),
-                _buildDetailRow('Conversation ID', decision.conversationId ?? 'N/A'),
-                _buildDetailRow(strings('lifecycle'), decision.lifecycle ?? 'suggested'),
+                _buildDetailRow(
+                  'Conversation ID',
+                  decision.conversationId ?? 'N/A',
+                ),
+                _buildDetailRow(
+                  strings('lifecycle'),
+                  decision.lifecycle ?? 'suggested',
+                ),
                 _buildDetailRow(strings('intent'), decision.intentBase),
                 if (decision.requestedAction != null)
                   _buildDetailRow('Action', decision.requestedAction!),
@@ -149,30 +167,46 @@ class _AIDecisionsScreenState extends State<AIDecisionsScreen> {
                 _buildDetailRow(
                   strings('requires_human'),
                   decision.requiresHuman ? 'YES' : 'NO',
-                  color: decision.requiresHuman ? AppColors.error : AppColors.success,
+                  color: decision.requiresHuman
+                      ? AppColors.error
+                      : AppColors.success,
                 ),
                 if (decision.entities.isNotEmpty) ...[
                   const Divider(),
-                  Text(strings('entities'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(
+                    strings('entities'),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 4),
                   ...decision.entities.entries.map(
-                    (e) => Text('• ${e.key}: ${e.value}', style: const TextStyle(fontSize: 13)),
+                    (e) => Text(
+                      '• ${e.key}: ${e.value}',
+                      style: const TextStyle(fontSize: 13),
+                    ),
                   ),
                 ],
                 if (decision.evidenceReferences.isNotEmpty) ...[
                   const Divider(),
-                  const Text('Evidence References:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Evidence References:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 4),
                   ...decision.evidenceReferences.map(
-                    (ref) => Text('• $ref', style: const TextStyle(fontSize: 13)),
+                    (ref) =>
+                        Text('• $ref', style: const TextStyle(fontSize: 13)),
                   ),
                 ],
                 if (decision.missingInformation.isNotEmpty) ...[
                   const Divider(),
-                  const Text('Missing Information:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Missing Information:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 4),
                   ...decision.missingInformation.map(
-                    (info) => Text('• $info', style: const TextStyle(fontSize: 13)),
+                    (info) =>
+                        Text('• $info', style: const TextStyle(fontSize: 13)),
                   ),
                 ],
               ],
@@ -180,7 +214,9 @@ class _AIDecisionsScreenState extends State<AIDecisionsScreen> {
           ),
           actions: [
             ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.warning),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.warning,
+              ),
               icon: const Icon(Icons.person_add),
               label: Text(strings('request_human_review')),
               onPressed: () {
@@ -208,13 +244,21 @@ class _AIDecisionsScreenState extends State<AIDecisionsScreen> {
             width: 130,
             child: Text(
               '$label:',
-              style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary, fontSize: 13),
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+                fontSize: 13,
+              ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 13),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: color,
+                fontSize: 13,
+              ),
             ),
           ),
         ],
@@ -249,7 +293,10 @@ class _AIDecisionsScreenState extends State<AIDecisionsScreen> {
             children: [
               // Filter: All vs Requires Human
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     FilterChip(
@@ -262,7 +309,11 @@ class _AIDecisionsScreenState extends State<AIDecisionsScreen> {
                     ),
                     const SizedBox(width: 8),
                     FilterChip(
-                      avatar: const Icon(Icons.person_pin, size: 16, color: AppColors.warning),
+                      avatar: const Icon(
+                        Icons.person_pin,
+                        size: 16,
+                        color: AppColors.warning,
+                      ),
                       label: Text(strings('filter_requires_human')),
                       selected: provider.requiresHumanFilter == true,
                       onSelected: (_) {
@@ -295,9 +346,16 @@ class _AIDecisionsScreenState extends State<AIDecisionsScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.smart_toy_outlined, size: 64, color: AppColors.textSecondary),
+                            const Icon(
+                              Icons.smart_toy_outlined,
+                              size: 64,
+                              color: AppColors.textSecondary,
+                            ),
                             const SizedBox(height: 16),
-                            Text(strings('no_ai_decisions'), style: Theme.of(context).textTheme.titleMedium),
+                            Text(
+                              strings('no_ai_decisions'),
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
                           ],
                         ),
                       )
@@ -306,10 +364,12 @@ class _AIDecisionsScreenState extends State<AIDecisionsScreen> {
                         child: ListView.separated(
                           padding: const EdgeInsets.all(16),
                           itemCount: provider.aiDecisions.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 12),
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 12),
                           itemBuilder: (context, index) {
                             final decision = provider.aiDecisions[index];
-                            final lifecycleStr = decision.lifecycle ?? 'suggested';
+                            final lifecycleStr =
+                                decision.lifecycle ?? 'suggested';
 
                             return Card(
                               elevation: 2,
@@ -322,12 +382,14 @@ class _AIDecisionsScreenState extends State<AIDecisionsScreen> {
                                 ),
                               ),
                               child: InkWell(
-                                onTap: () => _showDecisionDetailDialog(decision),
+                                onTap: () =>
+                                    _showDecisionDetailDialog(decision),
                                 borderRadius: BorderRadius.circular(12),
                                 child: Padding(
                                   padding: const EdgeInsets.all(16),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
@@ -336,18 +398,28 @@ class _AIDecisionsScreenState extends State<AIDecisionsScreen> {
                                               decision.intentBase.isNotEmpty
                                                   ? decision.intentBase
                                                   : 'Decision #${decision.id.substring(0, 8)}',
-                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
                                             ),
                                           ),
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 2,
+                                            ),
                                             decoration: BoxDecoration(
                                               color: Colors.grey.shade200,
-                                              borderRadius: BorderRadius.circular(8),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
                                             ),
                                             child: Text(
                                               lifecycleStr.toUpperCase(),
-                                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                              ),
                                             ),
                                           ),
                                         ],
@@ -357,24 +429,37 @@ class _AIDecisionsScreenState extends State<AIDecisionsScreen> {
                                         Wrap(
                                           spacing: 6,
                                           runSpacing: 4,
-                                          children: decision.entities.entries.map((ent) {
-                                            return Chip(
-                                              label: Text('${ent.key}: ${ent.value}'),
-                                              backgroundColor: Colors.blueGrey.shade50,
-                                              labelStyle: const TextStyle(fontSize: 11),
-                                              visualDensity: VisualDensity.compact,
-                                            );
-                                          }).toList(),
+                                          children: decision.entities.entries
+                                              .map((ent) {
+                                                return Chip(
+                                                  label: Text(
+                                                    '${ent.key}: ${ent.value}',
+                                                  ),
+                                                  backgroundColor:
+                                                      Colors.blueGrey.shade50,
+                                                  labelStyle: const TextStyle(
+                                                    fontSize: 11,
+                                                  ),
+                                                  visualDensity:
+                                                      VisualDensity.compact,
+                                                );
+                                              })
+                                              .toList(),
                                         ),
                                         const SizedBox(height: 8),
                                       ],
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
                                           if (decision.requiresHuman)
                                             Row(
                                               children: [
-                                                const Icon(Icons.warning, size: 16, color: AppColors.warning),
+                                                const Icon(
+                                                  Icons.warning,
+                                                  size: 16,
+                                                  color: AppColors.warning,
+                                                ),
                                                 const SizedBox(width: 4),
                                                 Text(
                                                   strings('requires_human'),
@@ -389,9 +474,17 @@ class _AIDecisionsScreenState extends State<AIDecisionsScreen> {
                                           else
                                             const SizedBox.shrink(),
                                           TextButton.icon(
-                                            icon: const Icon(Icons.person_add, size: 16),
-                                            label: Text(strings('request_human_review')),
-                                            onPressed: () => _showRequestHumanDialog(decision),
+                                            icon: const Icon(
+                                              Icons.person_add,
+                                              size: 16,
+                                            ),
+                                            label: Text(
+                                              strings('request_human_review'),
+                                            ),
+                                            onPressed: () =>
+                                                _showRequestHumanDialog(
+                                                  decision,
+                                                ),
                                           ),
                                         ],
                                       ),

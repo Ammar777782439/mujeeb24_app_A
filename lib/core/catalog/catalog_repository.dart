@@ -50,9 +50,7 @@ class CatalogRepository {
     String? cursor,
     int limit = 25,
   }) async {
-    final queryParams = <String, dynamic>{
-      'limit': limit.toString(),
-    };
+    final queryParams = <String, dynamic>{'limit': limit.toString()};
     if (status != null && status.isNotEmpty && status != 'all') {
       queryParams['status'] = status;
     }
@@ -76,8 +74,12 @@ class CatalogRepository {
 
     final pagination = response is Map ? response['pagination'] : null;
     final hasMore = pagination is Map && pagination['has_more'] == true;
-    final nextCursor = pagination is Map ? pagination['next_cursor']?.toString() : null;
-    final requestId = response is Map ? response['request_id']?.toString() : null;
+    final nextCursor = pagination is Map
+        ? pagination['next_cursor']?.toString()
+        : null;
+    final requestId = response is Map
+        ? response['request_id']?.toString()
+        : null;
 
     return CatalogPage(
       items: items,
@@ -179,9 +181,7 @@ class CatalogRepository {
     String? cursor,
     int limit = 25,
   }) async {
-    final queryParams = <String, dynamic>{
-      'limit': limit.toString(),
-    };
+    final queryParams = <String, dynamic>{'limit': limit.toString()};
     if (status != null && status.isNotEmpty && status != 'all') {
       queryParams['status'] = status;
     }
@@ -208,8 +208,12 @@ class CatalogRepository {
 
     final pagination = response is Map ? response['pagination'] : null;
     final hasMore = pagination is Map && pagination['has_more'] == true;
-    final nextCursor = pagination is Map ? pagination['next_cursor']?.toString() : null;
-    final requestId = response is Map ? response['request_id']?.toString() : null;
+    final nextCursor = pagination is Map
+        ? pagination['next_cursor']?.toString()
+        : null;
+    final requestId = response is Map
+        ? response['request_id']?.toString()
+        : null;
 
     return CatalogItemPage(
       items: items,
@@ -292,9 +296,7 @@ class CatalogRepository {
     String? cursor,
     int limit = 50,
   }) async {
-    final queryParams = <String, dynamic>{
-      'limit': limit.toString(),
-    };
+    final queryParams = <String, dynamic>{'limit': limit.toString()};
     if (status != null && status.isNotEmpty && status != 'all') {
       queryParams['status'] = status;
     }
@@ -318,8 +320,12 @@ class CatalogRepository {
 
     final pagination = response is Map ? response['pagination'] : null;
     final hasMore = pagination is Map && pagination['has_more'] == true;
-    final nextCursor = pagination is Map ? pagination['next_cursor']?.toString() : null;
-    final requestId = response is Map ? response['request_id']?.toString() : null;
+    final nextCursor = pagination is Map
+        ? pagination['next_cursor']?.toString()
+        : null;
+    final requestId = response is Map
+        ? response['request_id']?.toString()
+        : null;
 
     return VariantPage(
       items: items,
@@ -387,9 +393,7 @@ class CatalogRepository {
     String? cursor,
     int limit = 50,
   }) async {
-    final queryParams = <String, dynamic>{
-      'limit': limit.toString(),
-    };
+    final queryParams = <String, dynamic>{'limit': limit.toString()};
     if (status != null && status.isNotEmpty && status != 'all') {
       queryParams['status'] = status;
     }
@@ -413,8 +417,12 @@ class CatalogRepository {
 
     final pagination = response is Map ? response['pagination'] : null;
     final hasMore = pagination is Map && pagination['has_more'] == true;
-    final nextCursor = pagination is Map ? pagination['next_cursor']?.toString() : null;
-    final requestId = response is Map ? response['request_id']?.toString() : null;
+    final nextCursor = pagination is Map
+        ? pagination['next_cursor']?.toString()
+        : null;
+    final requestId = response is Map
+        ? response['request_id']?.toString()
+        : null;
 
     return OfferPage(
       items: items,

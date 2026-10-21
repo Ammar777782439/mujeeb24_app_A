@@ -110,7 +110,9 @@ class FakeCatalogRepository extends CatalogRepository {
   }
 
   @override
-  Future<CatalogEntityContract> getCatalogEntityContract({required String businessId}) async {
+  Future<CatalogEntityContract> getCatalogEntityContract({
+    required String businessId,
+  }) async {
     return mockContract ?? CatalogEntityContract.defaults();
   }
 
@@ -194,7 +196,8 @@ class FakeCatalogRepository extends CatalogRepository {
       pricingMode: request.pricingMode ?? current.pricingMode,
       availabilityMode: request.availabilityMode ?? current.availabilityMode,
       fulfillmentMode: request.fulfillmentMode ?? current.fulfillmentMode,
-      requiresConfirmation: request.requiresConfirmation ?? current.requiresConfirmation,
+      requiresConfirmation:
+          request.requiresConfirmation ?? current.requiresConfirmation,
       attributes: request.attributes ?? current.attributes,
       resourceVersion: '${(int.tryParse(current.resourceVersion) ?? 1) + 1}',
     );
@@ -319,7 +322,8 @@ class FakeCatalogRepository extends CatalogRepository {
       priceVerificationStatus: current.priceVerificationStatus,
       availabilityMode: current.availabilityMode,
       fulfillmentMode: current.fulfillmentMode,
-      availabilityStatus: request.availabilityStatus ?? current.availabilityStatus,
+      availabilityStatus:
+          request.availabilityStatus ?? current.availabilityStatus,
       status: request.status ?? current.status,
       resourceVersion: '${(int.tryParse(current.resourceVersion) ?? 1) + 1}',
     );
@@ -434,13 +438,17 @@ void main() {
   );
 
   group('Phase 5 CatalogsScreen Widget Tests', () {
-    testWidgets('Renders catalogs list, filters, and cards correctly', (tester) async {
+    testWidgets('Renders catalogs list, filters, and cards correctly', (
+      tester,
+    ) async {
       final fakeRepo = FakeCatalogRepository(mockCatalogs: [sampleCatalog]);
       final provider = CatalogProvider(catalogRepository: fakeRepo);
 
-      await tester.pumpWidget(createTestApp(
-        CatalogsScreen(catalogProvider: provider, businessId: testBusinessId),
-      ));
+      await tester.pumpWidget(
+        createTestApp(
+          CatalogsScreen(catalogProvider: provider, businessId: testBusinessId),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('كتالوج الصيف'), findsOneWidget);
@@ -450,13 +458,17 @@ void main() {
       expect(fakeRepo.listCatalogsCalled, isTrue);
     });
 
-    testWidgets('Opens create catalog dialog and creates a new catalog', (tester) async {
+    testWidgets('Opens create catalog dialog and creates a new catalog', (
+      tester,
+    ) async {
       final fakeRepo = FakeCatalogRepository(mockCatalogs: []);
       final provider = CatalogProvider(catalogRepository: fakeRepo);
 
-      await tester.pumpWidget(createTestApp(
-        CatalogsScreen(catalogProvider: provider, businessId: testBusinessId),
-      ));
+      await tester.pumpWidget(
+        createTestApp(
+          CatalogsScreen(catalogProvider: provider, businessId: testBusinessId),
+        ),
+      );
       await tester.pumpAndSettle();
 
       // Tap on create button
@@ -488,20 +500,24 @@ void main() {
   });
 
   group('Phase 5 CatalogItemsScreen Widget Tests', () {
-    testWidgets('Renders items list, chips, and allows search filtering', (tester) async {
+    testWidgets('Renders items list, chips, and allows search filtering', (
+      tester,
+    ) async {
       final fakeRepo = FakeCatalogRepository(
         mockCatalogs: [sampleCatalog],
         mockItems: [sampleItem],
       );
       final provider = CatalogProvider(catalogRepository: fakeRepo);
 
-      await tester.pumpWidget(createTestApp(
-        CatalogItemsScreen(
-          catalogProvider: provider,
-          businessId: testBusinessId,
-          catalog: sampleCatalog,
+      await tester.pumpWidget(
+        createTestApp(
+          CatalogItemsScreen(
+            catalogProvider: provider,
+            businessId: testBusinessId,
+            catalog: sampleCatalog,
+          ),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('قميص صيفي قطني'), findsOneWidget);
@@ -518,19 +534,24 @@ void main() {
       );
       final provider = CatalogProvider(catalogRepository: fakeRepo);
 
-      await tester.pumpWidget(createTestApp(
-        CatalogItemFormScreen(
-          catalogProvider: provider,
-          businessId: testBusinessId,
-          catalogId: testCatalogId,
+      await tester.pumpWidget(
+        createTestApp(
+          CatalogItemFormScreen(
+            catalogProvider: provider,
+            businessId: testBusinessId,
+            catalogId: testCatalogId,
+          ),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('إضافة عنصر / منتج'), findsOneWidget);
 
       // Scroll to submit button
-      final submitBtn = find.widgetWithText(ElevatedButton, 'إضافة عنصر / منتج');
+      final submitBtn = find.widgetWithText(
+        ElevatedButton,
+        'إضافة عنصر / منتج',
+      );
       await tester.dragUntilVisible(
         submitBtn,
         find.byType(ListView),
@@ -573,7 +594,9 @@ void main() {
   });
 
   group('Phase 5 CatalogItemDetailScreen Widget Tests', () {
-    testWidgets('Displays 3 tabs and switches to Variants and Offers tabs', (tester) async {
+    testWidgets('Displays 3 tabs and switches to Variants and Offers tabs', (
+      tester,
+    ) async {
       final fakeRepo = FakeCatalogRepository(
         mockCatalogs: [sampleCatalog],
         mockItems: [sampleItem],
@@ -582,14 +605,16 @@ void main() {
       );
       final provider = CatalogProvider(catalogRepository: fakeRepo);
 
-      await tester.pumpWidget(createTestApp(
-        CatalogItemDetailScreen(
-          catalogProvider: provider,
-          businessId: testBusinessId,
-          catalogId: testCatalogId,
-          itemId: testItemId,
+      await tester.pumpWidget(
+        createTestApp(
+          CatalogItemDetailScreen(
+            catalogProvider: provider,
+            businessId: testBusinessId,
+            catalogId: testCatalogId,
+            itemId: testItemId,
+          ),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       // Check overview tab
@@ -611,7 +636,9 @@ void main() {
   });
 
   group('Phase 5 Dashboard Integration Widget Tests', () {
-    testWidgets('Dashboard renders Catalogs card and triggers navigation', (tester) async {
+    testWidgets('Dashboard renders Catalogs card and triggers navigation', (
+      tester,
+    ) async {
       var navigatedToCatalogs = false;
       final merchantRepo = FakeMerchantRepository(
         mockOverview: const DashboardOverview(
@@ -623,7 +650,9 @@ void main() {
           connections: {'واتساب': 5},
         ),
       );
-      final merchantProvider = MerchantProvider(merchantRepository: merchantRepo);
+      final merchantProvider = MerchantProvider(
+        merchantRepository: merchantRepo,
+      );
 
       const business = Business(
         id: testBusinessId,
@@ -632,18 +661,20 @@ void main() {
         status: 'active',
       );
 
-      await tester.pumpWidget(createTestApp(
-        Scaffold(
-          body: DashboardTab(
-            merchantProvider: merchantProvider,
-            currentBusiness: business,
-            onNavigateToInbox: () {},
-            onNavigateToCatalogs: () {
-              navigatedToCatalogs = true;
-            },
+      await tester.pumpWidget(
+        createTestApp(
+          Scaffold(
+            body: DashboardTab(
+              merchantProvider: merchantProvider,
+              currentBusiness: business,
+              onNavigateToInbox: () {},
+              onNavigateToCatalogs: () {
+                navigatedToCatalogs = true;
+              },
+            ),
           ),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
 
       final catalogCard = find.text('الكتالوج والمنتجات');

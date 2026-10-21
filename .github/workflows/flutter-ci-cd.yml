@@ -47,17 +47,17 @@ jobs:
   # =========================================================================
   quality-gate:
     name: Code Quality & Automated Tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
 
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 1
 
       - name: Setup Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -85,9 +85,7 @@ jobs:
       - name: Verify Code Formatting
         run: |
           echo "Checking Dart code formatting..."
-          dart format --output=none --set-exit-if-changed lib/ test/ || {
-            echo "::warning::Some files require formatting via 'dart format .'. Proceeding with quality checks."
-          }
+          dart format --output=none --set-exit-if-changed lib/ test/
 
       - name: Static Analysis (flutter analyze)
         run: |
@@ -107,17 +105,17 @@ jobs:
     needs: quality-gate
     # Do not produce production release builds on Pull Requests
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.build_android_apk || inputs.build_android_bundle))
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
 
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 1
 
       - name: Setup Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -180,7 +178,7 @@ jobs:
 
       - name: Upload Android APK Artifact
         if: (github.event_name == 'push' || inputs.build_android_apk) && hashFiles('build/app/outputs/flutter-apk/app-release.apk') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: mujeeb24-android-release-apk-build-${{ github.run_number }}
           path: build/app/outputs/flutter-apk/app-release.apk
@@ -189,7 +187,7 @@ jobs:
 
       - name: Upload Android AAB Artifact
         if: (github.event_name == 'push' || inputs.build_android_bundle) && hashFiles('build/app/outputs/bundle/release/app-release.aab') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: mujeeb24-android-release-bundle-build-${{ github.run_number }}
           path: build/app/outputs/bundle/release/app-release.aab
@@ -209,7 +207,7 @@ jobs:
 
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 1
 
@@ -258,7 +256,7 @@ jobs:
           cd ../../..
 
       - name: Upload iOS Release Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: mujeeb24-ios-unsigned-build-${{ github.run_number }}
           path: build/ios/iphoneos/mujeeb24-ios-unsigned.zip
