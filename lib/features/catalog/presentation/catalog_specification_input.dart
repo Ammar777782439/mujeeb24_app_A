@@ -32,7 +32,10 @@ String displaySpecification(dynamic value) {
         ? 'لا توجد اختيارات'
         : value.map(displaySpecification).join('، ');
   }
-  if (value is Map) return 'تفاصيل محفوظة';
+  if (value is Map) {
+    final parts = value.values.map(displaySpecification).toList();
+    return parts.isEmpty ? 'تفاصيل محفوظة' : parts.join(' — ');
+  }
   return value.toString();
 }
 
