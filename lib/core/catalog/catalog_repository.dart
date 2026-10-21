@@ -504,7 +504,7 @@ class CatalogRepository {
         final schema = AttributeSchema.fromJson(Map<String, dynamic>.from(item));
         if (seenIds.add(schema.id)) collected.add(schema);
       }
-      final pagination = response is Map ? response['pagination'] : null;
+      final pagination = response['pagination'];
       final hasMore = pagination is Map && pagination['has_more'] == true;
       if (!hasMore) return collected;
       final nextCursor = pagination is Map
