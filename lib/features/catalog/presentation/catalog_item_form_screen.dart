@@ -222,7 +222,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
           originalManagedKeys.contains(key)) {
         return 'استخدم اسم معلومة طبيعيًا، مثل الضمان أو اللون.';
       }
-      if (!names.add(key)) return 'هذه المعلومة موجودة بالفعل: ' + key;
+      if (!names.add(key)) return 'هذه المعلومة موجودة بالفعل: ${key}';
     }
     return null;
   }
@@ -283,13 +283,13 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
       final amount = double.tryParse(_amountController.text.trim());
       final needsAmount = _selectedPricingMode != 'quote_required' &&
           _selectedPricingMode != 'dynamic';
-      final needsUnit = ['per_unit', 'per_person', 'per_day']
-          .contains(_selectedPricingMode);
+      final needsUnit = _selectedPricingMode == 'per_unit';
       if (_availabilityStatus == null ||
-          (needsAmount && (amount == null || amount <= 0)) ||
+          (needsAmount && (amount == null || amount < 0)) ||
           (_amountController.text.trim().isNotEmpty && amount == null) ||
           (needsUnit && _unitController.text.trim().isEmpty) ||
-          !RegExp(r'^[A-Za-z]{3}$').hasMatch(_currencyController.text.trim())) {
+          ((needsAmount || (_selectedPricingMode == 'dynamic' && amount != null)) &&
+              !RegExp(r'^[A-Za-z]{3}$').hasMatch(_currencyController.text.trim()))) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('راجع السعر والعملة وحدد حالة التوفر قبل المتابعة')),
         );
@@ -317,6 +317,13 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
 
     String strings(String key) => AppStrings.get(key, context);
     final attributes = _collectAttributes();
+    final parsedAmount = double.tryParse(_amountController.text.trim());
+    final effectiveUnit = _unitController.text.trim().isNotEmpty
+        ? _unitController.text.trim()
+        : _selectedPricingMode == 'per_person'
+            ? 'person'
+            : _selectedPricingMode == 'per_day' ? 'day' : null;
+
 
     CatalogItem? result;
     if (_isEditing) {
@@ -363,10 +370,11 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
         initialOffer: _saveInitialOffer ? CreateOfferRequest(
           name: 'السعر الأساسي',
           pricingMode: _selectedPricingMode,
-          amount: double.tryParse(_amountController.text.trim()),
-          currency: _currencyController.text.trim().toUpperCase(),
-          pricingUnit: _unitController.text.trim().isEmpty
-              ? null : _unitController.text.trim(),
+          amount: _selectedPricingMode == 'quote_required' ? null : parsedAmount,
+          currency: parsedAmount != null && _selectedPricingMode != 'quote_required'
+              ? _currencyController.text.trim().toUpperCase() : null,
+          pricingUnit: ['per_unit', 'per_person', 'per_day'].contains(_selectedPricingMode)
+              ? effectiveUnit : null,
           availabilityMode: _selectedAvailabilityMode,
           availabilityStatus: _availabilityStatus!,
           fulfillmentMode: _selectedFulfillmentMode,
@@ -459,7 +467,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
             ],
 
             if (!_isEditing) ...[
-              Text('الخطوة ' + (_step + 1).toString() + ' من 3',
+              Text('الخطوة ${_step + 1} من 3',
                 style: const TextStyle(color: AppColors.primary,
                   fontWeight: FontWeight.bold)),
               Text(const [
@@ -582,7 +590,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
               )),
             if (!_isEditing && schemas.isNotEmpty)
               DropdownButtonFormField<String>(
-                key: ValueKey('schema-' + (_selectedAttributeSchemaId ?? 'none')),
+                key: ValueKey('schema-${_selectedAttributeSchemaId ?? 'none}'),
                 initialValue: _selectedAttributeSchemaId,
                 isExpanded: true,
                 decoration: const InputDecoration(
@@ -601,7 +609,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
             if (_isEditing && _selectedAttributeSchemaId != null)
               Text(_selectedSchema == null
                 ? 'جاري تحميل قالب المواصفات المحفوظ'
-                : 'قالب المواصفات الحالي: ' + _selectedSchema!.name),
+                : 'قالب المواصفات الحالي: ${_selectedSchema!.name}'),
             if (_schemaLoading) const LinearProgressIndicator(),
             if (_schemaError != null)
               Card(child: Padding(
@@ -617,7 +625,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
               for (final definition in (_selectedSchema!.definitions.toList()
                 ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder))))
                 CatalogSpecificationInput(
-                  key: ValueKey('spec-' + definition.key),
+                  key: ValueKey('spec-${definition.key}'),
                   definition: definition,
                   value: _attributeValues[definition.key],
                   enabled: !isBusy,
@@ -640,7 +648,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(children: [
-                          Expanded(child: Text('المعلومة ' + (index + 1).toString(),
+                          Expanded(child: Text('المعلومة ${index + 1}',
                             style: const TextStyle(fontWeight: FontWeight.w600))),
                           IconButton(
                             tooltip: 'حذف المعلومة',
@@ -659,7 +667,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                         ),
                         const SizedBox(height: 10),
                         if (isStructuredSaved) ...[
-                          Text('القيمة: ' + displaySpecification(row.originalValue)),
+                          Text('القيمة: ${displaySpecification(row.originalValue)}'),
                           const Text('هذه القيمة محفوظة بنوعها الأصلي ولن تتحول إلى نص عند الحفظ.',
                             style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
                         ] else
@@ -889,48 +897,32 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(_nameController.text.trim(),
-                      style: const TextStyle(fontWeight: FontWeight.bold,
-                        fontSize: 18)),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                     const SizedBox(height: 6),
-                    Text('النوع: ' + _itemTypeName(_itemTypeController.text.trim())),
+                    Text('النوع: ${_itemTypeName(_itemTypeController.text.trim())}'),
                     if (_shortDescController.text.trim().isNotEmpty)
-                      Text('الوصف المختصر: ' + _shortDescController.text.trim()),
+                      Text('الوصف المختصر: ${_shortDescController.text.trim()}'),
                     if (_longDescController.text.trim().isNotEmpty)
-                      Text('الوصف التفصيلي: ' + _longDescController.text.trim()),
+                      Text('الوصف التفصيلي: ${_longDescController.text.trim()}'),
                     if (_selectedSchema != null)
-                      Text('قالب المواصفات: ' + _selectedSchema!.name),
+                      Text('قالب المواصفات: ${_selectedSchema!.name}'),
                     for (final entry in _collectAttributes().entries)
                       Padding(padding: const EdgeInsets.only(top: 6),
                         child: Text(
-                          specificationName(entry.key,
-                            _selectedSchema?.definitions ?? <AttributeDefinition>[]) +
-                          ': ' + displaySpecification(entry.value),
-                        )),
+                          '${specificationName(entry.key, _selectedSchema?.definitions ?? <AttributeDefinition>[])}: ${displaySpecification(entry.value)}')),
                     const Divider(),
-                    Text('طريقة التسعير: ' + contract.labelPricingMode(_selectedPricingMode)),
+                    Text('طريقة التسعير: ${contract.labelPricingMode(_selectedPricingMode)}'),
                     if (_saveInitialOffer) ...[
-                      Text('السعر: ' + (_selectedPricingMode == 'quote_required'
-                        ? 'يحدد بعد معرفة الطلب'
-                        : _amountController.text.trim().isEmpty
-                          ? 'سعر متغير يحتاج تأكدًا'
-                          : _amountController.text.trim() + ' ' +
-                            _currencyController.text.trim().toUpperCase())),
+                      Text('السعر: ${_selectedPricingMode == 'quote_required' ? 'يحدد بعد معرفة الطلب' : _amountController.text.trim().isEmpty ? 'سعر متغير يحتاج تأكدًا' : _amountController.text.trim() + ' ' + _currencyController.text.trim().toUpperCase()}'),
                       if (['per_unit', 'per_person', 'per_day']
                         .contains(_selectedPricingMode))
-                        Text('وحدة التسعير: ' + (_unitController.text.trim().isEmpty
-                          ? (_selectedPricingMode == 'per_person'
-                            ? 'شخص' : 'يوم')
-                          : _unitController.text.trim())),
-                      Text('التوفر الحالي: ' +
-                        contract.labelAvailabilityStatus(_availabilityStatus ?? 'unknown')),
+                        Text('وحدة التسعير: ${_unitController.text.trim().isEmpty ? (_selectedPricingMode == 'per_person' ? 'شخص' : 'يوم') : _unitController.text.trim()}'),
+                      Text('التوفر الحالي: ${contract.labelAvailabilityStatus(_availabilityStatus ?? 'unknown')}'),
                     ] else
                       const Text('السعر والتوفر سيُضافان لاحقًا'),
-                    Text('طريقة التأكد من التوفر: ' +
-                      contract.labelAvailabilityMode(_selectedAvailabilityMode)),
-                    Text('طريقة الحصول عليه: ' +
-                      contract.labelFulfillmentMode(_selectedFulfillmentMode)),
-                    Text('موافقة الموظف: ' +
-                      (_requiresConfirmation ? 'مطلوبة قبل التأكيد' : 'حسب سياسات النشاط')),
+                    Text('طريقة التأكد من التوفر: ${contract.labelAvailabilityMode(_selectedAvailabilityMode)}'),
+                    Text('طريقة الحصول عليه: ${contract.labelFulfillmentMode(_selectedFulfillmentMode)}'),
+                    Text('موافقة الموظف: ${_requiresConfirmation ? 'مطلوبة قبل التأكيد' : 'حسب سياسات النشاط'}'),
                   ],
                 ),
               )),
