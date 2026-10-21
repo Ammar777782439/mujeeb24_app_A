@@ -500,6 +500,23 @@ class CatalogRepository {
     return items;
   }
 
+  /// Creates a reusable named schema. The backend generates its attribute keys.
+  Future<AttributeSchema> createAttributeSchema({
+    required String businessId,
+    required CreateAttributeSchemaRequest request,
+    String? idempotencyKey,
+  }) async {
+    final response = await apiClient.post(
+      '/businesses/$businessId/attribute-schemas',
+      body: request.toJson(),
+      headers: {
+        'Idempotency-Key': idempotencyKey ?? _generateIdempotencyKey('schema'),
+      },
+      requiresAuth: true,
+    );
+    return AttributeSchema.fromJson(_extractDataMap(response));
+  }
+
   /// Retrieves an attribute schema by ID.
   /// `GET /businesses/{business_id}/attribute-schemas/{schema_id}`
   Future<AttributeSchema> getAttributeSchema({
