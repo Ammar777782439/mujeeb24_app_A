@@ -53,6 +53,7 @@ class AuthRepository {
         (apiClient.refreshCookie?.isNotEmpty ?? false);
     if (!hasSession) {
       apiClient.clearSession();
+      await apiClient.deletePersistedSession();
       return;
     }
     final remoteLogout = apiClient.post(
@@ -62,6 +63,12 @@ class AuthRepository {
       timeout: const Duration(seconds: 10),
     );
     apiClient.clearSession();
+    try {
+      await apiClient.deletePersistedSession();
+    } finally {
+      // Server revocation was already dispatched with the old credentials.
+      // Never await it before removing secure local credentials.
+    }
     try {
       await remoteLogout;
     } on ApiErrorEnvelope catch (error) {
