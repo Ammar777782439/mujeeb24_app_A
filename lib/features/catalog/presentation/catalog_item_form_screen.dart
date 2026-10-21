@@ -553,116 +553,136 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Optional Attribute Schema Selector (only on create)
-            if (!_isEditing && schemas.isNotEmpty) ...[
-              DropdownButtonFormField<String>(
-                initialValue: _selectedAttributeSchemaId,
-                decoration: InputDecoration(
-                  labelText: strings('attribute_schema'),
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.schema_rounded),
-                ),
-                isExpanded: true,
-                items: [
-                  DropdownMenuItem<String>(
-                    value: null,
-                    child: Text(strings('select_attribute_schema')),
-                  ),
-                  ...schemas.map((s) {
-                    return DropdownMenuItem<String>(
-                      value: s.id,
-                      child: Text('${s.name} (v${s.version})'),
-                    );
-                  }),
-                ],
-                onChanged: isBusy ? null : (val) {
-                  setState(() => _selectedAttributeSchemaId = val);
-                },
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // Custom Attributes Section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  strings('attributes'),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.onSurface,
-                  ),
-                ),
-                TextButton.icon(
-                  onPressed: isBusy ? null : _addAttribute,
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: Text(strings('add_attribute')),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-
-            if (_attributeControllers.isEmpty)
-              Container(
+            // Arabic merchant specifications: the server owns opaque schema keys.
+            const SizedBox(height: 4),
+            Text('المعلومات والمواصفات (اختياري)',
+              style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 6),
+            const Text('مثل اللون أو الضمان. خيارات المقاس واللون التي يختارها العميل تضاف بعد حفظ المنتج.'),
+            const SizedBox(height: 12),
+            if (!_isEditing && widget.catalogProvider.schemasError != null)
+              Card(child: Padding(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceSubtle,
-                  borderRadius: BorderRadius.circular(8),
+                child: Column(children: [
+                  Text(widget.catalogProvider.schemasError!),
+                  TextButton(
+                    onPressed: () => widget.catalogProvider.fetchAttributeSchemas(widget.businessId),
+                    child: const Text('إعادة تحميل القوالب')),
+                ]),
+              )),
+            if (!_isEditing && schemas.isNotEmpty)
+              DropdownButtonFormField<String>(
+                key: ValueKey('schema-' + (_selectedAttributeSchemaId ?? 'none')),
+                initialValue: _selectedAttributeSchemaId,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'استخدام قالب مواصفات', border: OutlineInputBorder()),
+                items: [
+                  const DropdownMenuItem<String>(
+                    value: null, child: Text('سأضيف المعلومات بنفسي')),
+                  for (final schema in schemas)
+                    DropdownMenuItem<String>(
+                      value: schema.id,
+                      child: Text(schema.name, overflow: TextOverflow.ellipsis),
+                    ),
+                ],
+                onChanged: isBusy ? null : (value) => _selectSchema(value),
+              ),
+            if (_isEditing && _selectedAttributeSchemaId != null)
+              Text(_selectedSchema == null
+                ? 'جاري تحميل قالب المواصفات المحفوظ'
+                : 'قالب المواصفات الحالي: ' + _selectedSchema!.name),
+            if (_schemaLoading) const LinearProgressIndicator(),
+            if (_schemaError != null)
+              Card(child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(children: [
+                  Text(_schemaError!, style: const TextStyle(color: AppColors.statusError)),
+                  TextButton(onPressed: () => _selectSchema(_selectedAttributeSchemaId),
+                    child: const Text('إعادة تحميل المواصفات')),
+                ]),
+              )),
+            if (_selectedSchema != null) ...[
+              const SizedBox(height: 14),
+              for (final definition in (_selectedSchema!.definitions.toList()
+                ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder))))
+                CatalogSpecificationInput(
+                  key: ValueKey('spec-' + definition.key),
+                  definition: definition,
+                  value: _attributeValues[definition.key],
+                  enabled: !isBusy,
+                  onChanged: (value) => _changeManagedAttribute(definition.key, value),
                 ),
-                child: Center(
-                  child: Text(
-                    strings('no_scores'),
-                    style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
-                  ),
-                ),
-              )
-            else
-              ...List.generate(_attributeControllers.length, (index) {
-                final ctrl = _attributeControllers[index];
+            ],
+            const SizedBox(height: 12),
+            Text('معلومات أخرى', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: 6),
+            for (var index = 0; index < _attributeControllers.length; index++) ...[
+              Builder(builder: (context) {
+                final row = _attributeControllers[index];
+                final isStructuredSaved = row.originalKey != null &&
+                  row.originalValue is! String;
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: TextFormField(
-                          controller: ctrl.keyController,
-                          enabled: !isBusy,
-                          decoration: InputDecoration(
-                            labelText: strings('attribute_key'),
-                            border: const OutlineInputBorder(),
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 8),
-                          ),
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Card(child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          Expanded(child: Text('المعلومة ' + (index + 1).toString(),
+                            style: const TextStyle(fontWeight: FontWeight.w600))),
+                          IconButton(
+                            tooltip: 'حذف المعلومة',
+                            onPressed: isBusy ? null : () => _removeAttribute(index),
+                            icon: const Icon(Icons.delete_outline_rounded)),
+                        ]),
+                        TextFormField(
+                          controller: row.keyController,
+                          enabled: !isBusy && row.originalKey == null,
+                          textDirection: TextDirection.rtl,
+                          decoration: const InputDecoration(
+                            labelText: 'اسم المعلومة',
+                            hintText: 'مثل: الضمان أو اللون',
+                            border: OutlineInputBorder()),
+                          onChanged: (_) { row.changed = true; _attributesDirty = true; },
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        flex: 3,
-                        child: TextFormField(
-                          controller: ctrl.valueController,
-                          enabled: !isBusy,
-                          decoration: InputDecoration(
-                            labelText: strings('attribute_value'),
-                            border: const OutlineInputBorder(),
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 8),
+                        const SizedBox(height: 10),
+                        if (isStructuredSaved) ...[
+                          Text('القيمة: ' + displaySpecification(row.originalValue)),
+                          const Text('هذه القيمة محفوظة بنوعها الأصلي ولن تتحول إلى نص عند الحفظ.',
+                            style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                        ] else
+                          TextFormField(
+                            controller: row.valueController,
+                            enabled: !isBusy,
+                            textDirection: TextDirection.rtl,
+                            decoration: const InputDecoration(
+                              labelText: 'قيمة المعلومة',
+                              hintText: 'اكتب القيمة بالعربية',
+                              border: OutlineInputBorder()),
+                            onChanged: (_) { row.changed = true; _attributesDirty = true; },
                           ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline_rounded,
-                            color: AppColors.statusError),
-                        onPressed: isBusy ? null : () => _removeAttribute(index),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  )),
                 );
               }),
-
-            const SizedBox(height: 24),
-
+            ],
+            OutlinedButton.icon(
+              icon: const Icon(Icons.add_rounded),
+              onPressed: isBusy ? null : _addAttribute,
+              label: const Text('إضافة معلومة'),
+            ),
+            if (_customError != null) ...[
+              const SizedBox(height: 8),
+              Text(_customError!, style: const TextStyle(color: AppColors.statusError)),
+            ],
+            if (_isEditing && _selectedSchema == null &&
+                widget.existingItem!.attributes.keys.any((k) => k.startsWith('attr_')))
+              const Text('المواصفات المحفوظة من القالب ستبقى كما هي حتى يكتمل تحميل القالب.',
+                style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+            const SizedBox(height: 20),
             ],
             if (_isEditing || _step == 1) ...[
             // Pricing Mode Dropdown
