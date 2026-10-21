@@ -5,6 +5,7 @@ import '../../../core/models/catalog_models.dart';
 import '../providers/catalog_provider.dart';
 import 'catalog_item_form_screen.dart';
 import 'catalog_specification_input.dart';
+import 'merchant_editor_dialog.dart';
 import 'catalog_currency_select.dart';
 
 class _VariantAttributeRow {
@@ -190,7 +191,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
           final chosen = values.keys.toSet();
           final notChosen = managedDefinitions
               .where((definition) => !chosen.contains(definition.key)).toList();
-          return AlertDialog(
+          return MerchantEditorDialog(
             title: Text(existing == null ? 'إضافة خيار للمنتج' : 'تعديل خيار المنتج'),
             content: SizedBox(
               width: double.maxFinite,
@@ -472,7 +473,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
 
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            return AlertDialog(
+            return MerchantEditorDialog(
               title: Text(existing == null ? strings('add_offer') : strings('edit_offer')),
               content: Form(
                 key: formKey,
@@ -702,7 +703,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
               actions: [
                 TextButton(
                   onPressed: isSaving ? null : () => Navigator.of(ctx).pop(),
-                  child: Text(strings('cancel_action')),
+                  child: const Text('إلغاء'),
                 ),
                 ElevatedButton(
                   onPressed: isSaving ? null : () async {
@@ -980,7 +981,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${strings('item_type')}: ${item.itemType}',
+                  '${strings('item_type')}: ${merchantItemTypeLabel(item.itemType)}',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -1087,7 +1088,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                 const SizedBox(height: 12),
                 if (item.attributes.isEmpty)
                   Text(
-                    strings('no_attributions'),
+                    'لم تضف معلومات أو مواصفات بعد',
                     style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
                   )
                 else
