@@ -3,6 +3,7 @@ import '../../../app/localization/app_localizations.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/models/catalog_models.dart';
 import '../providers/catalog_provider.dart';
+import 'catalog_specification_input.dart';
 
 /// Form screen for creating or editing a CatalogItem.
 class CatalogItemFormScreen extends StatefulWidget {
@@ -28,8 +29,12 @@ class CatalogItemFormScreen extends StatefulWidget {
 class _AttributeEntryController {
   final TextEditingController keyController;
   final TextEditingController valueController;
+  final String? originalKey;
+  final dynamic originalValue;
+  bool changed = false;
 
-  _AttributeEntryController({String key = '', String value = ''})
+  _AttributeEntryController({String key = '', String value = '',
+      this.originalKey, this.originalValue})
       : keyController = TextEditingController(text: key),
         valueController = TextEditingController(text: value);
 
@@ -62,6 +67,15 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
   String? _selectedAttributeSchemaId;
 
   final List<_AttributeEntryController> _attributeControllers = [];
+  final Map<String, dynamic> _attributeValues = {};
+  final Set<String> _removedKeys = {};
+  AttributeSchema? _selectedSchema;
+  bool _schemaLoading = false;
+  String? _schemaError;
+  String? _customError;
+  bool _attributesDirty = false;
+  bool _isSaving = false;
+  bool _manualInitialized = false;
 
   bool get _isEditing => widget.existingItem != null;
 
@@ -88,13 +102,14 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
     _currencyController = TextEditingController(text: widget.businessCurrency ?? '');
     _unitController = TextEditingController();
 
-    if (item != null && item.attributes.isNotEmpty) {
-      item.attributes.forEach((k, v) {
-        _attributeControllers.add(
-          _AttributeEntryController(key: k, value: v.toString()),
-        );
-      });
-    }
+    if (item != null) _attributeValues.addAll(item.attributes);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await widget.catalogProvider.fetchEntityContract(widget.businessId);
+      if (!mounted) return;
+      await widget.catalogProvider.fetchAttributeSchemas(widget.businessId);
+      if (!mounted) return;
+      await _selectSchema(_selectedAttributeSchemaId);
+    });
   }
 
   @override
@@ -112,26 +127,122 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
     super.dispose();
   }
 
-  void _addAttribute() {
+  Future<void> _selectSchema(String? schemaId) async {
+    if (_selectedAttributeSchemaId != schemaId && !_isEditing) {
+      _attributeValues.removeWhere((key, _) =>
+        _selectedSchema?.definitions.any((d) => d.key == key) ?? false);
+      _attributesDirty = true;
+    }
     setState(() {
-      _attributeControllers.add(_AttributeEntryController());
+      _selectedAttributeSchemaId = schemaId;
+      _selectedSchema = null;
+      _schemaError = null;
+      _schemaLoading = schemaId != null;
     });
+    if (schemaId != null) {
+      try {
+        final schema = await widget.catalogProvider.catalogRepository.getAttributeSchema(
+          businessId: widget.businessId, schemaId: schemaId);
+        if (!mounted || schemaId != _selectedAttributeSchemaId) return;
+        setState(() => _selectedSchema = schema);
+      } catch (_) {
+        if (!mounted || schemaId != _selectedAttributeSchemaId) return;
+        setState(() => _schemaError =
+          'تعذر تحميل أسئلة قالب المواصفات. أعد اختياره.');
+      } finally {
+        if (mounted && schemaId == _selectedAttributeSchemaId) {
+          setState(() => _schemaLoading = false);
+        }
+      }
+    }
+    if (_isEditing && !_manualInitialized && mounted) {
+      final managed = _selectedSchema?.definitions.map((d) => d.key).toSet() ??
+          <String>{};
+      for (final entry in widget.existingItem!.attributes.entries) {
+        // An opaque server key is never presented as a merchant-editable label.
+        if (managed.contains(entry.key) || entry.key.startsWith('attr_')) continue;
+        _attributeControllers.add(_AttributeEntryController(
+          key: entry.key,
+          value: entry.value is String ? entry.value as String : '',
+          originalKey: entry.key,
+          originalValue: entry.value,
+        ));
+      }
+      _manualInitialized = true;
+      setState(() {});
+    }
+  }
+
+  void _addAttribute() {
+    setState(() => _attributeControllers.add(_AttributeEntryController()));
   }
 
   void _removeAttribute(int index) {
     setState(() {
       final removed = _attributeControllers.removeAt(index);
+      if (removed.originalKey != null) _removedKeys.add(removed.originalKey!);
+      _attributesDirty = true;
       removed.dispose();
     });
   }
 
+  void _changeManagedAttribute(String key, dynamic value) {
+    setState(() {
+      if (value == null || (value is String && value.isEmpty)) {
+        _attributeValues.remove(key);
+      } else {
+        _attributeValues[key] = value;
+      }
+      _attributesDirty = true;
+    });
+  }
+
+  String? _validateAttributes() {
+    if (_schemaLoading) return 'انتظر تحميل قالب المواصفات.';
+    if (_selectedAttributeSchemaId != null && _selectedSchema == null) {
+      return _schemaError ?? 'تعذر تحميل قالب المواصفات. أعد المحاولة.';
+    }
+    final definitions = _selectedSchema?.definitions ?? <AttributeDefinition>[];
+    for (final definition in definitions) {
+      final error = validateSpecification(definition, _attributeValues[definition.key]);
+      if (error != null) return error;
+    }
+    final names = definitions.map((d) => d.label.trim()).toSet();
+    final originalManagedKeys = definitions.map((d) => d.key).toSet();
+    for (final row in _attributeControllers) {
+      final key = row.keyController.text.trim();
+      final value = row.valueController.text.trim();
+      final isUntouchedSavedValue = row.originalKey != null && !row.changed;
+      if (key.isEmpty && value.isEmpty && row.originalKey == null) continue;
+      if (key.isEmpty || (!isUntouchedSavedValue && value.isEmpty)) {
+        return 'اكتب اسم المعلومة وقيمتها، أو احذف السطر.';
+      }
+      if (key.startsWith('attr_') || key.length > 120 ||
+          key.runes.any((r) => r < 32 || r == 127) ||
+          originalManagedKeys.contains(key)) {
+        return 'استخدم اسم معلومة طبيعيًا، مثل الضمان أو اللون.';
+      }
+      if (!names.add(key)) return 'هذه المعلومة موجودة بالفعل: ' + key;
+    }
+    return null;
+  }
+
   Map<String, dynamic> _collectAttributes() {
-    final map = <String, dynamic>{};
-    for (final c in _attributeControllers) {
-      final key = c.keyController.text.trim();
-      final val = c.valueController.text.trim();
-      if (key.isNotEmpty) {
-        map[key] = val;
+    final map = Map<String, dynamic>.from(_attributeValues);
+    for (final removed in _removedKeys) {
+      map.remove(removed);
+    }
+    for (final row in _attributeControllers) {
+      final name = row.keyController.text.trim();
+      if (name.isEmpty) continue;
+      if (row.originalKey != null && row.originalKey != name) {
+        map.remove(row.originalKey);
+      }
+      if (row.originalKey != null && !row.changed &&
+          row.originalKey == name) {
+        map[name] = row.originalValue;
+      } else {
+        map[name] = row.valueController.text.trim();
       }
     }
     return map;
@@ -142,6 +253,20 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
     if (_step == 0 && _itemTypeController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('اختر نوع المنتج أو الخدمة')));
+      return;
+    }
+    if (_step == 0) {
+      final attributesError = _validateAttributes();
+      if (attributesError != null) {
+        setState(() => _customError = attributesError);
+        return;
+      }
+      setState(() => _customError = null);
+    }
+    if (_step == 1 && !widget.catalogProvider.hasLoadedContract) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('تعذر تحميل اختيارات الكتالوج. أعد المحاولة قبل الحفظ.'),
+      ));
       return;
     }
     if (_step == 1 && _saveInitialOffer) {
@@ -166,7 +291,19 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
 
   Future<void> _submit() async {
     if (!_isEditing && _step != 2) return;
-    if (!_formKey.currentState!.validate()) return;
+    if (_isSaving || !_formKey.currentState!.validate()) return;
+    if (!widget.catalogProvider.hasLoadedContract) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('حمّل اختيارات الكتالوج قبل الحفظ.')));
+      return;
+    }
+    final attributesError = _validateAttributes();
+    if ((_attributesDirty || !_isEditing) && attributesError != null) {
+      setState(() => _customError = attributesError);
+      if (!_isEditing) setState(() => _step = 0);
+      return;
+    }
+    setState(() => _isSaving = true);
 
     String strings(String key) => AppStrings.get(key, context);
     final attributes = _collectAttributes();
@@ -187,7 +324,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
         longDescription: _longDescController.text.trim().isNotEmpty
             ? _longDescController.text.trim()
             : null,
-        attributes: attributes,
+        attributes: _attributesDirty ? attributes : null,
       );
 
       result = await widget.catalogProvider.updateCatalogItem(
@@ -235,6 +372,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
     }
 
     if (mounted) {
+      setState(() => _isSaving = false);
       if (result != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -264,7 +402,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
   Widget build(BuildContext context) {
     String strings(String key) => AppStrings.get(key, context);
     final contract = widget.catalogProvider.entityContract;
-    final isBusy = widget.catalogProvider.isPerformingAction;
+    final isBusy = widget.catalogProvider.isPerformingAction || _isSaving;
     final schemas = widget.catalogProvider.attributeSchemas;
 
     return Scaffold(
