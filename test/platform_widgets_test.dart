@@ -555,6 +555,8 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('merchant_more_actions')));
+      await tester.pumpAndSettle();
       expect(find.byKey(const Key('btn_appbar_platform')), findsNothing);
 
       // 2. For platform admin: platform icon in AppBar appears
@@ -570,6 +572,8 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('merchant_more_actions')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('btn_appbar_platform')), findsOneWidget);
     });
