@@ -1287,14 +1287,16 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
+                            Expanded(child: Text(
                               v.name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.onSurface,
                               ),
-                            ),
+                            ),),
                             Row(
                               children: [
                                 Container(
@@ -1304,8 +1306,11 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                                     color: statusBg,
                                     borderRadius: BorderRadius.circular(10),
                                   ),
+                                  constraints: const BoxConstraints(maxWidth: 115),
                                   child: Text(
                                     statusLabel,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
@@ -1438,6 +1443,8 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                             Expanded(
                               child: Text(
                                 offer.name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
