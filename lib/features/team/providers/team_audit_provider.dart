@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../../../core/errors/api_error.dart';
+import '../../../core/team/team_invitation_presentation.dart';
 import '../../../core/models/team_audit_models.dart';
 import '../../../core/team/team_audit_repository.dart';
 
@@ -363,20 +364,19 @@ class TeamAuditProvider extends ChangeNotifier {
       );
 
       _latestCreatedInvitation = resent;
-      final index = _invitations.indexWhere((inv) => inv.id == invitationId);
-      if (index != -1) {
-        _invitations[index] = resent.invitation;
-      }
+      // Resend creates a new token and a NEW invitation ID.
+      // Refresh records rather than mutating the previous invitation ID.
+      await fetchInvitations(businessId, refresh: true);
       return resent;
     } on ApiErrorEnvelope catch (e) {
-      _actionError = e.error.message;
+      _actionError = invitationErrorMessage(e, resend: true);
       _lastRequestId = e.requestId;
       return null;
     } on NetworkException catch (e) {
       _actionError = e.message;
       return null;
     } catch (e) {
-      _actionError = e.toString();
+      _actionError = 'تعذر تجديد الدعوة. تحقق من الاتصال.';
       return null;
     } finally {
       _isPerformingAction = false;
