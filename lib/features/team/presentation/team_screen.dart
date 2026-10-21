@@ -154,12 +154,11 @@ class _TeamScreenState extends State<TeamScreen>
             const SizedBox(height: 10),
             SelectableText(
               created.acceptanceToken,
-                style: const TextStyle(
-                  fontFamily: 'monospace',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: AppColors.primary,
-                ),
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: AppColors.primary,
               ),
             ),
             const SizedBox(height: 8),
