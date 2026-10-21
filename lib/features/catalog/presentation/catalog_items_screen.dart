@@ -11,12 +11,14 @@ class CatalogItemsScreen extends StatefulWidget {
   final CatalogProvider catalogProvider;
   final String businessId;
   final Catalog catalog;
+  final String? businessCurrency;
 
   const CatalogItemsScreen({
     super.key,
     required this.catalogProvider,
     required this.businessId,
     required this.catalog,
+    this.businessCurrency,
   });
 
   @override
@@ -119,6 +121,7 @@ class _CatalogItemsScreenState extends State<CatalogItemsScreen> {
                     catalogProvider: provider,
                     businessId: widget.businessId,
                     catalogId: widget.catalog.id,
+                    businessCurrency: widget.businessCurrency,
                   ),
                 ),
               );
@@ -245,6 +248,7 @@ class _CatalogItemsScreenState extends State<CatalogItemsScreen> {
                                               catalogProvider: provider,
                                               businessId: widget.businessId,
                                               catalogId: widget.catalog.id,
+                                              businessCurrency: widget.businessCurrency,
                                             ),
                                           ),
                                         );
