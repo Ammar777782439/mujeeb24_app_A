@@ -326,7 +326,7 @@ void main() {
       expect(find.text('WhatsApp Support'), findsOneWidget);
       expect(find.text('متصل ونشط'), findsOneWidget);
       expect(find.text('Telegram Bot'), findsOneWidget);
-      expect(find.text('غير متصل'), findsOneWidget);
+      expect(find.text('غير متصل'), findsWidgets);
       expect(find.byType(FloatingActionButton), findsOneWidget);
       expect(find.text('قرارات الذكاء الاصطناعي'), findsOneWidget);
       expect(find.text('قواعد الأتمتة'), findsOneWidget);
