@@ -138,26 +138,44 @@ jobs:
       - name: Install Locked Dependencies
         run: flutter pub get --enforce-lockfile
 
-      - name: Configure Android Release Keystore (Optional Secrets)
-        id: android_keystore
+      - name: Enforce production signing certificate (fail closed)
+        id: android_signing
+        shell: bash
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          EXPECTED_CERT_SHA256: ${{ secrets.ANDROID_RELEASE_CERT_SHA256 }}
         run: |
-          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
-            echo "Configuring production release keystore from GitHub Secrets..."
-            echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
-            echo "storePassword=$KEYSTORE_PASSWORD" > android/key.properties
-            echo "keyPassword=$KEY_PASSWORD" >> android/key.properties
-            echo "keyAlias=$KEY_ALIAS" >> android/key.properties
-            echo "storeFile=release.keystore" >> android/key.properties
-            echo "has_keystore=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "No custom production keystore secrets detected. Building release with configured project signing profile."
-            echo "has_keystore=false" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          if [[ "$MUJEEB_PRODUCTION_RELEASE" != 'true' ]]; then
+            echo 'QA PREVIEW ONLY: using the isolated .preview app ID and Android debug signing.'
+            echo 'signing_profile=preview' >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          for required in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD EXPECTED_CERT_SHA256; do
+            if [[ -z "${!required:-}" ]]; then
+              echo "::error::Production build blocked: missing secret $required."
+              exit 1
+            fi
+          done
+          umask 077
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
+          printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=release.keystore\n' \
+            "$KEYSTORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" > android/key.properties
+          actual="$(keytool -list -v -keystore android/app/release.keystore \
+            -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASSWORD" \
+            | grep -m 1 'SHA256:' | sed -E 's/.*SHA256:[[:space:]]*//' \
+            | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')"
+          expected="$(printf '%s' "$EXPECTED_CERT_SHA256" \
+            | tr -d ':[:space:]' | tr '[:lower:]' '[:upper:]')"
+          if [[ ! "$expected" =~ ^[0-9A-F]{64}$ || "$actual" != "$expected" ]]; then
+            echo '::error::Production signing certificate fingerprint does not match the trusted value.'
+            exit 1
+          fi
+          echo 'Release keystore and expected signing certificate verified.'
+          echo 'signing_profile=production' >> "$GITHUB_OUTPUT"
 
       - name: Determine API Base URL Argument
         id: api_args
