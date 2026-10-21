@@ -11,13 +11,18 @@ on:
       - master
   workflow_dispatch:
     inputs:
+      production_release:
+        description: 'PRODUCTION release: requires secured release keystore + verified certificate fingerprint'
+        required: true
+        type: boolean
+        default: false
       build_android_apk:
         description: 'Build Android APK (Direct install)'
         required: false
         type: boolean
         default: true
       build_android_bundle:
-        description: 'Build Android App Bundle (Google Play)'
+        description: 'Build signed Android App Bundle (production only)'
         required: false
         type: boolean
         default: true
@@ -68,8 +73,6 @@ jobs:
           flutter-version: '3.47.5'
           channel: 'stable'
           cache: true
-          cache-key: 'flutter-:os:-:channel:-:version:-:arch:-:hash:'
-          cache-path: '${{ runner.tool_cache }}/flutter/:channel:-:version:-:arch:'
 
       - name: Log Environment Diagnostics
         run: |
@@ -103,12 +106,14 @@ jobs:
   # 2. Android Build Job: Release APK & App Bundle (AAB)
   # =========================================================================
   build-android:
-    name: Build Android Release
+    name: Build Android (production signing gate / QA preview)
     needs: quality-gate
     # Do not produce production release builds on Pull Requests
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.build_android_apk || inputs.build_android_bundle))
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    env:
+      MUJEEB_PRODUCTION_RELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.production_release && 'true' || 'false' }}
 
     steps:
       - name: Checkout Source Code
@@ -121,6 +126,7 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+          cache: gradle
 
       - name: Setup Flutter SDK
         uses: subosito/flutter-action@v2
@@ -129,8 +135,8 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Install Dependencies
-        run: flutter pub get
+      - name: Install Locked Dependencies
+        run: flutter pub get --enforce-lockfile
 
       - name: Configure Android Release Keystore (Optional Secrets)
         id: android_keystore
