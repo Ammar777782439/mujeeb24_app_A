@@ -704,7 +704,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                 return DropdownMenuItem(
                   value: e.key,
                   child: Text(
-                    e.value,
+                    merchantCatalogOptionLabel(e.value),
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 13),
                   ),
@@ -729,7 +729,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                 return DropdownMenuItem(
                   value: e.key,
                   child: Text(
-                    e.value,
+                    merchantCatalogOptionLabel(e.value),
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 13),
                   ),
@@ -754,7 +754,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                 return DropdownMenuItem(
                   value: e.key,
                   child: Text(
-                    e.value,
+                    merchantCatalogOptionLabel(e.value),
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 13),
                   ),
