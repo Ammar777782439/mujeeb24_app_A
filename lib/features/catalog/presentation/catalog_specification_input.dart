@@ -219,7 +219,8 @@ class _CatalogSpecificationInputState extends State<CatalogSpecificationInput> {
 
     if (dataType == 'date' || dataType == 'datetime') {
       return _field(TextFormField(
-        key: ValueKey('managed-${definition.key}'),
+        // Re-create read-only field after a picker selection so its text updates.
+        key: ValueKey('managed-${definition.key}-${value ?? ''}'),
         initialValue: value?.toString() ?? '',
         enabled: widget.enabled,
         readOnly: true,
