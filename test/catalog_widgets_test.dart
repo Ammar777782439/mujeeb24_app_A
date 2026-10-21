@@ -23,6 +23,8 @@ class FakeCatalogRepository extends CatalogRepository {
   List<AttributeSchema> mockSchemas;
   CatalogEntityContract? mockContract;
   bool failEntityContract;
+  bool failVariants;
+  bool failOffers;
   CreateCatalogItemRequest? lastCreateItemRequest;
 
   bool listCatalogsCalled = false;
@@ -46,6 +48,8 @@ class FakeCatalogRepository extends CatalogRepository {
     this.mockSchemas = const [],
     this.mockContract,
     this.failEntityContract = false,
+    this.failVariants = false,
+    this.failOffers = false,
   }) : super(apiClient: ApiClient(baseUrl: 'https://mock.local'));
 
   @override
@@ -216,6 +220,7 @@ class FakeCatalogRepository extends CatalogRepository {
     int limit = 25,
   }) async {
     listVariantsCalled = true;
+    if (failVariants) throw StateError('variant list unavailable');
     return VariantPage(items: mockVariants, hasMore: false);
   }
 
@@ -272,6 +277,7 @@ class FakeCatalogRepository extends CatalogRepository {
     int limit = 25,
   }) async {
     listOffersCalled = true;
+    if (failOffers) throw StateError('offer list unavailable');
     return OfferPage(items: mockOffers, hasMore: false);
   }
 
@@ -580,6 +586,34 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(fakeRepo.createItemCalled, isTrue);
+    });
+  });
+
+  group('Independent product, variant and offer loading', () {
+    test('product details remain accessible if variant/offer endpoints fail', () async {
+      final repo = FakeCatalogRepository(
+        mockItems: [sampleItem],
+        failVariants: true,
+        failOffers: true,
+      );
+      final provider = CatalogProvider(catalogRepository: repo);
+      await provider.fetchItemDetail(testBusinessId, testCatalogId, testItemId);
+      expect(provider.selectedItem?.id, testItemId);
+      expect(provider.itemDetailError, isNull);
+      expect(provider.variantsError, contains('متغيرات'));
+      expect(provider.offersError, contains('أسعار'));
+      expect(provider.variants, isEmpty);
+      expect(provider.offers, isEmpty);
+
+      repo.failVariants = false;
+      repo.failOffers = false;
+      repo.mockVariants = [sampleVariant];
+      await provider.refreshVariants(testBusinessId, testItemId);
+      await provider.refreshOffers(testBusinessId, testItemId);
+      expect(provider.selectedItem?.id, testItemId);
+      expect(provider.variantsError, isNull);
+      expect(provider.offersError, isNull);
+      expect(provider.variants.length, 1);
     });
   });
 
