@@ -1,4 +1,5 @@
 import '../api/api_client.dart';
+import '../errors/api_error.dart';
 import '../models/auth_models.dart';
 
 /// Authentication Repository implementing:
