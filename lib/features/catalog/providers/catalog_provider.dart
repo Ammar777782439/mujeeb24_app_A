@@ -60,6 +60,8 @@ class CatalogProvider extends ChangeNotifier {
   bool _loadingMoreOffers = false;
   bool _isLoadingItemDetail = false;
   String? _itemDetailError;
+  String? _variantsError;
+  String? _offersError;
 
   List<Variant> get variants => _variants;
   List<Offer> get offers => _offers;
@@ -69,6 +71,8 @@ class CatalogProvider extends ChangeNotifier {
   bool get loadingMoreOffers => _loadingMoreOffers;
   bool get isLoadingItemDetail => _isLoadingItemDetail;
   String? get itemDetailError => _itemDetailError;
+  String? get variantsError => _variantsError;
+  String? get offersError => _offersError;
 
   // ==========================================
   // Attribute Schemas & Entity Contract
@@ -119,6 +123,8 @@ class CatalogProvider extends ChangeNotifier {
     _offersCursor = null;
     _variantsHasMore = false;
     _offersHasMore = false;
+    _variantsError = null;
+    _offersError = null;
     notifyListeners();
   }
 
@@ -407,6 +413,8 @@ class CatalogProvider extends ChangeNotifier {
   // Item Detail & Sub-resources
   // ==========================================
 
+  /// Load the product first. A broken variants or offers endpoint must
+  /// never turn a successfully saved product into an unusable detail screen.
   Future<void> fetchItemDetail(
     String businessId,
     String catalogId,
@@ -415,44 +423,70 @@ class CatalogProvider extends ChangeNotifier {
     if (businessId.isEmpty || catalogId.isEmpty || itemId.isEmpty) return;
     _isLoadingItemDetail = true;
     _itemDetailError = null;
+    _variantsError = null;
+    _offersError = null;
+    if (_selectedItem?.id != itemId) _selectedItem = null;
+    _variants = [];
+    _offers = [];
+    _variantsCursor = null;
+    _offersCursor = null;
+    _variantsHasMore = false;
+    _offersHasMore = false;
     notifyListeners();
 
     try {
-      final itemFuture = catalogRepository.getCatalogItem(
-        businessId: businessId,
-        catalogId: catalogId,
-        itemId: itemId,
-      );
-      final variantsFuture = catalogRepository.listVariants(
-        businessId: businessId,
-        itemId: itemId,
-      );
-      final offersFuture = catalogRepository.listOffers(
-        businessId: businessId,
-        itemId: itemId,
-      );
-
-      final results = await Future.wait([
-        itemFuture,
-        variantsFuture,
-        offersFuture,
-      ]);
-
-      _selectedItem = results[0] as CatalogItem;
-      final variantPage = results[1] as VariantPage;
-      final offerPage = results[2] as OfferPage;
-      _variants = variantPage.items;
-      _offers = offerPage.items;
-      _variantsHasMore = variantPage.hasMore;
-      _offersHasMore = offerPage.hasMore;
-      _variantsCursor = variantPage.nextCursor;
-      _offersCursor = offerPage.nextCursor;
+      final item = await catalogRepository.getCatalogItem(
+        businessId: businessId, catalogId: catalogId, itemId: itemId);
+      _selectedItem = item;
     } on ApiErrorEnvelope catch (e) {
       _itemDetailError = e.error.message;
-    } catch (e) {
-      _itemDetailError = e.toString();
+    } catch (_) {
+      _itemDetailError = 'تعذر تحميل بيانات المنتج. أعد المحاولة.';
     } finally {
       _isLoadingItemDetail = false;
+      notifyListeners();
+    }
+    if (_selectedItem?.id != itemId || _itemDetailError != null) return;
+    await Future.wait([
+      refreshVariants(businessId, itemId),
+      refreshOffers(businessId, itemId),
+    ]);
+  }
+
+  /// Separately retry product variations without reloading or losing the item.
+  Future<void> refreshVariants(String businessId, String itemId) async {
+    _variantsError = null;
+    notifyListeners();
+    try {
+      final page = await catalogRepository.listVariants(
+        businessId: businessId, itemId: itemId);
+      if (_selectedItem?.id != itemId) return;
+      _variants = page.items;
+      _variantsCursor = page.nextCursor;
+      _variantsHasMore = page.hasMore;
+    } catch (_) {
+      if (_selectedItem?.id != itemId) return;
+      _variantsError = 'تعذر تحميل متغيرات المنتج. يمكنك إعادة المحاولة.';
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  /// An offers failure must not hide the product or its variations.
+  Future<void> refreshOffers(String businessId, String itemId) async {
+    _offersError = null;
+    notifyListeners();
+    try {
+      final page = await catalogRepository.listOffers(
+        businessId: businessId, itemId: itemId);
+      if (_selectedItem?.id != itemId) return;
+      _offers = page.items;
+      _offersCursor = page.nextCursor;
+      _offersHasMore = page.hasMore;
+    } catch (_) {
+      if (_selectedItem?.id != itemId) return;
+      _offersError = 'تعذر تحميل عروض وأسعار المنتج. أعد المحاولة.';
+    } finally {
       notifyListeners();
     }
   }
@@ -469,7 +503,7 @@ class CatalogProvider extends ChangeNotifier {
       _variantsHasMore = page.hasMore;
       _variantsCursor = page.nextCursor;
     } catch (e) {
-      _itemDetailError = 'تعذر تحميل خيارات أخرى. أعد المحاولة.';
+      _variantsError = 'تعذر تحميل بقية المتغيرات. أعد المحاولة.';
     } finally {
       _loadingMoreVariants = false;
       notifyListeners();
@@ -488,7 +522,7 @@ class CatalogProvider extends ChangeNotifier {
       _offersHasMore = page.hasMore;
       _offersCursor = page.nextCursor;
     } catch (e) {
-      _itemDetailError = 'تعذر تحميل أسعار أخرى. أعد المحاولة.';
+      _offersError = 'تعذر تحميل بقية الأسعار. أعد المحاولة.';
     } finally {
       _loadingMoreOffers = false;
       notifyListeners();
