@@ -961,6 +961,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
         ),
         const SizedBox(height: 16),
 
+        if (_schemaLoading) const LinearProgressIndicator(),
         // Custom Attributes Card
         Card(
           elevation: 0,
@@ -1181,9 +1182,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                             children: v.attributes.entries.map((attr) {
                               return Chip(
                                 label: Text(
-                                  specificationName(attr.key,
-                                    _schema?.definitions ?? <AttributeDefinition>[]) +
-                                  ': ' + displaySpecification(attr.value),
+                                  '${specificationName(attr.key, _schema?.definitions ?? <AttributeDefinition>[])}: ${displaySpecification(attr.value)}',
                                   style: const TextStyle(fontSize: 10),
                                 ),
                                 padding: EdgeInsets.zero,
@@ -1330,7 +1329,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                           children: [
                             Text(
                               offer.amount != null
-                                  ? offer.amount!.toStringAsFixed(2) + ' ' + (offer.currency ?? '')
+                                  ? '${offer.amount!.toStringAsFixed(2)} ${offer.currency ?? ''}'
                                   : strings('pricing_mode'),
                               style: const TextStyle(
                                 fontSize: 16,
