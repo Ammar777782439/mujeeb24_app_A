@@ -148,7 +148,7 @@ class MerchantProvider extends ChangeNotifier {
           code.contains('token_expired') ||
           serverMessage.contains('invalid access token');
       final safeArabicMessage = e.error.message.length <= 160 &&
-          RegExp(r'[\\u0600-\\u06FF]').hasMatch(e.error.message);
+          RegExp(r'[ء-ي]').hasMatch(e.error.message);
       _dashboardError = _dashboardRequiresLogin
           ? 'انتهت صلاحية جلسة الدخول. سجّل دخولك من جديد.'
           : safeArabicMessage
