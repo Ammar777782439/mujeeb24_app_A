@@ -1,6 +1,21 @@
 import 'package:flutter/material.dart';
 import '../../../core/models/catalog_models.dart';
 
+/// Merchant item names from the frontend catalog-form-values contract.
+String merchantItemTypeLabel(String type) {
+  const names = <String, String>{
+    'product': 'منتج',
+    'physical_good': 'منتج',
+    'service': 'خدمة',
+    'consultation': 'استشارة',
+    'booking': 'حجز',
+    'real_estate': 'عقار',
+    'course': 'دورة',
+    'subscription': 'اشتراك',
+  };
+  return names[type] ?? type;
+}
+
 /// Contract-backed labels: never show opaque attribute keys to merchants.
 String specificationName(String key, List<AttributeDefinition> definitions) {
   for (final definition in definitions) {
