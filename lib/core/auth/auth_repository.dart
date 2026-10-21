@@ -29,6 +29,7 @@ class AuthRepository {
     final data = response['data'] as Map<String, dynamic>;
     final authResponse = AuthResponse.fromJson(data);
     apiClient.setAccessToken(authResponse.accessToken);
+    await apiClient.flushCookiePersistence();
     return authResponse;
   }
 
@@ -43,6 +44,7 @@ class AuthRepository {
     final data = response['data'] as Map<String, dynamic>;
     final authResponse = AuthResponse.fromJson(data);
     apiClient.setAccessToken(authResponse.accessToken);
+    await apiClient.flushCookiePersistence();
     return authResponse;
   }
 
