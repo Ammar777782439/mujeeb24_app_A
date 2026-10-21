@@ -222,7 +222,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
           originalManagedKeys.contains(key)) {
         return 'استخدم اسم معلومة طبيعيًا، مثل الضمان أو اللون.';
       }
-      if (!names.add(key)) return 'هذه المعلومة موجودة بالفعل: ${key}';
+      if (!names.add(key)) return 'هذه المعلومة موجودة بالفعل: $key';
     }
     return null;
   }
@@ -597,7 +597,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
               )),
             if (!_isEditing && schemas.isNotEmpty)
               DropdownButtonFormField<String>(
-                key: ValueKey('schema-${_selectedAttributeSchemaId ?? 'none}'),
+                key: ValueKey('schema-${_selectedAttributeSchemaId ?? 'none'}'),
                 initialValue: _selectedAttributeSchemaId,
                 isExpanded: true,
                 decoration: const InputDecoration(
