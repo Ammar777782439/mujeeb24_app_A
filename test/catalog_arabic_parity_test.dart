@@ -6,6 +6,8 @@ import 'package:mujeeb24_app/core/catalog/catalog_repository.dart';
 import 'package:mujeeb24_app/features/catalog/providers/catalog_provider.dart';
 import 'package:mujeeb24_app/features/catalog/presentation/catalog_item_form_screen.dart';
 import 'package:mujeeb24_app/features/catalog/presentation/catalog_specification_input.dart';
+import 'package:mujeeb24_app/features/catalog/presentation/catalog_currency_select.dart';
+import 'package:mujeeb24_app/features/catalog/presentation/attribute_schemas_screen.dart';
 
 class _MerchantCatalogRepository extends CatalogRepository {
   _MerchantCatalogRepository() : super(apiClient: ApiClient(baseUrl: 'https://mock.local'));
@@ -33,6 +35,53 @@ void main() {
     displayOrder: 1,
     validationRules: {'min': 1, 'max': 60},
   );
+
+  testWidgets('Arabic CLDR currency names render at 320px without overflow',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    final controller = TextEditingController(text: 'YER');
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('ar'),
+      home: Scaffold(body: SafeArea(child: CatalogCurrencySelect(
+        controller: controller,
+      ))),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('ريال يمني'), findsOneWidget);
+    expect(controller.text, 'YER');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Arabic schema builder opens at 320px with no Key/Value controls',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 680);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    final provider = CatalogProvider(
+      catalogRepository: _MerchantCatalogRepository());
+    addTearDown(provider.dispose);
+    await tester.pumpWidget(MaterialApp(
+      locale: const Locale('ar'),
+      home: AttributeSchemasScreen(
+        catalogProvider: provider, businessId: 'business'),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('إنشاء قالب مواصفات').last);
+    await tester.pumpAndSettle();
+    expect(find.text('اسم المعلومة *'), findsWidgets);
+    expect(find.text('كيف ستكون الإجابة؟'), findsWidgets);
+    expect(find.textContaining('Attribute Key'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 
   test('Server-owned schema key never leaks to merchant labels', () {
     expect(specificationName(definition.key, [definition]), 'مدة الضمان');
