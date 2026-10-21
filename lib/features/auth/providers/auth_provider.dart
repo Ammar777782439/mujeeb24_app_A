@@ -160,8 +160,18 @@ class AuthProvider extends ChangeNotifier {
       _status = AuthStatus.authenticated;
       notifyListeners();
       return true;
-    } catch (e) {
-      _status = AuthStatus.sessionExpired;
+    } on ApiErrorEnvelope catch (error) {
+      if (error.statusCode == 401 || error.statusCode == 403) {
+        authRepository.apiClient.clearSession();
+        markSessionExpired();
+      } else {
+        _errorMessage = 'تعذر تجديد الجلسة مؤقتًا. أعد المحاولة.';
+        notifyListeners();
+      }
+      return false;
+    } catch (_) {
+      // A timeout is not evidence of refresh-token revocation.
+      _errorMessage = 'تعذر الاتصال بالخادم لتجديد الجلسة.';
       notifyListeners();
       return false;
     }
