@@ -36,6 +36,8 @@ class CatalogItemDetailScreen extends StatefulWidget {
   final String catalogId;
   final String itemId;
   final String? businessCurrency;
+  final bool justCreated;
+  final int initialTabIndex;
 
   const CatalogItemDetailScreen({
     super.key,
@@ -44,6 +46,8 @@ class CatalogItemDetailScreen extends StatefulWidget {
     required this.catalogId,
     required this.itemId,
     this.businessCurrency,
+    this.justCreated = false,
+    this.initialTabIndex = 0,
   });
 
   @override
@@ -60,7 +64,9 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: 3, initialIndex: widget.initialTabIndex, vsync: this,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadDetails();
     });
@@ -383,10 +389,6 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                       setDialogState(() => error = message);
                       return;
                     }
-                  }
-                  if (!widget.catalogProvider.hasLoadedContract) {
-                    setDialogState(() => error = 'تعذر تحميل اختيارات الكتالوج، أعد المحاولة.');
-                    return;
                   }
                   setDialogState(() { busy = true; error = null; });
                   final success = existing == null
@@ -1169,6 +1171,37 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
   // Tab 2: Variants
   // ==========================================
 
+  Widget _postCreateBanner() => Card(
+    margin: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+    color: AppColors.surfaceCanvas,
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(children: [
+            Icon(Icons.check_circle_outline_rounded,
+              color: AppColors.statusSuccess),
+            SizedBox(width: 10),
+            Expanded(child: Text('تم حفظ المنتج كمسودة',
+              style: TextStyle(fontWeight: FontWeight.bold))),
+          ]),
+          const SizedBox(height: 8),
+          const Text(
+            'هذه الخطوة اختيارية. إذا كان للمنتج مقاسات أو ألوان أو خيارات مختلفة، أضفها الآن. يمكنك تجاوزها والعودة إليها لاحقًا.',
+          ),
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('إنهاء الآن'),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
   Widget _buildVariantsTab(
     List<Variant> variants,
     CatalogEntityContract contract,
@@ -1182,7 +1215,9 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
         icon: const Icon(Icons.add_rounded),
         label: Text(strings('add_variant')),
       ),
-      body: variants.isEmpty
+      body: Column(children: [
+        if (widget.justCreated) _postCreateBanner(),
+        Expanded(child: variants.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -1305,8 +1340,11 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                 );
               },
             ),
+        ),
+      ]),
     );
   }
+
 
   // ==========================================
   // Tab 3: Offers
