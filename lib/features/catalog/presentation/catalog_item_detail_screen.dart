@@ -1217,7 +1217,17 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
       ),
       body: Column(children: [
         if (widget.justCreated) _postCreateBanner(),
-        Expanded(child: widget.catalogProvider.variantsError != null &&
+        Expanded(child: widget.catalogProvider.isLoadingVariants &&
+                variants.isEmpty
+          ? const Center(child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 14),
+                Text('جاري تحميل متغيرات المنتج'),
+              ],
+            ))
+          : widget.catalogProvider.variantsError != null &&
                 variants.isEmpty
           ? Center(child: Padding(
               padding: const EdgeInsets.all(24),
@@ -1389,7 +1399,16 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
         icon: const Icon(Icons.add_rounded),
         label: Text(strings('add_offer')),
       ),
-      body: widget.catalogProvider.offersError != null && offers.isEmpty
+      body: widget.catalogProvider.isLoadingOffers && offers.isEmpty
+          ? const Center(child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 14),
+                Text('جاري تحميل عروض المنتج'),
+              ],
+            ))
+          : widget.catalogProvider.offersError != null && offers.isEmpty
           ? Center(child: Padding(
               padding: const EdgeInsets.all(24),
               child: Column(
