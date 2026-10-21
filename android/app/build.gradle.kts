@@ -8,6 +8,7 @@ plugins {
 
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
+val requireReleaseSignature = System.getenv("MUJEEB_PRODUCTION_RELEASE") == "true"
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(keystorePropertiesFile.inputStream())
 }
