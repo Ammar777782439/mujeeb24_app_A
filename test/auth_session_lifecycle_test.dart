@@ -102,6 +102,21 @@ void main() {
     await future;
   });
 
+  test('old logout response cannot clear the next user session', () async {
+    final gate = Completer<http.Response>();
+    final api = ApiClient(client: MockClient((r) async => gate.future));
+    api.setAccessToken('old');
+    api.setRefreshCookie('mujeeb_refresh=old');
+    final logout = AuthRepository(apiClient: api).logout();
+    expect(api.accessToken, isNull);
+    api.setAccessToken('new-login');
+    api.setRefreshCookie('mujeeb_refresh=new-login');
+    gate.complete(http.Response('', 204));
+    await logout;
+    expect(api.accessToken, 'new-login');
+    expect(api.refreshCookie, 'mujeeb_refresh=new-login');
+  });
+
   test('logout during refresh never resurrects stale credentials', () async {
     final gate = Completer<http.Response>();
     final refreshSeen = Completer<void>();
