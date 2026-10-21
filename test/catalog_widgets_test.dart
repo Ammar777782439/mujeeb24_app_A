@@ -549,8 +549,8 @@ void main() {
       );
       await tester.pumpAndSettle();
       await tester.enterText(nameField, 'ساعة فاخرة');
-      final typeField = find.widgetWithText(TextFormField, 'نوع العنصر *');
-      await tester.enterText(typeField, 'product');
+      // The default choice is the human-readable 'منتج' -> API 'product'.
+      expect(find.text('ما الذي تقدمه؟'), findsWidgets);
 
       await tester.dragUntilVisible(
         nextButton,
