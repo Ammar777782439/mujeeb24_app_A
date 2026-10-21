@@ -71,7 +71,7 @@ void main() {
       );
       expect(message.contains('متجر الأفق'), isTrue);
       expect(message.contains('مسؤول نشاط'), isTrue);
-      expect(message.contains('تحميل تطبيق "مجيب 24"'), isTrue);
+      expect(message.contains('يمكن قبول الدعوة من صفحة الويب'), isTrue);
     });
   });
 
