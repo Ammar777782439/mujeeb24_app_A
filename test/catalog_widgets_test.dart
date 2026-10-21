@@ -536,13 +536,8 @@ void main() {
       expect(find.text('إضافة عنصر / منتج'), findsOneWidget);
 
       // Guided creation: no write until all three stages finish.
-      final nextButton = find.widgetWithText(ElevatedButton, 'التالي');
-      await tester.dragUntilVisible(
-        nextButton,
-        find.byType(ListView),
-        const Offset(0, -300),
-      );
-      await tester.pumpAndSettle();
+      final nextButton = find.widgetWithText(FilledButton, 'متابعة');
+      // The merchant's next action stays pinned above the system navigation bar.
       await tester.tap(nextButton);
       await tester.pumpAndSettle();
       expect(fakeRepo.createItemCalled, isFalse);
@@ -558,12 +553,6 @@ void main() {
       // The default choice is the human-readable 'منتج' -> API 'product'.
       expect(find.text('ما الذي تقدمه؟'), findsWidgets);
 
-      await tester.dragUntilVisible(
-        nextButton,
-        find.byType(ListView),
-        const Offset(0, -300),
-      );
-      await tester.pumpAndSettle();
       await tester.tap(nextButton);
       await tester.pumpAndSettle();
 
@@ -577,23 +566,11 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(skipOffer);
       await tester.pumpAndSettle();
-      await tester.dragUntilVisible(
-        nextButton,
-        find.byType(ListView),
-        const Offset(0, -300),
-      );
-      await tester.pumpAndSettle();
       await tester.tap(nextButton);
       await tester.pumpAndSettle();
 
       expect(fakeRepo.createItemCalled, isFalse);
-      final saveButton = find.widgetWithText(ElevatedButton, 'احفظ المنتج');
-      await tester.dragUntilVisible(
-        saveButton,
-        find.byType(ListView),
-        const Offset(0, -300),
-      );
-      await tester.pumpAndSettle();
+      final saveButton = find.widgetWithText(FilledButton, 'حفظ المنتج');
       await tester.tap(saveButton);
       await tester.pumpAndSettle();
 

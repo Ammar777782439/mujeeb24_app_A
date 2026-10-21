@@ -5,6 +5,7 @@ import '../../../core/models/catalog_models.dart';
 import '../providers/catalog_provider.dart';
 import 'catalog_item_form_screen.dart';
 import 'catalog_specification_input.dart';
+import 'merchant_editor_dialog.dart';
 import 'catalog_currency_select.dart';
 
 class _VariantAttributeRow {
@@ -190,7 +191,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
           final chosen = values.keys.toSet();
           final notChosen = managedDefinitions
               .where((definition) => !chosen.contains(definition.key)).toList();
-          return AlertDialog(
+          return MerchantEditorDialog(
             title: Text(existing == null ? 'إضافة خيار للمنتج' : 'تعديل خيار المنتج'),
             content: SizedBox(
               width: double.maxFinite,
@@ -472,7 +473,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
 
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            return AlertDialog(
+            return MerchantEditorDialog(
               title: Text(existing == null ? strings('add_offer') : strings('edit_offer')),
               content: Form(
                 key: formKey,
@@ -501,7 +502,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                         items: [
                           for (final option in contract.pricingModes.entries)
                             DropdownMenuItem(value: option.key,
-                              child: Text(option.value,
+                              child: Text(merchantCatalogOptionLabel(option.value),
                                 overflow: TextOverflow.ellipsis)),
                         ],
                         onChanged: isSaving ? null : (value) {
@@ -582,7 +583,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                         items: [
                           for (final option in contract.availabilityModes.entries)
                             DropdownMenuItem(value: option.key,
-                              child: Text(option.value,
+                              child: Text(merchantCatalogOptionLabel(option.value),
                                 overflow: TextOverflow.ellipsis)),
                         ],
                         onChanged: isSaving ? null : (value) {
@@ -600,7 +601,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                         items: contract.availabilityStatuses.entries.map((e) {
                           return DropdownMenuItem(
                             value: e.key,
-                            child: Text(e.value, overflow: TextOverflow.ellipsis),
+                            child: Text(merchantCatalogOptionLabel(e.value), overflow: TextOverflow.ellipsis),
                           );
                         }).toList(),
                         onChanged: (val) {
@@ -618,7 +619,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                         items: [
                           for (final option in contract.fulfillmentModes.entries)
                             DropdownMenuItem(value: option.key,
-                              child: Text(option.value,
+                              child: Text(merchantCatalogOptionLabel(option.value),
                                 overflow: TextOverflow.ellipsis)),
                         ],
                         onChanged: isSaving ? null : (value) {
@@ -636,7 +637,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                         items: [
                           for (final option in contract.offerStatuses.entries)
                             DropdownMenuItem(value: option.key,
-                              child: Text(option.value,
+                              child: Text(merchantCatalogOptionLabel(option.value),
                                 overflow: TextOverflow.ellipsis)),
                         ],
                         onChanged: isSaving ? null : (value) {
@@ -702,7 +703,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
               actions: [
                 TextButton(
                   onPressed: isSaving ? null : () => Navigator.of(ctx).pop(),
-                  child: Text(strings('cancel_action')),
+                  child: const Text('إلغاء'),
                 ),
                 ElevatedButton(
                   onPressed: isSaving ? null : () async {
@@ -980,7 +981,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${strings('item_type')}: ${item.itemType}',
+                  '${strings('item_type')}: ${merchantItemTypeLabel(item.itemType)}',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -1033,19 +1034,19 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
               children: [
                 _buildInfoRow(
                   strings('pricing_mode'),
-                  contract.labelPricingMode(item.pricingMode),
+                  merchantCatalogOptionLabel(contract.labelPricingMode(item.pricingMode)),
                   Icons.price_change_rounded,
                 ),
                 const Divider(height: 16),
                 _buildInfoRow(
                   strings('availability_mode'),
-                  contract.labelAvailabilityMode(item.availabilityMode),
+                  merchantCatalogOptionLabel(contract.labelAvailabilityMode(item.availabilityMode)),
                   Icons.event_available_rounded,
                 ),
                 const Divider(height: 16),
                 _buildInfoRow(
                   strings('fulfillment_mode'),
-                  contract.labelFulfillmentMode(item.fulfillmentMode),
+                  merchantCatalogOptionLabel(contract.labelFulfillmentMode(item.fulfillmentMode)),
                   Icons.local_shipping_rounded,
                 ),
                 const Divider(height: 16),
@@ -1087,7 +1088,7 @@ class _CatalogItemDetailScreenState extends State<CatalogItemDetailScreen>
                 const SizedBox(height: 12),
                 if (item.attributes.isEmpty)
                   Text(
-                    strings('no_attributions'),
+                    'لم تضف معلومات أو مواصفات بعد',
                     style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
                   )
                 else
