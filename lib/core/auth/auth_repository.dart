@@ -20,6 +20,10 @@ class AuthRepository {
     required String email,
     required String password,
   }) async {
+    // A different account's saved refresh cookie must NEVER be inherited
+    // when a new principal explicitly signs in.
+    apiClient.clearSession();
+    await apiClient.flushCookiePersistence();
     final response = await apiClient.post(
       '/auth/login',
       body: {'email': email.trim(), 'password': password},
@@ -35,17 +39,27 @@ class AuthRepository {
 
   /// POST /auth/refresh
   Future<AuthResponse> refreshSession() async {
-    final response = await apiClient.post(
-      '/auth/refresh',
-      requiresAuth: false,
-      sendCookie: true,
-    );
-
-    final data = response['data'] as Map<String, dynamic>;
-    final authResponse = AuthResponse.fromJson(data);
-    apiClient.setAccessToken(authResponse.accessToken);
-    await apiClient.flushCookiePersistence();
-    return authResponse;
+    try {
+      final response = await apiClient.post(
+        '/auth/refresh',
+        requiresAuth: false,
+        sendCookie: true,
+        timeout: const Duration(seconds: 20),
+      );
+      final data = response['data'] as Map<String, dynamic>;
+      final authResponse = AuthResponse.fromJson(data);
+      apiClient.setAccessToken(authResponse.accessToken);
+      await apiClient.flushCookiePersistence();
+      return authResponse;
+    } on ApiErrorEnvelope catch (e) {
+      // Explicit startup refresh bypasses the normal protected 401 handler.
+      // Erase a revoked or expired rotating token on definitive rejection.
+      if (e.statusCode == 401 || e.statusCode == 403) {
+        apiClient.clearSession();
+        await apiClient.flushCookiePersistence();
+      }
+      rethrow;
+    }
   }
 
   /// POST /auth/logout. Clear local secrets immediately after dispatch,
