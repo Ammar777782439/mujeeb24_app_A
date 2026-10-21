@@ -57,12 +57,12 @@ jobs:
 
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
       - name: Setup Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -117,12 +117,12 @@ jobs:
 
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
       - name: Setup Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -196,6 +196,17 @@ jobs:
             echo 'dart_define=' >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Initialize release provenance and audit manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            printf 'git_sha=%s\n' "$GITHUB_SHA"
+            printf 'run_number=%s\n' "$GITHUB_RUN_NUMBER"
+            printf 'production_release=%s\n' "$MUJEEB_PRODUCTION_RELEASE"
+            printf 'build_time_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > android-artifacts-manifest.txt
+
       - name: Build optimized APKs per Android architecture
         if: github.event_name == 'push' || inputs.build_android_apk
         shell: bash
@@ -220,12 +231,6 @@ jobs:
             echo '::error::Android apksigner is unavailable; refusing unverified artifacts.'
             exit 1
           fi
-          {
-            printf 'git_sha=%s\n' "$GITHUB_SHA"
-            printf 'run_number=%s\n' "$GITHUB_RUN_NUMBER"
-            printf 'channel=%s\n' "$MUJEEB_PRODUCTION_RELEASE"
-            printf 'build_time_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          } > android-artifacts-manifest.txt
           for abi in armeabi-v7a arm64-v8a x86_64; do
             apk="$root/app-$abi-release.apk"
             if [[ ! -s "$apk" ]]; then
@@ -258,6 +263,10 @@ jobs:
           bundle=build/app/outputs/bundle/release/app-release.aab
           test -s "$bundle"
           jarsigner -verify "$bundle" > /tmp/bundle-signature.txt
+          if ! grep -q 'jar verified.' /tmp/bundle-signature.txt; then
+            echo '::error::AAB signature verification failed.'
+            exit 1
+          fi
           sha256sum "$bundle" >> android-artifacts-manifest.txt
 
       - name: Upload primary ARM64 APK (one-architecture direct install)
@@ -293,7 +302,7 @@ jobs:
           compression-level: 0
 
       - name: Upload immutable release manifest and checksums
-        if: (github.event_name == 'push' || inputs.build_android_apk) && success()
+        if: (github.event_name == 'push' || inputs.build_android_apk || inputs.build_android_bundle) && success()
         uses: actions/upload-artifact@v4
         with:
           name: mujeeb24-build-${{ github.run_number }}-manifest
@@ -316,8 +325,8 @@ jobs:
     env:
       MUJEEB_PRODUCTION_RELEASE: 'false'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -354,7 +363,7 @@ jobs:
 
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
