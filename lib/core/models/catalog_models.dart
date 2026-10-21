@@ -574,6 +574,47 @@ class UpdateOfferRequest {
   }
 }
 
+/// Merchant supplies an Arabic label. Only the server generates the opaque key.
+@immutable
+class AttributeDefinitionInput {
+  final String label;
+  final String dataType;
+  final bool required;
+  final int displayOrder;
+  final Map<String, dynamic>? validationRules;
+
+  const AttributeDefinitionInput({
+    required this.label,
+    required this.dataType,
+    required this.required,
+    required this.displayOrder,
+    this.validationRules,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'label': label,
+    'data_type': dataType,
+    'required': required,
+    'display_order': displayOrder,
+    if (validationRules != null) 'validation_rules': validationRules,
+  };
+}
+
+@immutable
+class CreateAttributeSchemaRequest {
+  final String name;
+  final List<AttributeDefinitionInput> definitions;
+  const CreateAttributeSchemaRequest({
+    required this.name,
+    required this.definitions,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'definitions': definitions.map((d) => d.toJson()).toList(),
+  };
+}
+
 /// Attribute definition within an AttributeSchema.
 @immutable
 class AttributeDefinition {
