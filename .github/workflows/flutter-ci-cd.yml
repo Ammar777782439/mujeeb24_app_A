@@ -196,35 +196,115 @@ jobs:
             echo 'dart_define=' >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Build Android Release APK
+      - name: Build optimized APKs per Android architecture
         if: github.event_name == 'push' || inputs.build_android_apk
+        shell: bash
+        env:
+          API_DEFINE: ${{ steps.api_args.outputs.dart_define }}
         run: |
-          echo "Building Android Release APK (Build #${{ github.run_number }})..."
-          flutter build apk --release --build-number=${{ github.run_number }} ${{ steps.api_args.outputs.dart_define }}
+          set -euo pipefail
+          define=()
+          if [[ -n "$API_DEFINE" ]]; then define+=("$API_DEFINE"); fi
+          flutter build apk --release --split-per-abi \
+            --build-number="${{ github.run_number }}" "${define[@]}"
 
-      - name: Build Android Release App Bundle (AAB)
-        if: github.event_name == 'push' || inputs.build_android_bundle
+      - name: Validate size, installable signatures, and APK manifest
+        if: github.event_name == 'push' || inputs.build_android_apk
+        shell: bash
         run: |
-          echo "Building Android Release App Bundle (Build #${{ github.run_number }})..."
-          flutter build appbundle --release --build-number=${{ github.run_number }} ${{ steps.api_args.outputs.dart_define }}
+          set -euo pipefail
+          root="build/app/outputs/flutter-apk"
+          signer="$(find "${ANDROID_HOME:-${ANDROID_SDK_ROOT}}" -path '*/build-tools/*/apksigner' \
+            -type f | sort -V | tail -n 1)"
+          if [[ -z "$signer" ]]; then
+            echo '::error::Android apksigner is unavailable; refusing unverified artifacts.'
+            exit 1
+          fi
+          {
+            printf 'git_sha=%s\n' "$GITHUB_SHA"
+            printf 'run_number=%s\n' "$GITHUB_RUN_NUMBER"
+            printf 'channel=%s\n' "$MUJEEB_PRODUCTION_RELEASE"
+            printf 'build_time_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > android-artifacts-manifest.txt
+          for abi in armeabi-v7a arm64-v8a x86_64; do
+            apk="$root/app-$abi-release.apk"
+            if [[ ! -s "$apk" ]]; then
+              echo "::error::Missing or empty APK for $abi."
+              exit 1
+            fi
+            "$signer" verify --print-certs "$apk" > /tmp/apk-signature.txt
+            if [[ "$MUJEEB_PRODUCTION_RELEASE" == 'true' ]] &&
+               grep -qi 'Android Debug' /tmp/apk-signature.txt; then
+              echo '::error::Production APK was debug signed.'
+              exit 1
+            fi
+            file_bytes="$(stat -c '%s' "$apk")"
+            printf 'apk_%s_bytes=%s\n' "$abi" "$file_bytes" >> android-artifacts-manifest.txt
+            sha256sum "$apk" >> android-artifacts-manifest.txt
+            echo "$abi APK: $file_bytes bytes; signature verified."
+          done
 
-      - name: Upload Android APK Artifact
-        if: (github.event_name == 'push' || inputs.build_android_apk) && hashFiles('build/app/outputs/flutter-apk/app-release.apk') != ''
+      - name: Build Google Play AAB (production signing only)
+        if: inputs.production_release && inputs.build_android_bundle
+        shell: bash
+        env:
+          API_DEFINE: ${{ steps.api_args.outputs.dart_define }}
+        run: |
+          set -euo pipefail
+          define=()
+          if [[ -n "$API_DEFINE" ]]; then define+=("$API_DEFINE"); fi
+          flutter build appbundle --release \
+            --build-number="${{ github.run_number }}" "${define[@]}"
+          bundle=build/app/outputs/bundle/release/app-release.aab
+          test -s "$bundle"
+          jarsigner -verify "$bundle" > /tmp/bundle-signature.txt
+          sha256sum "$bundle" >> android-artifacts-manifest.txt
+
+      - name: Upload primary ARM64 APK (one-architecture direct install)
+        if: github.event_name == 'push' || inputs.build_android_apk
         uses: actions/upload-artifact@v4
         with:
-          name: mujeeb24-android-release-apk-build-${{ github.run_number }}
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: mujeeb24-${{ env.MUJEEB_PRODUCTION_RELEASE == 'true' && 'production' || 'qa-preview' }}-arm64-build-${{ github.run_number }}
+          path: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
           if-no-files-found: error
           retention-days: 14
+          compression-level: 0
 
-      - name: Upload Android AAB Artifact
-        if: (github.event_name == 'push' || inputs.build_android_bundle) && hashFiles('build/app/outputs/bundle/release/app-release.aab') != ''
+      - name: Upload APKs for older ARM and x86_64 devices
+        if: github.event_name == 'push' || inputs.build_android_apk
         uses: actions/upload-artifact@v4
         with:
-          name: mujeeb24-android-release-bundle-build-${{ github.run_number }}
+          name: mujeeb24-${{ env.MUJEEB_PRODUCTION_RELEASE == 'true' && 'production' || 'qa-preview' }}-other-abis-build-${{ github.run_number }}
+          path: |
+            build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+            build/app/outputs/flutter-apk/app-x86_64-release.apk
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Upload signed production AAB for Google Play
+        if: inputs.production_release && inputs.build_android_bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: mujeeb24-production-aab-build-${{ github.run_number }}
           path: build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 14
+          compression-level: 0
+
+      - name: Upload immutable release manifest and checksums
+        if: (github.event_name == 'push' || inputs.build_android_apk) && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mujeeb24-build-${{ github.run_number }}-manifest
+          path: android-artifacts-manifest.txt
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Remove transient signing secrets from build workspace
+        if: always()
+        shell: bash
+        run: rm -f android/app/release.keystore android/key.properties
 
   # =========================================================================
   # 3. iOS Build Job: Release Build without codesign (macOS Runner)
