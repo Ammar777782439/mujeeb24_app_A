@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../../app/localization/app_localizations.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/models/team_audit_models.dart';
+import '../../../core/services/invitation_link_service.dart';
 import '../providers/team_audit_provider.dart';
 
 class TeamScreen extends StatefulWidget {
@@ -117,6 +118,7 @@ class _TeamScreenState extends State<TeamScreen>
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
+        scrollable: true,
         title: Row(
           children: [
             const Icon(Icons.check_circle, color: AppColors.statusSuccess),
@@ -141,7 +143,17 @@ class _TeamScreenState extends State<TeamScreen>
                 border: Border.all(color: AppColors.borderHairline),
               ),
               child: SelectableText(
-                created.acceptanceToken,
+                InvitationLinkService.buildWebInvitationUrl(
+                  created.acceptanceToken),
+                style: const TextStyle(
+                  color: AppColors.primary, fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SelectableText(
+              created.acceptanceToken,
                 style: const TextStyle(
                   fontFamily: 'monospace',
                   fontWeight: FontWeight.bold,
@@ -162,6 +174,38 @@ class _TeamScreenState extends State<TeamScreen>
           ],
         ),
         actions: [
+          TextButton.icon(
+            key: const Key('btn_share_invitation'),
+            icon: const Icon(Icons.share_outlined, size: 18),
+            label: const Text('مشاركة الدعوة'),
+            onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              final shared = await InvitationLinkService.shareInvitation(
+                token: created.acceptanceToken,
+                businessName: created.invitation.businessName,
+                role: _getRoleLabel(ctx, created.invitation.role),
+                email: created.invitation.email,
+              );
+              if (!shared && mounted) {
+                messenger.showSnackBar(const SnackBar(
+                  content: Text('يمكنك نسخ الرابط ومشاركته يدويًا.'),
+                ));
+              }
+            },
+          ),
+          TextButton.icon(
+            key: const Key('btn_copy_invitation_url'),
+            icon: const Icon(Icons.link_outlined, size: 18),
+            label: const Text('نسخ رابط الدعوة'),
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(
+                text: InvitationLinkService.buildWebInvitationUrl(
+                  created.acceptanceToken)));
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('تم نسخ رابط الدعوة')));
+            },
+          ),
           TextButton.icon(
             key: const Key('btn_copy_token'),
             icon: const Icon(Icons.copy, size: 16),
@@ -259,7 +303,7 @@ class _TeamScreenState extends State<TeamScreen>
                     decoration: InputDecoration(
                       labelText: AppStrings.get('expires_in_hours', dialogCtx),
                       prefixIcon: const Icon(Icons.timer_outlined),
-                      helperText: '1 - 720 hours',
+                      helperText: 'من ساعة واحدة إلى 720 ساعة',
                     ),
                     keyboardType: TextInputType.number,
                   ),
@@ -286,8 +330,8 @@ class _TeamScreenState extends State<TeamScreen>
                         child: Text(
                           selectedPermissions.length ==
                                   TeamPermissions.all.length
-                              ? 'Deselect All'
-                              : 'Select All',
+                              ? 'إلغاء تحديد الكل'
+                              : 'تحديد الكل',
                           style: const TextStyle(fontSize: 12),
                         ),
                       ),
@@ -348,6 +392,11 @@ class _TeamScreenState extends State<TeamScreen>
                   return;
                 }
 
+                if (expiry == null || expiry < 1 || expiry > 720) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('مدة الدعوة يجب أن تكون بين 1 و720 ساعة.')));
+                  return;
+                }
                 if (selectedPermissions.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
