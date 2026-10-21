@@ -22,6 +22,10 @@ class FakeCatalogRepository extends CatalogRepository {
   List<Offer> mockOffers;
   List<AttributeSchema> mockSchemas;
   CatalogEntityContract? mockContract;
+  bool failEntityContract;
+  bool failVariants;
+  bool failOffers;
+  CreateCatalogItemRequest? lastCreateItemRequest;
 
   bool listCatalogsCalled = false;
   bool createCatalogCalled = false;
@@ -43,6 +47,9 @@ class FakeCatalogRepository extends CatalogRepository {
     this.mockOffers = const [],
     this.mockSchemas = const [],
     this.mockContract,
+    this.failEntityContract = false,
+    this.failVariants = false,
+    this.failOffers = false,
   }) : super(apiClient: ApiClient(baseUrl: 'https://mock.local'));
 
   @override
@@ -111,6 +118,7 @@ class FakeCatalogRepository extends CatalogRepository {
 
   @override
   Future<CatalogEntityContract> getCatalogEntityContract({required String businessId}) async {
+    if (failEntityContract) throw StateError('entity-contract unavailable');
     return mockContract ?? CatalogEntityContract.defaults();
   }
 
@@ -142,6 +150,7 @@ class FakeCatalogRepository extends CatalogRepository {
     String? idempotencyKey,
   }) async {
     createItemCalled = true;
+    lastCreateItemRequest = request;
     final newItem = CatalogItem(
       id: 'item_new_${DateTime.now().millisecondsSinceEpoch}',
       businessId: businessId,
@@ -211,6 +220,7 @@ class FakeCatalogRepository extends CatalogRepository {
     int limit = 25,
   }) async {
     listVariantsCalled = true;
+    if (failVariants) throw StateError('variant list unavailable');
     return VariantPage(items: mockVariants, hasMore: false);
   }
 
@@ -267,6 +277,7 @@ class FakeCatalogRepository extends CatalogRepository {
     int limit = 25,
   }) async {
     listOffersCalled = true;
+    if (failOffers) throw StateError('offer list unavailable');
     return OfferPage(items: mockOffers, hasMore: false);
   }
 
@@ -575,6 +586,108 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(fakeRepo.createItemCalled, isTrue);
+    });
+  });
+
+  group('Independent product, variant and offer loading', () {
+    test('product details remain accessible if variant/offer endpoints fail', () async {
+      final repo = FakeCatalogRepository(
+        mockItems: [sampleItem],
+        failVariants: true,
+        failOffers: true,
+      );
+      final provider = CatalogProvider(catalogRepository: repo);
+      await provider.fetchItemDetail(testBusinessId, testCatalogId, testItemId);
+      expect(provider.selectedItem?.id, testItemId);
+      expect(provider.itemDetailError, isNull);
+      expect(provider.variantsError, contains('متغيرات'));
+      expect(provider.offersError, contains('أسعار'));
+      expect(provider.variants, isEmpty);
+      expect(provider.offers, isEmpty);
+
+      repo.failVariants = false;
+      repo.failOffers = false;
+      repo.mockVariants = [sampleVariant];
+      await provider.refreshVariants(testBusinessId, testItemId);
+      await provider.refreshOffers(testBusinessId, testItemId);
+      expect(provider.selectedItem?.id, testItemId);
+      expect(provider.variantsError, isNull);
+      expect(provider.offersError, isNull);
+      expect(provider.variants.length, 1);
+    });
+  });
+
+  group('Catalog draft when pricing contract is unavailable', () {
+    testWidgets('merchant can save without price and add variants afterward',
+        (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      final repo = FakeCatalogRepository(
+        mockCatalogs: [sampleCatalog],
+        failEntityContract: true,
+      );
+      final provider = CatalogProvider(catalogRepository: repo);
+      await tester.pumpWidget(createTestApp(
+        CatalogItemFormScreen(
+          catalogProvider: provider,
+          businessId: testBusinessId,
+          catalogId: testCatalogId,
+        ),
+      ));
+      await tester.pumpAndSettle();
+      final nameField = find.widgetWithText(TextFormField, 'اسم البند *');
+      await tester.enterText(nameField, 'عطر فاخر');
+      await tester.tap(find.widgetWithText(FilledButton, 'متابعة'));
+      await tester.pumpAndSettle();
+
+      expect(provider.hasLoadedContract, isFalse);
+      expect(find.text('تعذر تحميل خيارات السعر والتوفر'), findsOneWidget);
+      expect(find.byKey(const Key('catalog_skip_pricing_draft')), findsOneWidget);
+      expect(repo.createItemCalled, isFalse);
+
+      // A missing pricing-label endpoint cannot force a fake price or stock.
+      await tester.tap(find.byKey(const Key('catalog_skip_pricing_draft')));
+      await tester.pumpAndSettle();
+      expect(find.text('التسعير: سيُحدد لاحقًا'), findsOneWidget);
+      expect(find.text('السعر والتوفر سيُضافان لاحقًا'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'حفظ المنتج'));
+      await tester.pumpAndSettle();
+
+      expect(repo.createItemCalled, isTrue);
+      final saved = repo.lastCreateItemRequest!;
+      expect(saved.name, 'عطر فاخر');
+      expect(saved.initialOffer, isNull);
+      expect(saved.pricingMode, 'quote_required');
+      expect(saved.availabilityMode, 'unknown');
+      expect(saved.fulfillmentMode, 'manual');
+    });
+
+    testWidgets('newly created item shows optional variants as final step',
+        (tester) async {
+      final repo = FakeCatalogRepository(
+        mockCatalogs: [sampleCatalog],
+        mockItems: [sampleItem],
+      );
+      final provider = CatalogProvider(catalogRepository: repo);
+      await tester.pumpWidget(createTestApp(
+        CatalogItemDetailScreen(
+          catalogProvider: provider,
+          businessId: testBusinessId,
+          catalogId: testCatalogId,
+          itemId: sampleItem.id,
+          initialTabIndex: 1,
+          justCreated: true,
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.text('تم حفظ المنتج كمسودة'), findsOneWidget);
+      expect(find.text('إنهاء الآن'), findsOneWidget);
+      expect(find.text('إضافة متغير'), findsWidgets);
+      expect(tester.takeException(), isNull);
     });
   });
 

@@ -52,6 +52,28 @@ class _CatalogItemsScreenState extends State<CatalogItemsScreen> {
     );
   }
 
+  Future<void> _openCreatedItemOptions(CatalogItem created) async {
+    await _loadItems();
+    if (!mounted) return;
+    // Same lifecycle as the web frontend: save the item first.
+    // Product options/variants are a separate, optional follow-up action.
+    widget.catalogProvider.selectItem(created);
+    final isPhysicalProduct = created.itemType == 'product' ||
+        created.itemType == 'physical_good';
+    await Navigator.of(context).push<void>(MaterialPageRoute(
+      builder: (_) => CatalogItemDetailScreen(
+        catalogProvider: widget.catalogProvider,
+        businessId: widget.businessId,
+        catalogId: widget.catalog.id,
+        itemId: created.id,
+        businessCurrency: widget.businessCurrency,
+        justCreated: true,
+        initialTabIndex: isPhysicalProduct ? 1 : 0,
+      ),
+    ));
+    if (mounted) await _loadItems();
+  }
+
   Color _getStatusColor(String status) {
     switch (status) {
       case 'active':
@@ -127,7 +149,7 @@ class _CatalogItemsScreenState extends State<CatalogItemsScreen> {
                 ),
               );
               if (created != null) {
-                _loadItems();
+                await _openCreatedItemOptions(created);
               }
             },
             backgroundColor: AppColors.primary,
@@ -254,7 +276,7 @@ class _CatalogItemsScreenState extends State<CatalogItemsScreen> {
                                           ),
                                         );
                                         if (created != null) {
-                                          _loadItems();
+                                          await _openCreatedItemOptions(created);
                                         }
                                       },
                                       icon: const Icon(Icons.add_rounded),

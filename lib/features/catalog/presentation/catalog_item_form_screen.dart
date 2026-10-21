@@ -57,6 +57,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
   late final TextEditingController _unitController;
   String? _availabilityStatus;
   bool _saveInitialOffer = true;
+  bool _skipPricingForDraft = false;
   int _step = 0;
   bool _customItemType = false;
 
@@ -80,9 +81,32 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
 
   bool get _isEditing => widget.existingItem != null;
 
+  bool get _draftWithoutPricing =>
+      !_isEditing && (_skipPricingForDraft || !_saveInitialOffer);
+
+  // Backend catalog contract defaults for an item without an initial offer.
+  // No price, availability or fulfillment promise is created.
+  static const _draftPricingMode = 'quote_required';
+  static const _draftAvailabilityMode = 'unknown';
+  static const _draftFulfillmentMode = 'manual';
+
+  void _contractChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _continueAsDraft() {
+    if (_isEditing) return;
+    setState(() {
+      _saveInitialOffer = false;
+      _skipPricingForDraft = true;
+      _step = 2;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
+    widget.catalogProvider.addListener(_contractChanged);
     final item = widget.existingItem;
 
     _nameController = TextEditingController(text: item?.name ?? '');
@@ -120,6 +144,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
 
   @override
   void dispose() {
+    widget.catalogProvider.removeListener(_contractChanged);
     _nameController.dispose();
     _itemTypeController.dispose();
     _shortDescController.dispose();
@@ -286,9 +311,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
       setState(() => _customError = null);
     }
     if (_step == 1 && !widget.catalogProvider.hasLoadedContract) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('تعذر تحميل اختيارات الكتالوج. أعد المحاولة قبل الحفظ.'),
-      ));
+      _continueAsDraft();
       return;
     }
     if (_step == 1 && _saveInitialOffer) {
@@ -314,9 +337,10 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
   Future<void> _submit() async {
     if (!_isEditing && _step != 2) return;
     if (_isSaving || !_formKey.currentState!.validate()) return;
-    if (!widget.catalogProvider.hasLoadedContract) {
+    if (!widget.catalogProvider.hasLoadedContract &&
+        !(!_isEditing && _draftWithoutPricing)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('حمّل اختيارات الكتالوج قبل الحفظ.')));
+        const SnackBar(content: Text('حمّل اختيارات السعر أو احفظ المنتج مسودة دون سعر.')));
       return;
     }
     final attributesError = _validateAttributes();
@@ -335,6 +359,8 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
         : _selectedPricingMode == 'per_person'
             ? 'person'
             : _selectedPricingMode == 'per_day' ? 'day' : null;
+    final unconfiguredDraft = _skipPricingForDraft ||
+        !widget.catalogProvider.hasLoadedContract;
 
 
     CatalogItem? result;
@@ -367,9 +393,9 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
       final createReq = CreateCatalogItemRequest(
         name: _nameController.text.trim(),
         itemType: _itemTypeController.text.trim(),
-        pricingMode: _selectedPricingMode,
-        availabilityMode: _selectedAvailabilityMode,
-        fulfillmentMode: _selectedFulfillmentMode,
+        pricingMode: unconfiguredDraft ? _draftPricingMode : _selectedPricingMode,
+        availabilityMode: unconfiguredDraft ? _draftAvailabilityMode : _selectedAvailabilityMode,
+        fulfillmentMode: unconfiguredDraft ? _draftFulfillmentMode : _selectedFulfillmentMode,
         requiresConfirmation: _requiresConfirmation,
         shortDescription: _shortDescController.text.trim().isNotEmpty
             ? _shortDescController.text.trim()
@@ -379,7 +405,7 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
             : null,
         attributeSchemaId: _selectedAttributeSchemaId,
         attributes: attributes,
-        initialOffer: _saveInitialOffer ? CreateOfferRequest(
+        initialOffer: !_draftWithoutPricing && !unconfiguredDraft ? CreateOfferRequest(
           name: 'السعر الأساسي',
           pricingMode: _selectedPricingMode,
           amount: _selectedPricingMode == 'quote_required' ? null : parsedAmount,
@@ -696,17 +722,42 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
             if (_isEditing || _step == 1) ...[
             if (widget.catalogProvider.isLoadingContract)
               const LinearProgressIndicator(),
-            if (widget.catalogProvider.contractError != null)
-              Card(child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(children: [
-                  Text(widget.catalogProvider.contractError!,
-                    style: const TextStyle(color: AppColors.statusError)),
-                  TextButton(
-                    onPressed: () => widget.catalogProvider.fetchEntityContract(widget.businessId),
-                    child: const Text('إعادة تحميل الاختيارات')),
-                ]),
-              )),
+            if (!widget.catalogProvider.hasLoadedContract)
+              Card(
+                color: AppColors.surfaceCanvas,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        widget.catalogProvider.isLoadingContract
+                            ? 'جاري تحميل خيارات السعر والتوفر'
+                            : 'تعذر تحميل خيارات السعر والتوفر',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'يمكنك حفظ المنتج كمسودة دون سعر أو تأكيد توفر، ثم إضافة السعر وخيارات المنتج بعد الحفظ.',
+                        style: TextStyle(color: AppColors.textMuted),
+                      ),
+                      const SizedBox(height: 12),
+                      FilledButton.tonalIcon(
+                        key: const Key('catalog_skip_pricing_draft'),
+                        onPressed: isBusy ? null : _continueAsDraft,
+                        icon: const Icon(Icons.description_outlined),
+                        label: const Text('متابعة كمسودة دون سعر'),
+                      ),
+                      if (!widget.catalogProvider.isLoadingContract)
+                        TextButton(
+                          onPressed: isBusy ? null : () =>
+                              widget.catalogProvider.fetchEntityContract(widget.businessId),
+                          child: const Text('إعادة تحميل اختيارات السعر'),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
             if (widget.catalogProvider.hasLoadedContract) ...[
             // Pricing Mode Dropdown
             DropdownButtonFormField<String>(
@@ -900,7 +951,9 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                         child: Text(
                           '${specificationName(entry.key, _selectedSchema?.definitions ?? <AttributeDefinition>[])}: ${displaySpecification(entry.value)}')),
                     const Divider(),
-                    Text('طريقة التسعير: ${contract.labelPricingMode(_selectedPricingMode)}'),
+                    Text(_skipPricingForDraft
+                        ? 'التسعير: سيُحدد لاحقًا'
+                        : 'طريقة التسعير: ${contract.labelPricingMode(_selectedPricingMode)}'),
                     if (_saveInitialOffer) ...[
                       Text('السعر: ${_reviewPrice()}'),
                       if (['per_unit', 'per_person', 'per_day']
@@ -909,8 +962,11 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                       Text('التوفر الحالي: ${contract.labelAvailabilityStatus(_availabilityStatus ?? 'unknown')}'),
                     ] else
                       const Text('السعر والتوفر سيُضافان لاحقًا'),
-                    Text('طريقة التأكد من التوفر: ${contract.labelAvailabilityMode(_selectedAvailabilityMode)}'),
-                    Text('طريقة الحصول عليه: ${contract.labelFulfillmentMode(_selectedFulfillmentMode)}'),
+                    if (!_skipPricingForDraft) ...[
+                      Text('طريقة التأكد من التوفر: ${contract.labelAvailabilityMode(_selectedAvailabilityMode)}'),
+                      Text('طريقة الحصول عليه: ${contract.labelFulfillmentMode(_selectedFulfillmentMode)}'),
+                    ] else
+                      const Text('التوفر والتسليم: يُحددان لاحقًا'),
                     Text('موافقة الموظف: ${_requiresConfirmation ? 'مطلوبة قبل التأكيد' : 'حسب سياسات النشاط'}'),
                   ],
                 ),
@@ -964,7 +1020,10 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
                             color: Colors.white))
                       : Text(_isEditing
                           ? strings('save_changes')
-                          : _step == 2 ? 'حفظ المنتج' : 'متابعة',
+                          : _step == 2 ? 'حفظ المنتج'
+                          : _step == 1 && !widget.catalogProvider.hasLoadedContract
+                              ? 'متابعة كمسودة دون سعر'
+                              : 'متابعة',
                           style: const TextStyle(fontWeight: FontWeight.w700)),
                 ),
               ),
