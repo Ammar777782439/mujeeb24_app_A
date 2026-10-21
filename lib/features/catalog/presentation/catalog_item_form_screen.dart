@@ -46,6 +46,12 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
   late final TextEditingController _itemTypeController;
   late final TextEditingController _shortDescController;
   late final TextEditingController _longDescController;
+  late final TextEditingController _amountController;
+  late final TextEditingController _currencyController;
+  late final TextEditingController _unitController;
+  String? _availabilityStatus;
+  bool _saveInitialOffer = true;
+  int _step = 0;
 
   late String _selectedPricingMode;
   late String _selectedAvailabilityMode;
@@ -65,18 +71,21 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
 
     _nameController = TextEditingController(text: item?.name ?? '');
     _itemTypeController =
-        TextEditingController(text: item?.itemType ?? '');
+        TextEditingController(text: item?.itemType ?? 'product');
     _shortDescController =
         TextEditingController(text: item?.shortDescription ?? '');
     _longDescController =
         TextEditingController(text: item?.longDescription ?? '');
 
     _selectedPricingMode = item?.pricingMode ?? 'fixed';
-    _selectedAvailabilityMode = item?.availabilityMode ?? 'stock';
-    _selectedFulfillmentMode = item?.fulfillmentMode ?? 'delivery';
+    _selectedAvailabilityMode = item?.availabilityMode ?? 'unknown';
+    _selectedFulfillmentMode = item?.fulfillmentMode ?? 'manual';
     _selectedStatus = item?.status ?? 'draft';
     _requiresConfirmation = item?.requiresConfirmation ?? false;
     _selectedAttributeSchemaId = item?.attributeSchemaId;
+    _amountController = TextEditingController();
+    _currencyController = TextEditingController(text: widget.businessCurrency ?? '');
+    _unitController = TextEditingController();
 
     if (item != null && item.attributes.isNotEmpty) {
       item.attributes.forEach((k, v) {
@@ -93,6 +102,9 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
     _itemTypeController.dispose();
     _shortDescController.dispose();
     _longDescController.dispose();
+    _amountController.dispose();
+    _currencyController.dispose();
+    _unitController.dispose();
     for (final c in _attributeControllers) {
       c.dispose();
     }
@@ -124,7 +136,30 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
     return map;
   }
 
+  void _nextStep() {
+    if (_step == 0 && !_formKey.currentState!.validate()) return;
+    if (_step == 1 && _saveInitialOffer) {
+      final amount = double.tryParse(_amountController.text.trim());
+      final needsAmount = _selectedPricingMode != 'quote_required' &&
+          _selectedPricingMode != 'dynamic';
+      final needsUnit = ['per_unit', 'per_person', 'per_day']
+          .contains(_selectedPricingMode);
+      if (_availabilityStatus == null ||
+          (needsAmount && (amount == null || amount <= 0)) ||
+          (_amountController.text.trim().isNotEmpty && amount == null) ||
+          (needsUnit && _unitController.text.trim().isEmpty) ||
+          !RegExp(r'^[A-Za-z]{3}$').hasMatch(_currencyController.text.trim())) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('راجع السعر والعملة وحدد حالة التوفر قبل المتابعة')),
+        );
+        return;
+      }
+    }
+    setState(() => _step++);
+  }
+
   Future<void> _submit() async {
+    if (!_isEditing && _step != 2) return;
     if (!_formKey.currentState!.validate()) return;
 
     String strings(String key) => AppStrings.get(key, context);
@@ -172,6 +207,18 @@ class _CatalogItemFormScreenState extends State<CatalogItemFormScreen> {
             : null,
         attributeSchemaId: _selectedAttributeSchemaId,
         attributes: attributes,
+        initialOffer: _saveInitialOffer ? CreateOfferRequest(
+          name: 'السعر الأساسي',
+          pricingMode: _selectedPricingMode,
+          amount: double.tryParse(_amountController.text.trim()),
+          currency: _currencyController.text.trim().toUpperCase(),
+          pricingUnit: _unitController.text.trim().isEmpty
+              ? null : _unitController.text.trim(),
+          availabilityMode: _selectedAvailabilityMode,
+          availabilityStatus: _availabilityStatus!,
+          fulfillmentMode: _selectedFulfillmentMode,
+          status: 'active',
+        ) : null,
       );
 
       result = await widget.catalogProvider.createCatalogItem(
