@@ -65,11 +65,9 @@ class AuthRepository {
     try {
       await remoteLogout;
     } on ApiErrorEnvelope catch (error) {
-      // Our local session epoch changed intentionally while the HTTP
-      // request was in flight. This is expected during safe logout.
+      // Immediate local logout was already performed before awaiting the server.
+      // A late response cannot revoke the next account's newly created session.
       if (error.error.code != 'SESSION_CHANGED') rethrow;
-    } finally {
-      apiClient.clearSession();
     }
   }
 
