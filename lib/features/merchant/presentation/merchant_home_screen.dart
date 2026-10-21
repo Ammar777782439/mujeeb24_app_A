@@ -239,6 +239,7 @@ class _MerchantHomeScreenState extends State<MerchantHomeScreen> {
         onNavigateToTeam: widget.teamAuditProvider != null ? _openTeam : null,
         onNavigateToAuditLogs:
             widget.teamAuditProvider != null ? _openAuditLogs : null,
+        onSessionExpired: widget.onLogout,
       ),
       InboxTab(
         merchantProvider: widget.merchantProvider,
