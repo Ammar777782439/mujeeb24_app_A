@@ -692,6 +692,29 @@ class CatalogProvider extends ChangeNotifier {
     }
   }
 
+  Future<AttributeSchema?> createAttributeSchema(
+    String businessId, CreateAttributeSchemaRequest request) async {
+    if (_isPerformingAction) return null;
+    _isPerformingAction = true;
+    _actionError = null;
+    notifyListeners();
+    try {
+      final created = await catalogRepository.createAttributeSchema(
+        businessId: businessId, request: request);
+      _attributeSchemas = [created, ..._attributeSchemas];
+      return created;
+    } on ApiErrorEnvelope catch (error) {
+      _actionError = error.error.message;
+      return null;
+    } catch (_) {
+      _actionError = 'تعذر حفظ قالب المواصفات. تحقق من الاتصال.';
+      return null;
+    } finally {
+      _isPerformingAction = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> fetchAttributeSchemas(String businessId) async {
     if (businessId.isEmpty) return;
     _schemasError = null;
