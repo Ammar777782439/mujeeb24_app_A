@@ -28,12 +28,12 @@ bool missingSpecification(dynamic value) =>
 
 String? validateSpecification(AttributeDefinition definition, dynamic value) {
   if (missingSpecification(value)) {
-    return definition.required ? 'أدخل ' + definition.label : null;
+    return definition.required ? 'أدخل ${definition.label}' : null;
   }
   final type = definition.dataType;
   if ((type == 'number' || type == 'money') &&
       (value is! num || !value.isFinite)) {
-    return 'أدخل رقمًا صحيحًا في ' + definition.label;
+    return 'أدخل رقمًا صحيحًا في ${definition.label}';
   }
   final options = definition.validationRules?['enum'];
   if (options is List && options.isNotEmpty) {
@@ -41,16 +41,16 @@ String? validateSpecification(AttributeDefinition definition, dynamic value) {
         ? (value is List ? value : [value])
         : [value];
     if (values.any((v) => !options.contains(v))) {
-      return 'اختر ' + definition.label + ' من الاختيارات الموجودة';
+      return 'اختر ${definition.label} من الاختيارات الموجودة';
     }
   }
   final min = definition.validationRules?['min'];
   final max = definition.validationRules?['max'];
   if (value is num && min is num && value < min) {
-    return 'أدخل رقمًا لا يقل عن ' + min.toString();
+    return 'أدخل رقمًا لا يقل عن ${min}';
   }
   if (value is num && max is num && value > max) {
-    return 'أدخل رقمًا لا يزيد عن ' + max.toString();
+    return 'أدخل رقمًا لا يزيد عن ${max}';
   }
   return null;
 }
@@ -90,7 +90,7 @@ class _CatalogSpecificationInputState extends State<CatalogSpecificationInput> {
   @override
   Widget build(BuildContext context) {
     final definition = widget.definition;
-    final name = definition.label + (definition.required ? ' *' : '');
+    final name = '${definition.label}${definition.required ? ' *' : ''}';
     final value = widget.value;
     final dataType = definition.dataType;
     final available = definition.validationRules?['enum'];
@@ -98,7 +98,7 @@ class _CatalogSpecificationInputState extends State<CatalogSpecificationInput> {
 
     if (dataType == 'boolean') {
       return _field(DropdownButtonFormField<bool>(
-        key: ValueKey('managed-' + definition.key),
+        key: ValueKey('managed-${definition.key}'),
         initialValue: value is bool ? value : null,
         isExpanded: true,
         decoration: InputDecoration(labelText: name),
@@ -113,7 +113,7 @@ class _CatalogSpecificationInputState extends State<CatalogSpecificationInput> {
     if (dataType == 'select' && choices.isNotEmpty) {
       final selection = choices.indexOf(value);
       return _field(DropdownButtonFormField<int>(
-        key: ValueKey('managed-' + definition.key),
+        key: ValueKey('managed-${definition.key}'),
         initialValue: selection >= 0 ? selection : null,
         isExpanded: true,
         decoration: InputDecoration(labelText: name),
@@ -204,7 +204,7 @@ class _CatalogSpecificationInputState extends State<CatalogSpecificationInput> {
 
     if (dataType == 'date' || dataType == 'datetime') {
       return _field(TextFormField(
-        key: ValueKey('managed-' + definition.key),
+        key: ValueKey('managed-${definition.key}'),
         initialValue: value?.toString() ?? '',
         enabled: widget.enabled,
         readOnly: true,
@@ -236,7 +236,7 @@ class _CatalogSpecificationInputState extends State<CatalogSpecificationInput> {
 
     final numeric = dataType == 'number' || dataType == 'money';
     return _field(TextFormField(
-      key: ValueKey('managed-' + definition.key),
+      key: ValueKey('managed-${definition.key}'),
       initialValue: value?.toString() ?? '',
       enabled: widget.enabled,
       keyboardType: numeric
