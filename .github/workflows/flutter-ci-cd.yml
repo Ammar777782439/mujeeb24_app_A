@@ -1,0 +1,266 @@
+name: Mujeeb24 Flutter CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      build_android_apk:
+        description: 'Build Android APK (Direct install)'
+        required: false
+        type: boolean
+        default: true
+      build_android_bundle:
+        description: 'Build Android App Bundle (Google Play)'
+        required: false
+        type: boolean
+        default: true
+      build_ios:
+        description: 'Build iOS Release (macOS runner, no codesign)'
+        required: false
+        type: boolean
+        default: false
+      api_base_url:
+        description: 'Custom API Base URL override (optional --dart-define)'
+        required: false
+        type: string
+        default: ''
+
+# Least-privilege security permissions
+permissions:
+  contents: read
+
+# Concurrency group to cancel duplicate PR runs while letting main branch pushes complete
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # =========================================================================
+  # 1. Quality Gate Job: Formatting, Static Analysis, Automated Tests
+  # =========================================================================
+  quality-gate:
+    name: Code Quality & Automated Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.5'
+          channel: 'stable'
+          cache: true
+          cache-key: 'flutter-:os:-:channel:-:version:-:arch:-:hash:'
+          cache-path: '${{ runner.tool_cache }}/flutter/:channel:-:version:-:arch:'
+
+      - name: Log Environment Diagnostics
+        run: |
+          echo "=== Diagnostic Environment Information ==="
+          echo "Operating System: $(uname -s) $(uname -r)"
+          flutter --version
+          dart --version
+          java -version
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Verify Code Formatting
+        run: |
+          echo "Checking Dart code formatting..."
+          dart format --output=none --set-exit-if-changed lib/ test/ || {
+            echo "::warning::Some files require formatting via 'dart format .'. Proceeding with quality checks."
+          }
+
+      - name: Static Analysis (flutter analyze)
+        run: |
+          echo "Running static analysis..."
+          flutter analyze --no-fatal-infos
+
+      - name: Execute Automated Test Suite (flutter test)
+        run: |
+          echo "Running all unit, integration, and widget tests..."
+          flutter test --no-pub
+
+  # =========================================================================
+  # 2. Android Build Job: Release APK & App Bundle (AAB)
+  # =========================================================================
+  build-android:
+    name: Build Android Release
+    needs: quality-gate
+    # Do not produce production release builds on Pull Requests
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.build_android_apk || inputs.build_android_bundle))
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.5'
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Configure Android Release Keystore (Optional Secrets)
+        id: android_keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            echo "Configuring production release keystore from GitHub Secrets..."
+            echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
+            echo "storePassword=$KEYSTORE_PASSWORD" > android/key.properties
+            echo "keyPassword=$KEY_PASSWORD" >> android/key.properties
+            echo "keyAlias=$KEY_ALIAS" >> android/key.properties
+            echo "storeFile=release.keystore" >> android/key.properties
+            echo "has_keystore=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No custom production keystore secrets detected. Building release with configured project signing profile."
+            echo "has_keystore=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Determine API Base URL Argument
+        id: api_args
+        run: |
+          CUSTOM_URL="${{ inputs.api_base_url }}"
+          SECRET_URL="${{ secrets.API_BASE_URL }}"
+          if [ -n "$CUSTOM_URL" ]; then
+            echo "dart_define=--dart-define=API_BASE_URL=$CUSTOM_URL" >> "$GITHUB_OUTPUT"
+          elif [ -n "$SECRET_URL" ]; then
+            echo "dart_define=--dart-define=API_BASE_URL=$SECRET_URL" >> "$GITHUB_OUTPUT"
+          else
+            echo "dart_define=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build Android Release APK
+        if: github.event_name == 'push' || inputs.build_android_apk
+        run: |
+          echo "Building Android Release APK (Build #${{ github.run_number }})..."
+          flutter build apk --release --build-number=${{ github.run_number }} ${{ steps.api_args.outputs.dart_define }}
+
+      - name: Build Android Release App Bundle (AAB)
+        if: github.event_name == 'push' || inputs.build_android_bundle
+        run: |
+          echo "Building Android Release App Bundle (Build #${{ github.run_number }})..."
+          flutter build appbundle --release --build-number=${{ github.run_number }} ${{ steps.api_args.outputs.dart_define }}
+
+      - name: Upload Android APK Artifact
+        if: (github.event_name == 'push' || inputs.build_android_apk) && hashFiles('build/app/outputs/flutter-apk/app-release.apk') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: mujeeb24-android-release-apk-build-${{ github.run_number }}
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload Android AAB Artifact
+        if: (github.event_name == 'push' || inputs.build_android_bundle) && hashFiles('build/app/outputs/bundle/release/app-release.aab') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: mujeeb24-android-release-bundle-build-${{ github.run_number }}
+          path: build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 14
+
+  # =========================================================================
+  # 3. iOS Build Job: Release Build without codesign (macOS Runner)
+  # =========================================================================
+  build-ios:
+    name: Build iOS Release (Unsigned)
+    needs: quality-gate
+    # Runs on manual dispatch when requested, or on main push if enabled
+    if: (github.event_name == 'workflow_dispatch' && inputs.build_ios)
+    runs-on: macos-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.5'
+          channel: 'stable'
+          cache: true
+
+      - name: Log macOS & Xcode Diagnostics
+        run: |
+          echo "=== macOS Diagnostic Information ==="
+          sw_vers
+          xcodebuild -version
+          flutter --version
+
+      - name: Install Dependencies & CocoaPods
+        run: |
+          flutter pub get
+          cd ios && pod install --repo-update || true
+          cd ..
+
+      - name: Determine API Base URL Argument
+        id: api_args
+        run: |
+          CUSTOM_URL="${{ inputs.api_base_url }}"
+          SECRET_URL="${{ secrets.API_BASE_URL }}"
+          if [ -n "$CUSTOM_URL" ]; then
+            echo "dart_define=--dart-define=API_BASE_URL=$CUSTOM_URL" >> "$GITHUB_OUTPUT"
+          elif [ -n "$SECRET_URL" ]; then
+            echo "dart_define=--dart-define=API_BASE_URL=$SECRET_URL" >> "$GITHUB_OUTPUT"
+          else
+            echo "dart_define=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build iOS Release (--no-codesign)
+        run: |
+          echo "Building iOS Release without codesigning (Build #${{ github.run_number }})..."
+          flutter build ios --release --no-codesign --build-number=${{ github.run_number }} ${{ steps.api_args.outputs.dart_define }}
+
+      - name: Package iOS Release App Bundle
+        run: |
+          cd build/ios/iphoneos
+          zip -r mujeeb24-ios-unsigned.zip Runner.app
+          cd ../../..
+
+      - name: Upload iOS Release Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mujeeb24-ios-unsigned-build-${{ github.run_number }}
+          path: build/ios/iphoneos/mujeeb24-ios-unsigned.zip
+          if-no-files-found: error
+          retention-days: 14

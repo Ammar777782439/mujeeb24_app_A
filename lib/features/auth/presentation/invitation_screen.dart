@@ -8,10 +8,13 @@ class InvitationScreen extends StatefulWidget {
   final AuthProvider authProvider;
   final VoidCallback onBackToLogin;
 
+  final String? initialToken;
+
   const InvitationScreen({
     super.key,
     required this.authProvider,
     required this.onBackToLogin,
+    this.initialToken,
   });
 
   @override
@@ -28,6 +31,17 @@ class _InvitationScreenState extends State<InvitationScreen> {
   bool _isAccepting = false;
   String? _localError;
   String? _successMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialToken != null && widget.initialToken!.isNotEmpty) {
+      _tokenController.text = widget.initialToken!;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _inspectToken();
+      });
+    }
+  }
 
   @override
   void dispose() {

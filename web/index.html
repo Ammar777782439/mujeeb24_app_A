@@ -41,6 +41,12 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <script>
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.has('token') && !window.location.pathname.endsWith('invite.html')) {
+      window.location.replace('invite.html' + window.location.search);
+    }
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
