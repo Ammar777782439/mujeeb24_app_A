@@ -49,6 +49,7 @@ android {
             signingConfig = if (keystorePropertiesFile.exists() && releaseConfig.storeFile != null) {
                 releaseConfig
             } else {
+                // Preview builds only; publishing this signature is forbidden.
                 signingConfigs.getByName("debug")
             }
         }
