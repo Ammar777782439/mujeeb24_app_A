@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -69,12 +70,7 @@ void main() {
       final req = const CreateTransactionDraftRequest(
         customerId: testCustomerId,
         transactionType: 'order',
-        lines: [
-          TransactionLineInput(
-            catalogItemId: 'item_101',
-            quantity: 1.0,
-          ),
-        ],
+        lines: [TransactionLineInput(catalogItemId: 'item_101', quantity: 1.0)],
         currency: 'SAR',
         leadId: 'lead_55',
       );
@@ -90,12 +86,7 @@ void main() {
     test('UpdateTransactionDraftRequest builds correct JSON payload', () {
       final req = const UpdateTransactionDraftRequest(
         currency: 'USD',
-        lines: [
-          TransactionLineInput(
-            catalogItemId: 'item_202',
-            quantity: 4.0,
-          ),
-        ],
+        lines: [TransactionLineInput(catalogItemId: 'item_202', quantity: 4.0)],
       );
 
       final json = req.toJson();
@@ -104,7 +95,9 @@ void main() {
     });
 
     test('TransactionReasonRequest, ConfirmTransactionRequest, and SubmitReviewRequest', () {
-      final reasonReq = const TransactionReasonRequest(reason: 'Customer requested cancellation');
+      final reasonReq = const TransactionReasonRequest(
+        reason: 'Customer requested cancellation',
+      );
       expect(reasonReq.toJson()['reason'], 'Customer requested cancellation');
 
       final confirmReq = const ConfirmTransactionRequest(
@@ -118,7 +111,10 @@ void main() {
       final submitReq = const SubmitReviewRequest(
         reasonCodes: ['high_value', 'custom_discount'],
       );
-      expect(submitReq.toJson()['reason_codes'], ['high_value', 'custom_discount']);
+      expect(submitReq.toJson()['reason_codes'], [
+        'high_value',
+        'custom_discount',
+      ]);
     });
 
     test('ReviewDecisionRequest and TransactionReview properties', () {
@@ -184,7 +180,10 @@ void main() {
     test('1. listTransactions GET /businesses/{business_id}/transactions with filters', () async {
       final mockClient = MockClient((request) async {
         expect(request.method, 'GET');
-        expect(request.url.path, '/api/v1/businesses/$testBusinessId/transactions');
+        expect(
+          request.url.path,
+          '/api/v1/businesses/$testBusinessId/transactions',
+        );
         expect(request.url.queryParameters['limit'], '25');
         expect(request.url.queryParameters['state'], 'review');
         expect(request.url.queryParameters['transaction_type'], 'order');
@@ -226,7 +225,10 @@ void main() {
         );
       });
 
-      final apiClient = ApiClient(baseUrl: 'https://api.test.mujeeb24.com/api/v1', client: mockClient);
+      final apiClient = ApiClient(
+        baseUrl: 'https://api.test.mujeeb24.com/api/v1',
+        client: mockClient,
+      );
       apiClient.setAccessToken('mock_token');
       final repo = TransactionRepository(apiClient: apiClient);
 
@@ -246,7 +248,10 @@ void main() {
     test('2. createTransactionDraft POST /businesses/{business_id}/transactions with Idempotency-Key', () async {
       final mockClient = MockClient((request) async {
         expect(request.method, 'POST');
-        expect(request.url.path, '/api/v1/businesses/$testBusinessId/transactions');
+        expect(
+          request.url.path,
+          '/api/v1/businesses/$testBusinessId/transactions',
+        );
         expect(request.headers['Idempotency-Key'], 'custom_idemp_key_1');
         final decoded = jsonDecode(request.body) as Map<String, dynamic>;
         expect(decoded['customer_id'], testCustomerId);
@@ -270,10 +275,17 @@ void main() {
           'request_id': 'req_create_draft_01',
         };
 
-        return http.Response(jsonEncode(responseBody), 201, headers: {'Content-Type': 'application/json; charset=utf-8'});
+        return http.Response(
+          jsonEncode(responseBody),
+          201,
+          headers: {'Content-Type': 'application/json; charset=utf-8'},
+        );
       });
 
-      final apiClient = ApiClient(baseUrl: 'https://api.test.mujeeb24.com/api/v1', client: mockClient);
+      final apiClient = ApiClient(
+        baseUrl: 'https://api.test.mujeeb24.com/api/v1',
+        client: mockClient,
+      );
       apiClient.setAccessToken('mock_token');
       final repo = TransactionRepository(apiClient: apiClient);
 
@@ -296,7 +308,10 @@ void main() {
     test('3. getTransaction GET /businesses/{business_id}/transactions/{transaction_id}', () async {
       final mockClient = MockClient((request) async {
         expect(request.method, 'GET');
-        expect(request.url.path, '/api/v1/businesses/$testBusinessId/transactions/$testTransactionId');
+        expect(
+          request.url.path,
+          '/api/v1/businesses/$testBusinessId/transactions/$testTransactionId',
+        );
 
         final responseBody = {
           'data': {
@@ -316,10 +331,17 @@ void main() {
           'request_id': 'req_get_tx_01',
         };
 
-        return http.Response(jsonEncode(responseBody), 200, headers: {'Content-Type': 'application/json; charset=utf-8'});
+        return http.Response(
+          jsonEncode(responseBody),
+          200,
+          headers: {'Content-Type': 'application/json; charset=utf-8'},
+        );
       });
 
-      final apiClient = ApiClient(baseUrl: 'https://api.test.mujeeb24.com/api/v1', client: mockClient);
+      final apiClient = ApiClient(
+        baseUrl: 'https://api.test.mujeeb24.com/api/v1',
+        client: mockClient,
+      );
       apiClient.setAccessToken('mock_token');
       final repo = TransactionRepository(apiClient: apiClient);
 
@@ -335,7 +357,10 @@ void main() {
     test('4. updateTransactionDraft PATCH /businesses/{business_id}/transactions/{transaction_id} with If-Match', () async {
       final mockClient = MockClient((request) async {
         expect(request.method, 'PATCH');
-        expect(request.url.path, '/api/v1/businesses/$testBusinessId/transactions/$testTransactionId');
+        expect(
+          request.url.path,
+          '/api/v1/businesses/$testBusinessId/transactions/$testTransactionId',
+        );
         expect(request.headers['If-Match'], 'v1');
         expect(request.headers['Idempotency-Key'], isNotEmpty);
 
@@ -357,10 +382,17 @@ void main() {
           'request_id': 'req_update_draft_01',
         };
 
-        return http.Response(jsonEncode(responseBody), 200, headers: {'Content-Type': 'application/json; charset=utf-8'});
+        return http.Response(
+          jsonEncode(responseBody),
+          200,
+          headers: {'Content-Type': 'application/json; charset=utf-8'},
+        );
       });
 
-      final apiClient = ApiClient(baseUrl: 'https://api.test.mujeeb24.com/api/v1', client: mockClient);
+      final apiClient = ApiClient(
+        baseUrl: 'https://api.test.mujeeb24.com/api/v1',
+        client: mockClient,
+      );
       apiClient.setAccessToken('mock_token');
       final repo = TransactionRepository(apiClient: apiClient);
 
@@ -378,7 +410,10 @@ void main() {
     test('5. cancelTransaction POST /businesses/{business_id}/transactions/{transaction_id}/cancel with If-Match', () async {
       final mockClient = MockClient((request) async {
         expect(request.method, 'POST');
-        expect(request.url.path, '/api/v1/businesses/$testBusinessId/transactions/$testTransactionId/cancel');
+        expect(
+          request.url.path,
+          '/api/v1/businesses/$testBusinessId/transactions/$testTransactionId/cancel',
+        );
         expect(request.headers['If-Match'], 'v2');
 
         final decoded = jsonDecode(request.body) as Map<String, dynamic>;
@@ -402,17 +437,26 @@ void main() {
           'request_id': 'req_cancel_01',
         };
 
-        return http.Response(jsonEncode(responseBody), 200, headers: {'Content-Type': 'application/json; charset=utf-8'});
+        return http.Response(
+          jsonEncode(responseBody),
+          200,
+          headers: {'Content-Type': 'application/json; charset=utf-8'},
+        );
       });
 
-      final apiClient = ApiClient(baseUrl: 'https://api.test.mujeeb24.com/api/v1', client: mockClient);
+      final apiClient = ApiClient(
+        baseUrl: 'https://api.test.mujeeb24.com/api/v1',
+        client: mockClient,
+      );
       apiClient.setAccessToken('mock_token');
       final repo = TransactionRepository(apiClient: apiClient);
 
       final cancelled = await repo.cancelTransaction(
         businessId: testBusinessId,
         transactionId: testTransactionId,
-        request: const TransactionReasonRequest(reason: 'Customer altered decision'),
+        request: const TransactionReasonRequest(
+          reason: 'Customer altered decision',
+        ),
         ifMatch: 'v2',
       );
 
@@ -423,7 +467,10 @@ void main() {
     test('6. confirmTransaction POST /businesses/{business_id}/transactions/{transaction_id}/confirm with If-Match', () async {
       final mockClient = MockClient((request) async {
         expect(request.method, 'POST');
-        expect(request.url.path, '/api/v1/businesses/$testBusinessId/transactions/$testTransactionId/confirm');
+        expect(
+          request.url.path,
+          '/api/v1/businesses/$testBusinessId/transactions/$testTransactionId/confirm',
+        );
         expect(request.headers['If-Match'], 'v2');
 
         final decoded = jsonDecode(request.body) as Map<String, dynamic>;
@@ -447,17 +494,26 @@ void main() {
           'request_id': 'req_confirm_01',
         };
 
-        return http.Response(jsonEncode(responseBody), 200, headers: {'Content-Type': 'application/json; charset=utf-8'});
+        return http.Response(
+          jsonEncode(responseBody),
+          200,
+          headers: {'Content-Type': 'application/json; charset=utf-8'},
+        );
       });
 
-      final apiClient = ApiClient(baseUrl: 'https://api.test.mujeeb24.com/api/v1', client: mockClient);
+      final apiClient = ApiClient(
+        baseUrl: 'https://api.test.mujeeb24.com/api/v1',
+        client: mockClient,
+      );
       apiClient.setAccessToken('mock_token');
       final repo = TransactionRepository(apiClient: apiClient);
 
       final confirmed = await repo.confirmTransaction(
         businessId: testBusinessId,
         transactionId: testTransactionId,
-        request: const ConfirmTransactionRequest(evidenceReference: 'pos_receipt_554'),
+        request: const ConfirmTransactionRequest(
+          evidenceReference: 'pos_receipt_554',
+        ),
         ifMatch: 'v2',
       );
 
@@ -468,7 +524,10 @@ void main() {
     test('7. getTransactionReview GET /businesses/{business_id}/transactions/{transaction_id}/reviews', () async {
       final mockClient = MockClient((request) async {
         expect(request.method, 'GET');
-        expect(request.url.path, '/api/v1/businesses/$testBusinessId/transactions/$testTransactionId/reviews');
+        expect(
+          request.url.path,
+          '/api/v1/businesses/$testBusinessId/transactions/$testTransactionId/reviews',
+        );
 
         final responseBody = {
           'data': {
@@ -480,10 +539,17 @@ void main() {
           'request_id': 'req_get_rev_01',
         };
 
-        return http.Response(jsonEncode(responseBody), 200, headers: {'Content-Type': 'application/json; charset=utf-8'});
+        return http.Response(
+          jsonEncode(responseBody),
+          200,
+          headers: {'Content-Type': 'application/json; charset=utf-8'},
+        );
       });
 
-      final apiClient = ApiClient(baseUrl: 'https://api.test.mujeeb24.com/api/v1', client: mockClient);
+      final apiClient = ApiClient(
+        baseUrl: 'https://api.test.mujeeb24.com/api/v1',
+        client: mockClient,
+      );
       apiClient.setAccessToken('mock_token');
       final repo = TransactionRepository(apiClient: apiClient);
 
@@ -500,7 +566,10 @@ void main() {
     test('8. approveTransactionReview POST /businesses/{business_id}/transactions/{transaction_id}/reviews/approve with If-Match', () async {
       final mockClient = MockClient((request) async {
         expect(request.method, 'POST');
-        expect(request.url.path, '/api/v1/businesses/$testBusinessId/transactions/$testTransactionId/reviews/approve');
+        expect(
+          request.url.path,
+          '/api/v1/businesses/$testBusinessId/transactions/$testTransactionId/reviews/approve',
+        );
         expect(request.headers['If-Match'], 'v2');
 
         final decoded = jsonDecode(request.body) as Map<String, dynamic>;
@@ -516,17 +585,26 @@ void main() {
           'request_id': 'req_approve_01',
         };
 
-        return http.Response(jsonEncode(responseBody), 200, headers: {'Content-Type': 'application/json; charset=utf-8'});
+        return http.Response(
+          jsonEncode(responseBody),
+          200,
+          headers: {'Content-Type': 'application/json; charset=utf-8'},
+        );
       });
 
-      final apiClient = ApiClient(baseUrl: 'https://api.test.mujeeb24.com/api/v1', client: mockClient);
+      final apiClient = ApiClient(
+        baseUrl: 'https://api.test.mujeeb24.com/api/v1',
+        client: mockClient,
+      );
       apiClient.setAccessToken('mock_token');
       final repo = TransactionRepository(apiClient: apiClient);
 
       final review = await repo.approveTransactionReview(
         businessId: testBusinessId,
         transactionId: testTransactionId,
-        request: const ReviewDecisionRequest(reviewerReference: 'manager_ahmed'),
+        request: const ReviewDecisionRequest(
+          reviewerReference: 'manager_ahmed',
+        ),
         ifMatch: 'v2',
       );
 
@@ -537,7 +615,10 @@ void main() {
     test('9. rejectTransactionReview POST /businesses/{business_id}/transactions/{transaction_id}/reviews/reject with If-Match', () async {
       final mockClient = MockClient((request) async {
         expect(request.method, 'POST');
-        expect(request.url.path, '/api/v1/businesses/$testBusinessId/transactions/$testTransactionId/reviews/reject');
+        expect(
+          request.url.path,
+          '/api/v1/businesses/$testBusinessId/transactions/$testTransactionId/reviews/reject',
+        );
         expect(request.headers['If-Match'], 'v2');
 
         final decoded = jsonDecode(request.body) as Map<String, dynamic>;
@@ -554,10 +635,17 @@ void main() {
           'request_id': 'req_reject_01',
         };
 
-        return http.Response(jsonEncode(responseBody), 200, headers: {'Content-Type': 'application/json; charset=utf-8'});
+        return http.Response(
+          jsonEncode(responseBody),
+          200,
+          headers: {'Content-Type': 'application/json; charset=utf-8'},
+        );
       });
 
-      final apiClient = ApiClient(baseUrl: 'https://api.test.mujeeb24.com/api/v1', client: mockClient);
+      final apiClient = ApiClient(
+        baseUrl: 'https://api.test.mujeeb24.com/api/v1',
+        client: mockClient,
+      );
       apiClient.setAccessToken('mock_token');
       final repo = TransactionRepository(apiClient: apiClient);
 
@@ -577,7 +665,10 @@ void main() {
     test('10. submitTransactionReview POST /businesses/{business_id}/transactions/{transaction_id}/submit-review with If-Match', () async {
       final mockClient = MockClient((request) async {
         expect(request.method, 'POST');
-        expect(request.url.path, '/api/v1/businesses/$testBusinessId/transactions/$testTransactionId/submit-review');
+        expect(
+          request.url.path,
+          '/api/v1/businesses/$testBusinessId/transactions/$testTransactionId/submit-review',
+        );
         expect(request.headers['If-Match'], 'v1');
 
         final decoded = jsonDecode(request.body) as Map<String, dynamic>;
@@ -593,10 +684,17 @@ void main() {
           'request_id': 'req_submit_rev_01',
         };
 
-        return http.Response(jsonEncode(responseBody), 200, headers: {'Content-Type': 'application/json; charset=utf-8'});
+        return http.Response(
+          jsonEncode(responseBody),
+          200,
+          headers: {'Content-Type': 'application/json; charset=utf-8'},
+        );
       });
 
-      final apiClient = ApiClient(baseUrl: 'https://api.test.mujeeb24.com/api/v1', client: mockClient);
+      final apiClient = ApiClient(
+        baseUrl: 'https://api.test.mujeeb24.com/api/v1',
+        client: mockClient,
+      );
       apiClient.setAccessToken('mock_token');
       final repo = TransactionRepository(apiClient: apiClient);
 
@@ -620,10 +718,17 @@ void main() {
           },
           'request_id': 'req_conflict_999',
         };
-        return http.Response(jsonEncode(errorBody), 412, headers: {'Content-Type': 'application/json; charset=utf-8'});
+        return http.Response(
+          jsonEncode(errorBody),
+          412,
+          headers: {'Content-Type': 'application/json; charset=utf-8'},
+        );
       });
 
-      final apiClient = ApiClient(baseUrl: 'https://api.test.mujeeb24.com/api/v1', client: mockClient);
+      final apiClient = ApiClient(
+        baseUrl: 'https://api.test.mujeeb24.com/api/v1',
+        client: mockClient,
+      );
       apiClient.setAccessToken('mock_token');
       final repo = TransactionRepository(apiClient: apiClient);
 
@@ -634,11 +739,13 @@ void main() {
           request: const UpdateTransactionDraftRequest(currency: 'SAR'),
           ifMatch: 'stale_version',
         ),
-        throwsA(isA<ApiErrorEnvelope>().having(
-          (e) => e.error.message,
-          'message',
-          contains('Resource version mismatch'),
-        )),
+        throwsA(
+          isA<ApiErrorEnvelope>().having(
+            (e) => e.error.message,
+            'message',
+            contains('Resource version mismatch'),
+          ),
+        ),
       );
     });
   });

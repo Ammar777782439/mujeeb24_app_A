@@ -1,5 +1,7 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
+
 import '../../../app/localization/app_localizations.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/models/team_audit_models.dart';
@@ -82,10 +84,13 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
               Row(
                 children: [
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: _getActionColor(event.action).withValues(alpha: 0.12),
+                      color: _getActionColor(event.action)
+                          .withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -135,7 +140,10 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
               const SizedBox(height: 16),
               Text(
                 AppStrings.get('audit_metadata', ctx),
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
               ),
               const SizedBox(height: 8),
               Container(
@@ -180,7 +188,9 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
                 Text(
                   title,
                   style: const TextStyle(
-                      fontSize: 12, color: AppColors.textMuted),
+                    fontSize: 12,
+                    color: AppColors.textMuted,
+                  ),
                 ),
                 Text(
                   value,
@@ -210,8 +220,10 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
               IconButton(
                 key: const Key('btn_refresh_audit'),
                 icon: const Icon(Icons.refresh),
-                onPressed: () => widget.provider
-                    .fetchAuditEvents(widget.businessId, refresh: true),
+                onPressed: () => widget.provider.fetchAuditEvents(
+                  widget.businessId,
+                  refresh: true,
+                ),
               ),
             ],
           ),
@@ -241,15 +253,19 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
                     widget.provider.setAuditFilters(
                       action: val.trim().isEmpty ? 'all' : val.trim(),
                     );
-                    widget.provider
-                        .fetchAuditEvents(widget.businessId, refresh: true);
+                    widget.provider.fetchAuditEvents(
+                      widget.businessId,
+                      refresh: true,
+                    );
                   },
                 ),
               ),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     FilterChip(
@@ -258,8 +274,10 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
                       selected: widget.provider.actorTypeFilter == 'all',
                       onSelected: (_) {
                         widget.provider.setAuditFilters(actorType: 'all');
-                        widget.provider.fetchAuditEvents(widget.businessId,
-                            refresh: true);
+                        widget.provider.fetchAuditEvents(
+                          widget.businessId,
+                          refresh: true,
+                        );
                       },
                     ),
                     const SizedBox(width: 6),
@@ -268,10 +286,11 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
                       label: const Text('Principal'),
                       selected: widget.provider.actorTypeFilter == 'principal',
                       onSelected: (_) {
-                        widget.provider
-                            .setAuditFilters(actorType: 'principal');
-                        widget.provider.fetchAuditEvents(widget.businessId,
-                            refresh: true);
+                        widget.provider.setAuditFilters(actorType: 'principal');
+                        widget.provider.fetchAuditEvents(
+                          widget.businessId,
+                          refresh: true,
+                        );
                       },
                     ),
                     const SizedBox(width: 6),
@@ -281,8 +300,10 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
                       selected: widget.provider.actorTypeFilter == 'system',
                       onSelected: (_) {
                         widget.provider.setAuditFilters(actorType: 'system');
-                        widget.provider.fetchAuditEvents(widget.businessId,
-                            refresh: true);
+                        widget.provider.fetchAuditEvents(
+                          widget.businessId,
+                          refresh: true,
+                        );
                       },
                     ),
                     const VerticalDivider(),
@@ -292,8 +313,10 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
                       selected: widget.provider.resourceTypeFilter == 'all',
                       onSelected: (_) {
                         widget.provider.setAuditFilters(resourceType: 'all');
-                        widget.provider.fetchAuditEvents(widget.businessId,
-                            refresh: true);
+                        widget.provider.fetchAuditEvents(
+                          widget.businessId,
+                          refresh: true,
+                        );
                       },
                     ),
                     const SizedBox(width: 6),
@@ -303,10 +326,13 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
                       selected:
                           widget.provider.resourceTypeFilter == 'team_member',
                       onSelected: (_) {
-                        widget.provider
-                            .setAuditFilters(resourceType: 'team_member');
-                        widget.provider.fetchAuditEvents(widget.businessId,
-                            refresh: true);
+                        widget.provider.setAuditFilters(
+                          resourceType: 'team_member',
+                        );
+                        widget.provider.fetchAuditEvents(
+                          widget.businessId,
+                          refresh: true,
+                        );
                       },
                     ),
                     const SizedBox(width: 6),
@@ -316,10 +342,13 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
                       selected:
                           widget.provider.resourceTypeFilter == 'catalog_item',
                       onSelected: (_) {
-                        widget.provider
-                            .setAuditFilters(resourceType: 'catalog_item');
-                        widget.provider.fetchAuditEvents(widget.businessId,
-                            refresh: true);
+                        widget.provider.setAuditFilters(
+                          resourceType: 'catalog_item',
+                        );
+                        widget.provider.fetchAuditEvents(
+                          widget.businessId,
+                          refresh: true,
+                        );
                       },
                     ),
                   ],
@@ -346,8 +375,11 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline,
-                size: 48, color: AppColors.statusError),
+            const Icon(
+              Icons.error_outline,
+              size: 48,
+              color: AppColors.statusError,
+            ),
             const SizedBox(height: 12),
             Text(
               widget.provider.auditEventsError!,
@@ -355,8 +387,10 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
             ),
             const SizedBox(height: 12),
             ElevatedButton(
-              onPressed: () => widget.provider
-                  .fetchAuditEvents(widget.businessId, refresh: true),
+              onPressed: () => widget.provider.fetchAuditEvents(
+                widget.businessId,
+                refresh: true,
+              ),
               child: Text(AppStrings.get('retry', context)),
             ),
           ],
@@ -385,9 +419,7 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
           elevation: 1,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(
-              color: AppColors.borderHairline,
-            ),
+            side: BorderSide(color: AppColors.borderHairline),
           ),
           child: InkWell(
             borderRadius: BorderRadius.circular(12),
@@ -401,9 +433,12 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: _getActionColor(ev.action).withValues(alpha: 0.12),
+                          color: _getActionColor(ev.action)
+                              .withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -428,22 +463,32 @@ class _AuditLogsScreenState extends State<AuditLogsScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.person_outline,
-                          size: 14, color: AppColors.textMuted),
+                      const Icon(
+                        Icons.person_outline,
+                        size: 14,
+                        color: AppColors.textMuted,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         '${ev.actorType}${ev.actorReference != null ? ' (${ev.actorReference})' : ''}',
                         style: const TextStyle(
-                            fontSize: 12, color: AppColors.textPrimary),
+                          fontSize: 12,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                       const SizedBox(width: 16),
-                      const Icon(Icons.category_outlined,
-                          size: 14, color: AppColors.textMuted),
+                      const Icon(
+                        Icons.category_outlined,
+                        size: 14,
+                        color: AppColors.textMuted,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         ev.resourceType,
                         style: const TextStyle(
-                            fontSize: 12, color: AppColors.textMuted),
+                          fontSize: 12,
+                          color: AppColors.textMuted,
+                        ),
                       ),
                     ],
                   ),

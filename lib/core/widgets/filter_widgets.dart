@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../app/localization/app_localizations.dart';
 import '../../app/theme/app_theme.dart';
 import '../channels/channel_presentation.dart';
@@ -26,7 +27,8 @@ class ChannelFilterBar extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: channels.map((meta) {
-          final isSelected = selectedChannel == meta.key ||
+          final isSelected =
+              selectedChannel == meta.key ||
               (selectedChannel.isEmpty && meta.key == 'all');
           final count = channelCounts?[meta.key];
           final label = meta.localizedName(context);
@@ -83,8 +85,8 @@ class ChannelFilterBar extends StatelessWidget {
                 color: isSelected
                     ? Colors.transparent
                     : (meta.key == 'all'
-                        ? AppColors.borderHairline
-                        : meta.brandColor.withValues(alpha: 0.35)),
+                          ? AppColors.borderHairline
+                          : meta.brandColor.withValues(alpha: 0.35)),
                 width: 1,
               ),
               shape: RoundedRectangleBorder(
@@ -126,9 +128,7 @@ class ActiveFiltersHeader extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.primaryFixed.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.2),
-        ),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
@@ -229,11 +229,7 @@ class FilterEmptyState extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: AppColors.borderHairline),
               ),
-              child: Icon(
-                icon,
-                size: 36,
-                color: AppColors.textMuted,
-              ),
+              child: Icon(icon, size: 36, color: AppColors.textMuted),
             ),
             const SizedBox(height: 16),
             Text(

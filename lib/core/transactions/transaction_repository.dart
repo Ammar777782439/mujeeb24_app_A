@@ -56,9 +56,9 @@ class TransactionRepository {
     final rawList = response['data'] as List?;
     final items = rawList != null
         ? rawList
-            .whereType<Map<String, dynamic>>()
-            .map(CommercialTransaction.fromJson)
-            .toList()
+              .whereType<Map<String, dynamic>>()
+              .map(CommercialTransaction.fromJson)
+              .toList()
         : <CommercialTransaction>[];
 
     final paginationMap = response['pagination'] as Map<String, dynamic>?;

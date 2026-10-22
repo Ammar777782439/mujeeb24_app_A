@@ -249,10 +249,7 @@ class PurgeChannelHistoryRequest {
   });
 
   Map<String, dynamic> toJson() {
-    return {
-      'confirmation': confirmation,
-      'expected_version': expectedVersion,
-    };
+    return {'confirmation': confirmation, 'expected_version': expectedVersion};
   }
 }
 
@@ -265,9 +262,7 @@ class ConnectionActionRequest {
   const ConnectionActionRequest({required this.reason});
 
   Map<String, dynamic> toJson() {
-    return {
-      'reason': reason,
-    };
+    return {'reason': reason};
   }
 }
 
@@ -293,10 +288,14 @@ class ChannelConnectionPage {
           .map((c) => ChannelConnection.fromJson(c))
           .toList();
     }
-    final pagination = json['pagination'] is Map ? json['pagination'] as Map : null;
+    final pagination = json['pagination'] is Map
+        ? json['pagination'] as Map
+        : null;
     return ChannelConnectionPage(
       items: list,
-      nextCursor: pagination?['next_cursor']?.toString() ?? json['next_cursor']?.toString(),
+      nextCursor:
+          pagination?['next_cursor']?.toString() ??
+          json['next_cursor']?.toString(),
       hasMore: pagination?['has_more'] == true || json['has_more'] == true,
     );
   }
@@ -465,10 +464,14 @@ class AutomationRulePage {
           .map((r) => AutomationRule.fromJson(r))
           .toList();
     }
-    final pagination = json['pagination'] is Map ? json['pagination'] as Map : null;
+    final pagination = json['pagination'] is Map
+        ? json['pagination'] as Map
+        : null;
     return AutomationRulePage(
       items: list,
-      nextCursor: pagination?['next_cursor']?.toString() ?? json['next_cursor']?.toString(),
+      nextCursor:
+          pagination?['next_cursor']?.toString() ??
+          json['next_cursor']?.toString(),
       hasMore: pagination?['has_more'] == true || json['has_more'] == true,
     );
   }
@@ -580,9 +583,7 @@ class AIHumanRequest {
   const AIHumanRequest({required this.reason});
 
   Map<String, dynamic> toJson() {
-    return {
-      'reason': reason,
-    };
+    return {'reason': reason};
   }
 }
 
@@ -608,10 +609,14 @@ class AIDecisionPage {
           .map((d) => AIDecision.fromJson(d))
           .toList();
     }
-    final pagination = json['pagination'] is Map ? json['pagination'] as Map : null;
+    final pagination = json['pagination'] is Map
+        ? json['pagination'] as Map
+        : null;
     return AIDecisionPage(
       items: list,
-      nextCursor: pagination?['next_cursor']?.toString() ?? json['next_cursor']?.toString(),
+      nextCursor:
+          pagination?['next_cursor']?.toString() ??
+          json['next_cursor']?.toString(),
       hasMore: pagination?['has_more'] == true || json['has_more'] == true,
     );
   }
@@ -636,11 +641,7 @@ class CreateCannedReplyRequest {
   });
 
   Map<String, dynamic> toJson() {
-    return {
-      'title': title,
-      'shortcut': shortcut,
-      'body': body,
-    };
+    return {'title': title, 'shortcut': shortcut, 'body': body};
   }
 }
 

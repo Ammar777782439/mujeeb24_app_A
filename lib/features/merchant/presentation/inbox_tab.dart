@@ -23,7 +23,8 @@ class InboxTab extends StatefulWidget {
 }
 
 class _InboxTabState extends State<InboxTab> {
-  String _selectedChannel = 'all'; // all, whatsapp, facebook, telegram, instagram
+  String _selectedChannel =
+      'all'; // all, whatsapp, facebook, telegram, instagram
   String _selectedFilter = 'all'; // all, waiting_human, open, closed
   String _selectedOwnership = 'all'; // all, assigned, unassigned
   final TextEditingController _searchController = TextEditingController();
@@ -89,7 +90,10 @@ class _InboxTabState extends State<InboxTab> {
       _selectedOwnership = ownership;
     });
     final businessId = widget.currentBusiness?.id ?? '';
-    widget.merchantProvider.setConversationOwnershipFilter(businessId, ownership);
+    widget.merchantProvider.setConversationOwnershipFilter(
+      businessId,
+      ownership,
+    );
   }
 
   void _clearAllFilters() {
@@ -160,11 +164,15 @@ class _InboxTabState extends State<InboxTab> {
 
       // Ownership Filter
       if (_selectedOwnership == 'assigned' &&
-          (c.assignment == null || c.ownership == 'none' || c.ownership == 'unassigned')) {
+          (c.assignment == null ||
+              c.ownership == 'none' ||
+              c.ownership == 'unassigned')) {
         return false;
       }
       if (_selectedOwnership == 'unassigned' &&
-          (c.assignment != null && c.ownership != 'none' && c.ownership != 'unassigned')) {
+          (c.assignment != null &&
+              c.ownership != 'none' &&
+              c.ownership != 'unassigned')) {
         return false;
       }
 
@@ -278,13 +286,33 @@ class _InboxTabState extends State<InboxTab> {
                   child: Row(
                     children: [
                       // State Filter Chips
-                      _buildFilterChip('all', strings('all_conversations'), _selectedFilter, _onStateSelected),
+                      _buildFilterChip(
+                        'all',
+                        strings('all_conversations'),
+                        _selectedFilter,
+                        _onStateSelected,
+                      ),
                       const SizedBox(width: 6),
-                      _buildFilterChip('waiting_human', strings('waiting_filter'), _selectedFilter, _onStateSelected),
+                      _buildFilterChip(
+                        'waiting_human',
+                        strings('waiting_filter'),
+                        _selectedFilter,
+                        _onStateSelected,
+                      ),
                       const SizedBox(width: 6),
-                      _buildFilterChip('open', strings('open_filter'), _selectedFilter, _onStateSelected),
+                      _buildFilterChip(
+                        'open',
+                        strings('open_filter'),
+                        _selectedFilter,
+                        _onStateSelected,
+                      ),
                       const SizedBox(width: 6),
-                      _buildFilterChip('closed', strings('closed_filter'), _selectedFilter, _onStateSelected),
+                      _buildFilterChip(
+                        'closed',
+                        strings('closed_filter'),
+                        _selectedFilter,
+                        _onStateSelected,
+                      ),
 
                       const SizedBox(width: 12),
                       Container(
@@ -295,11 +323,26 @@ class _InboxTabState extends State<InboxTab> {
                       const SizedBox(width: 12),
 
                       // Ownership Filter Chips
-                      _buildFilterChip('all', strings('ownership_all'), _selectedOwnership, _onOwnershipSelected),
+                      _buildFilterChip(
+                        'all',
+                        strings('ownership_all'),
+                        _selectedOwnership,
+                        _onOwnershipSelected,
+                      ),
                       const SizedBox(width: 6),
-                      _buildFilterChip('assigned', strings('ownership_assigned'), _selectedOwnership, _onOwnershipSelected),
+                      _buildFilterChip(
+                        'assigned',
+                        strings('ownership_assigned'),
+                        _selectedOwnership,
+                        _onOwnershipSelected,
+                      ),
                       const SizedBox(width: 6),
-                      _buildFilterChip('unassigned', strings('ownership_unassigned'), _selectedOwnership, _onOwnershipSelected),
+                      _buildFilterChip(
+                        'unassigned',
+                        strings('ownership_unassigned'),
+                        _selectedOwnership,
+                        _onOwnershipSelected,
+                      ),
                     ],
                   ),
                 ),
@@ -331,13 +374,13 @@ class _InboxTabState extends State<InboxTab> {
           Expanded(
             child: filtered.isEmpty
                 ? (_activeFiltersCount > 0
-                    ? FilterEmptyState(
-                        title: strings('no_filtered_results'),
-                        subtitle: strings('no_filtered_results_hint'),
-                        onClearFilters: _clearAllFilters,
-                        clearButtonText: strings('reset_all_filters'),
-                      )
-                    : _buildEmptyState(strings))
+                      ? FilterEmptyState(
+                          title: strings('no_filtered_results'),
+                          subtitle: strings('no_filtered_results_hint'),
+                          onClearFilters: _clearAllFilters,
+                          clearButtonText: strings('reset_all_filters'),
+                        )
+                      : _buildEmptyState(strings))
                 : ListView.separated(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,

@@ -285,16 +285,16 @@ class _LeadsTabState extends State<LeadsTab> {
                   ? const Center(child: CircularProgressIndicator())
                   : leads.isEmpty
                   ? (provider.activeLeadFiltersCount > 0
-                      ? FilterEmptyState(
-                          title: strings('no_filtered_results'),
-                          subtitle: strings('no_filtered_results_hint'),
-                          onClearFilters: () {
-                            _searchController.clear();
-                            provider.clearLeadFilters(widget.businessId);
-                          },
-                          clearButtonText: strings('reset_all_filters'),
-                        )
-                      : _buildEmptyState(strings))
+                        ? FilterEmptyState(
+                            title: strings('no_filtered_results'),
+                            subtitle: strings('no_filtered_results_hint'),
+                            onClearFilters: () {
+                              _searchController.clear();
+                              provider.clearLeadFilters(widget.businessId);
+                            },
+                            clearButtonText: strings('reset_all_filters'),
+                          )
+                        : _buildEmptyState(strings))
                   : ListView.separated(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
                       itemCount: leads.length,

@@ -163,7 +163,8 @@ class TeamMember {
       email: json['email'] as String? ?? '',
       displayName: json['display_name'] as String? ?? '',
       role: json['role'] as String? ?? 'member',
-      permissions: (json['permissions'] as List<dynamic>?)
+      permissions:
+          (json['permissions'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           [],
@@ -172,13 +173,13 @@ class TeamMember {
   }
 
   Map<String, dynamic> toJson() => {
-        'principal_id': principalId,
-        'email': email,
-        'display_name': displayName,
-        'role': role,
-        'permissions': permissions,
-        'status': status,
-      };
+    'principal_id': principalId,
+    'email': email,
+    'display_name': displayName,
+    'role': role,
+    'permissions': permissions,
+    'status': status,
+  };
 
   TeamMember copyWith({
     String? principalId,
@@ -249,7 +250,8 @@ class TeamInvitationDetails {
       email: json['email'] as String? ?? '',
       displayName: json['display_name'] as String? ?? '',
       role: json['role'] as String? ?? 'agent',
-      permissions: (json['permissions'] as List<dynamic>?)
+      permissions:
+          (json['permissions'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           [],
@@ -266,23 +268,23 @@ class TeamInvitationDetails {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'business_id': businessId,
-        if (businessName != null) 'business_name': businessName,
-        'email': email,
-        'display_name': displayName,
-        'role': role,
-        'permissions': permissions,
-        'status': status,
-        'invited_by': invitedBy,
-        'expires_at': expiresAt,
-        'created_at': createdAt,
-        'updated_at': updatedAt,
-        if (accountState != null) 'account_state': accountState,
-        if (acceptedAt != null) 'accepted_at': acceptedAt,
-        if (acceptedBy != null) 'accepted_by': acceptedBy,
-        if (revokedAt != null) 'revoked_at': revokedAt,
-      };
+    'id': id,
+    'business_id': businessId,
+    if (businessName != null) 'business_name': businessName,
+    'email': email,
+    'display_name': displayName,
+    'role': role,
+    'permissions': permissions,
+    'status': status,
+    'invited_by': invitedBy,
+    'expires_at': expiresAt,
+    'created_at': createdAt,
+    'updated_at': updatedAt,
+    if (accountState != null) 'account_state': accountState,
+    if (acceptedAt != null) 'accepted_at': acceptedAt,
+    if (acceptedBy != null) 'accepted_by': acceptedBy,
+    if (revokedAt != null) 'revoked_at': revokedAt,
+  };
 }
 
 /// Created invitation response with acceptance token
@@ -305,9 +307,9 @@ class TeamInvitationCreated {
   }
 
   Map<String, dynamic> toJson() => {
-        'invitation': invitation.toJson(),
-        'acceptance_token': acceptanceToken,
-      };
+    'invitation': invitation.toJson(),
+    'acceptance_token': acceptanceToken,
+  };
 }
 
 /// Request for creating a new team invitation
@@ -327,12 +329,12 @@ class CreateTeamInvitationRequest {
   });
 
   Map<String, dynamic> toJson() => {
-        'email': email,
-        'display_name': displayName,
-        'role': role,
-        'permissions': permissions,
-        if (expiresInHours != null) 'expires_in_hours': expiresInHours,
-      };
+    'email': email,
+    'display_name': displayName,
+    'role': role,
+    'permissions': permissions,
+    if (expiresInHours != null) 'expires_in_hours': expiresInHours,
+  };
 }
 
 /// Request for updating member access (role + permissions)
@@ -345,10 +347,7 @@ class UpdateTeamMemberAccessRequest {
     required this.permissions,
   });
 
-  Map<String, dynamic> toJson() => {
-        'role': role,
-        'permissions': permissions,
-      };
+  Map<String, dynamic> toJson() => {'role': role, 'permissions': permissions};
 }
 
 /// Request for updating member role
@@ -357,9 +356,7 @@ class UpdateTeamMemberRoleRequest {
 
   const UpdateTeamMemberRoleRequest({required this.role});
 
-  Map<String, dynamic> toJson() => {
-        'role': role,
-      };
+  Map<String, dynamic> toJson() => {'role': role};
 }
 
 /// Audit event item conforming to AuditEvent schema
@@ -401,16 +398,16 @@ class AuditEvent {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'business_id': businessId,
-        'actor_type': actorType,
-        if (actorReference != null) 'actor_reference': actorReference,
-        'action': action,
-        'resource_type': resourceType,
-        if (resourceId != null) 'resource_id': resourceId,
-        'metadata': metadata,
-        'occurred_at': occurredAt,
-      };
+    'id': id,
+    'business_id': businessId,
+    'actor_type': actorType,
+    if (actorReference != null) 'actor_reference': actorReference,
+    'action': action,
+    'resource_type': resourceType,
+    if (resourceId != null) 'resource_id': resourceId,
+    'metadata': metadata,
+    'occurred_at': occurredAt,
+  };
 }
 
 /// Paginated page of team members

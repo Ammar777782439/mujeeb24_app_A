@@ -156,9 +156,7 @@ class TransactionReasonRequest {
   const TransactionReasonRequest({required this.reason});
 
   factory TransactionReasonRequest.fromJson(Map<String, dynamic> json) {
-    return TransactionReasonRequest(
-      reason: json['reason'] as String? ?? '',
-    );
+    return TransactionReasonRequest(reason: json['reason'] as String? ?? '');
   }
 
   Map<String, dynamic> toJson() => {'reason': reason};
@@ -216,10 +214,7 @@ class ReviewDecisionRequest {
   final String reviewerReference;
   final String? reason;
 
-  const ReviewDecisionRequest({
-    required this.reviewerReference,
-    this.reason,
-  });
+  const ReviewDecisionRequest({required this.reviewerReference, this.reason});
 
   factory ReviewDecisionRequest.fromJson(Map<String, dynamic> json) {
     return ReviewDecisionRequest(
@@ -230,8 +225,7 @@ class ReviewDecisionRequest {
 
   Map<String, dynamic> toJson() => {
     'reviewer_reference': reviewerReference,
-    if (reason != null && reason!.trim().isNotEmpty)
-      'reason': reason!.trim(),
+    if (reason != null && reason!.trim().isNotEmpty) 'reason': reason!.trim(),
   };
 }
 
@@ -289,9 +283,7 @@ extension CommercialTransactionExtension on CommercialTransaction {
       if (item is Map<String, dynamic>) {
         return OrderLineSnapshot.fromJson(item);
       }
-      return OrderLineSnapshot.fromJson(
-        Map<String, dynamic>.from(item as Map),
-      );
+      return OrderLineSnapshot.fromJson(Map<String, dynamic>.from(item as Map));
     }).toList();
   }
 }
@@ -310,4 +302,3 @@ class TransactionPage {
     this.requestId,
   });
 }
-

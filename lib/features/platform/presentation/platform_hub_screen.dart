@@ -1,5 +1,7 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
+
 import '../../../app/localization/app_localizations.dart';
 import '../../../app/theme/app_theme.dart';
 import '../../../core/models/platform_models.dart';
@@ -283,8 +285,7 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                 FilterChip(
                   key: const Key('chip_biz_suspended'),
                   label: const Text('Suspended'),
-                  selected:
-                      widget.provider.businessStatusFilter == 'suspended',
+                  selected: widget.provider.businessStatusFilter == 'suspended',
                   onSelected: (_) {
                     widget.provider.setBusinessFilter('suspended');
                     widget.provider.fetchBusinesses(refresh: true);
@@ -307,9 +308,7 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                         elevation: 1,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(
-                            color: AppColors.borderHairline,
-                          ),
+                          side: BorderSide(color: AppColors.borderHairline),
                         ),
                         child: Padding(
                           padding: const EdgeInsets.all(16),
@@ -319,10 +318,12 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                               Row(
                                 children: [
                                   CircleAvatar(
-                                    backgroundColor:
-                                        AppColors.primary.withValues(alpha: 0.12),
-                                    child: const Icon(Icons.storefront,
-                                        color: AppColors.primary),
+                                    backgroundColor: AppColors.primary
+                                        .withValues(alpha: 0.12),
+                                    child: const Icon(
+                                      Icons.storefront,
+                                      color: AppColors.primary,
+                                    ),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -349,7 +350,9 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                                   ),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: _getStatusColor(b.platformStatus)
                                           .withValues(alpha: 0.12),
@@ -358,7 +361,9 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                                     child: Text(
                                       b.platformStatus,
                                       style: TextStyle(
-                                        color: _getStatusColor(b.platformStatus),
+                                        color: _getStatusColor(
+                                          b.platformStatus,
+                                        ),
                                         fontWeight: FontWeight.bold,
                                         fontSize: 12,
                                       ),
@@ -372,30 +377,45 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                                       if (b.isPendingSetup)
                                         PopupMenuItem(
                                           value: 'assign_owner',
-                                          child: Text(AppStrings.get(
-                                              'assign_owner', context)),
+                                          child: Text(
+                                            AppStrings.get(
+                                              'assign_owner',
+                                              context,
+                                            ),
+                                          ),
                                         ),
                                       if (b.isActive)
                                         PopupMenuItem(
                                           value: 'suspend',
                                           child: Text(
                                             AppStrings.get(
-                                                'suspend_business', context),
+                                              'suspend_business',
+                                              context,
+                                            ),
                                             style: const TextStyle(
-                                                color: AppColors.statusError),
+                                              color: AppColors.statusError,
+                                            ),
                                           ),
                                         ),
                                       if (b.isSuspended)
                                         PopupMenuItem(
                                           value: 'reactivate',
-                                          child: Text(AppStrings.get(
-                                              'reactivate_business', context)),
+                                          child: Text(
+                                            AppStrings.get(
+                                              'reactivate_business',
+                                              context,
+                                            ),
+                                          ),
                                         ),
                                       if (!b.isArchived)
                                         PopupMenuItem(
                                           value: 'archive',
-                                          child: Text(AppStrings.get(
-                                              'archive_business', context)),
+                                          child: Text(
+                                            AppStrings.get(
+                                              'archive_business',
+                                              context,
+                                            ),
+                                          ),
                                         ),
                                     ],
                                   ),
@@ -406,14 +426,18 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                                 Text(
                                   'Owner: ${b.ownerIdentitySummary}',
                                   style: const TextStyle(
-                                      fontSize: 12, color: AppColors.textMuted),
+                                    fontSize: 12,
+                                    color: AppColors.textMuted,
+                                  ),
                                 ),
                               ],
                               if (b.subscriptionSummary != null)
                                 Text(
                                   'Plan: ${b.subscriptionSummary}',
                                   style: const TextStyle(
-                                      fontSize: 12, color: AppColors.textMuted),
+                                    fontSize: 12,
+                                    color: AppColors.textMuted,
+                                  ),
                                 ),
                             ],
                           ),
@@ -556,8 +580,7 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
   // 2. Channels Tab
   // ==========================================
   Widget _buildChannelsTab() {
-    if (widget.provider.isLoadingChannels &&
-        widget.provider.channels.isEmpty) {
+    if (widget.provider.isLoadingChannels && widget.provider.channels.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
@@ -573,9 +596,7 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
           elevation: 1,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(
-              color: AppColors.borderHairline,
-            ),
+            side: BorderSide(color: AppColors.borderHairline),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -597,22 +618,28 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                           Text(
                             '${ch.channel.toUpperCase()} (${ch.provider})',
                             style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 14),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
                           ),
                           Text(
                             'Business: ${ch.businessId}',
                             style: const TextStyle(
-                                fontSize: 11, color: AppColors.textMuted),
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                            ),
                           ),
                         ],
                       ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
-                        color:
-                            _getStatusColor(ch.health).withValues(alpha: 0.12),
+                        color: _getStatusColor(ch.health)
+                            .withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -633,9 +660,12 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                     OutlinedButton.icon(
                       key: Key('btn_health_check_${ch.connectionId}'),
                       icon: const Icon(Icons.health_and_safety, size: 16),
-                      label: Text(AppStrings.get('run_channel_health', context)),
-                      onPressed: () => widget.provider
-                          .runChannelHealthCheck(ch.connectionId),
+                      label: Text(
+                        AppStrings.get('run_channel_health', context),
+                      ),
+                      onPressed: () => widget.provider.runChannelHealthCheck(
+                        ch.connectionId,
+                      ),
                     ),
                   ],
                 ),
@@ -699,12 +729,15 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: ((ai?.runtime.isEnabled ?? true)
-                                  ? AppColors.statusSuccess
-                                  : AppColors.statusError)
-                              .withValues(alpha: 0.15),
+                          color:
+                              ((ai?.runtime.isEnabled ?? true)
+                                      ? AppColors.statusSuccess
+                                      : AppColors.statusError)
+                                  .withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -722,7 +755,10 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                   const SizedBox(height: 10),
                   Text(
                     AppStrings.get('ai_kill_switch_desc', context),
-                    style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   if (ai?.runtime.isEnabled ?? true)
@@ -757,9 +793,7 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
           Card(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              side: BorderSide(
-                color: AppColors.borderHairline,
-              ),
+              side: BorderSide(color: AppColors.borderHairline),
             ),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -772,7 +806,9 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                       const Text(
                         'AI Runtime & Model Health',
                         style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 15),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
                       ),
                       ElevatedButton.icon(
                         key: const Key('btn_run_ai_health'),
@@ -781,7 +817,8 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                         ),
                         icon: const Icon(Icons.speed, size: 16),
                         label: Text(
-                            AppStrings.get('run_ai_health_check', context)),
+                          AppStrings.get('run_ai_health_check', context),
+                        ),
                         onPressed: () => widget.provider.runAIHealthCheck(),
                       ),
                     ],
@@ -826,9 +863,7 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
             Card(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: BorderSide(
-                  color: AppColors.borderHairline,
-                ),
+                side: BorderSide(color: AppColors.borderHairline),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -838,7 +873,9 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                     Text(
                       AppStrings.get('ai_usage_stats', context),
                       style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 15),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -876,11 +913,15 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+        ),
         const SizedBox(height: 4),
-        Text(value,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
       ],
     );
   }
@@ -927,8 +968,7 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
             ),
             onPressed: () async {
               Navigator.of(ctx).pop();
-              await widget.provider
-                  .disableAI(reason: reasonCtrl.text.trim());
+              await widget.provider.disableAI(reason: reasonCtrl.text.trim());
             },
             child: const Text('Confirm Disable'),
           ),
@@ -968,9 +1008,7 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                       elevation: 1,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(
-                          color: AppColors.borderHairline,
-                        ),
+                        side: BorderSide(color: AppColors.borderHairline),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
@@ -983,13 +1021,16 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                                   child: Text(
                                     '${p.displayName} (${p.code})',
                                     style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 15),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
                                   ),
                                 ),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: _getStatusColor(p.status)
                                         .withValues(alpha: 0.12),
@@ -1010,15 +1051,18 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                             Text(
                               '${p.priceYer} YER / ${p.billingInterval}',
                               style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primary),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
                             ),
                             const SizedBox(height: 8),
                             Text(
                               'Limits: ${p.aiReplyLimit} AI replies, ${p.channelLimit} channels',
                               style: const TextStyle(
-                                  fontSize: 12, color: AppColors.textMuted),
+                                fontSize: 12,
+                                color: AppColors.textMuted,
+                              ),
                             ),
                             const SizedBox(height: 8),
                             Row(
@@ -1032,16 +1076,18 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                                     ),
                                     onPressed: () =>
                                         widget.provider.activatePlan(p.id),
-                                    child: Text(AppStrings.get(
-                                        'activate_plan', context)),
+                                    child: Text(
+                                      AppStrings.get('activate_plan', context),
+                                    ),
                                   ),
                                 if (p.isActive)
                                   OutlinedButton(
                                     key: Key('btn_retire_plan_${p.id}'),
                                     onPressed: () =>
                                         widget.provider.retirePlan(p.id),
-                                    child: Text(AppStrings.get(
-                                        'retire_plan', context)),
+                                    child: Text(
+                                      AppStrings.get('retire_plan', context),
+                                    ),
                                   ),
                               ],
                             ),
@@ -1062,9 +1108,7 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                       elevation: 1,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(
-                          color: AppColors.borderHairline,
-                        ),
+                        side: BorderSide(color: AppColors.borderHairline),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
@@ -1077,13 +1121,16 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                                   child: Text(
                                     'Plan: ${s.planCode} (v${s.planVersion})',
                                     style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 15),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
                                   ),
                                 ),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: _getStatusColor(s.status)
                                         .withValues(alpha: 0.12),
@@ -1094,22 +1141,30 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                               ],
                             ),
                             const SizedBox(height: 6),
-                            Text('Business ID: ${s.businessId}',
-                                style: const TextStyle(
-                                    fontSize: 12, color: AppColors.textMuted)),
-                            Text('Period: ${s.periodStart} to ${s.periodEnd}',
-                                style: const TextStyle(
-                                    fontSize: 12, color: AppColors.textMuted)),
+                            Text(
+                              'Business ID: ${s.businessId}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                            Text(
+                              'Period: ${s.periodStart} to ${s.periodEnd}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
                             const SizedBox(height: 10),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
                                 OutlinedButton(
                                   key: Key('btn_override_budget_${s.id}'),
-                                  child: Text(AppStrings.get(
-                                      'override_budget', context)),
-                                  onPressed: () =>
-                                      _showOverrideBudgetDialog(s),
+                                  child: Text(
+                                    AppStrings.get('override_budget', context),
+                                  ),
+                                  onPressed: () => _showOverrideBudgetDialog(s),
                                 ),
                                 const SizedBox(width: 8),
                                 if (s.isActive)
@@ -1120,10 +1175,14 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                                       foregroundColor: Colors.white,
                                       minimumSize: const Size(0, 36),
                                     ),
-                                    child: Text(AppStrings.get(
-                                        'cancel_subscription', context)),
-                                    onPressed: () =>
-                                        widget.provider.cancelSubscription(s.id),
+                                    child: Text(
+                                      AppStrings.get(
+                                        'cancel_subscription',
+                                        context,
+                                      ),
+                                    ),
+                                    onPressed: () => widget.provider
+                                        .cancelSubscription(s.id),
                                   ),
                               ],
                             ),
@@ -1158,9 +1217,7 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
             TextField(
               key: const Key('input_budget_amount'),
               controller: budgetCtrl,
-              decoration: const InputDecoration(
-                labelText: 'New Budget (YER)',
-              ),
+              decoration: const InputDecoration(labelText: 'New Budget (YER)'),
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 12),
@@ -1240,8 +1297,7 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                 key: const Key('chip_ticket_resolved'),
                 label: const Text('Resolved'),
                 selected: widget.provider.ticketStatusFilter == 'resolved',
-                onSelected: (_) =>
-                    widget.provider.setTicketFilter('resolved'),
+                onSelected: (_) => widget.provider.setTicketFilter('resolved'),
               ),
             ],
           ),
@@ -1260,9 +1316,7 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                       elevation: 1,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(
-                          color: AppColors.borderHairline,
-                        ),
+                        side: BorderSide(color: AppColors.borderHairline),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
@@ -1275,13 +1329,16 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                                   child: Text(
                                     t.subject,
                                     style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 15),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
                                   ),
                                 ),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: _getStatusColor(t.status)
                                         .withValues(alpha: 0.12),
@@ -1295,7 +1352,9 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                             Text(
                               'Category: ${t.category} | Priority: ${t.priority}',
                               style: const TextStyle(
-                                  fontSize: 12, color: AppColors.textMuted),
+                                fontSize: 12,
+                                color: AppColors.textMuted,
+                              ),
                             ),
                             const SizedBox(height: 12),
                             Row(
@@ -1304,8 +1363,9 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                                 if (t.isOpen)
                                   OutlinedButton(
                                     key: Key('btn_ticket_start_${t.id}'),
-                                    child: Text(AppStrings.get(
-                                        'ticket_start', context)),
+                                    child: Text(
+                                      AppStrings.get('ticket_start', context),
+                                    ),
                                     onPressed: () =>
                                         widget.provider.startTicket(t.id),
                                   ),
@@ -1315,16 +1375,18 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                                     style: ElevatedButton.styleFrom(
                                       minimumSize: const Size(0, 36),
                                     ),
-                                    child: Text(AppStrings.get(
-                                        'ticket_resolve', context)),
+                                    child: Text(
+                                      AppStrings.get('ticket_resolve', context),
+                                    ),
                                     onPressed: () =>
                                         widget.provider.resolveTicket(t.id),
                                   ),
                                   const SizedBox(width: 8),
                                   OutlinedButton(
                                     key: Key('btn_ticket_close_${t.id}'),
-                                    child: Text(AppStrings.get(
-                                        'ticket_close', context)),
+                                    child: Text(
+                                      AppStrings.get('ticket_close', context),
+                                    ),
                                     onPressed: () =>
                                         widget.provider.closeTicket(t.id),
                                   ),
@@ -1358,9 +1420,7 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
           elevation: 1,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(
-              color: AppColors.borderHairline,
-            ),
+            side: BorderSide(color: AppColors.borderHairline),
           ),
           child: ExpansionTile(
             title: Text(
@@ -1395,10 +1455,11 @@ class _PlatformHubScreenState extends State<PlatformHubScreen>
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: SelectableText(
-                        const JsonEncoder.withIndent('  ')
-                            .convert(ev.metadata),
+                        const JsonEncoder.withIndent('  ').convert(ev.metadata),
                         style: const TextStyle(
-                            fontFamily: 'monospace', fontSize: 11),
+                          fontFamily: 'monospace',
+                          fontSize: 11,
+                        ),
                       ),
                     ),
                   ],

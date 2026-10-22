@@ -96,7 +96,9 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
   // ==========================================
 
   void _showSubmitReviewDialog(CommercialTransaction tx) {
-    final reasonController = TextEditingController(text: 'high_value, manual_review');
+    final reasonController = TextEditingController(
+      text: 'high_value, manual_review',
+    );
 
     showDialog(
       context: context,
@@ -347,7 +349,9 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
   }
 
   void _showConfirmDialog(CommercialTransaction tx) {
-    final evidenceController = TextEditingController(text: 'manual_receipt_ref');
+    final evidenceController = TextEditingController(
+      text: 'manual_receipt_ref',
+    );
     final policyVersionController = TextEditingController();
 
     showDialog(
@@ -394,15 +398,17 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
             ),
             onPressed: () async {
               Navigator.of(ctx).pop();
-              final result = await widget.transactionProvider.confirmTransaction(
-                widget.businessId,
-                tx.id,
-                evidenceController.text.trim(),
-                policyVersion: policyVersionController.text.trim().isNotEmpty
-                    ? policyVersionController.text.trim()
-                    : null,
-                ifMatch: tx.resourceVersion,
-              );
+              final result = await widget.transactionProvider
+                  .confirmTransaction(
+                    widget.businessId,
+                    tx.id,
+                    evidenceController.text.trim(),
+                    policyVersion:
+                        policyVersionController.text.trim().isNotEmpty
+                        ? policyVersionController.text.trim()
+                        : null,
+                    ifMatch: tx.resourceVersion,
+                  );
 
               if (mounted) {
                 if (result != null) {
@@ -540,53 +546,51 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
           body: provider.isLoadingTransactionDetail && currentTx == null
               ? const Center(child: CircularProgressIndicator())
               : currentTx == null
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            provider.transactionDetailError ??
-                                strings('no_transactions'),
-                            style: const TextStyle(color: AppColors.textMuted),
-                          ),
-                          const SizedBox(height: 12),
-                          ElevatedButton(
-                            onPressed: _loadDetails,
-                            child: Text(strings('retry')),
-                          ),
-                        ],
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        provider.transactionDetailError ??
+                            strings('no_transactions'),
+                        style: const TextStyle(color: AppColors.textMuted),
                       ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _loadDetails,
-                      child: ListView(
-                        padding: const EdgeInsets.all(16),
-                        children: [
-                          if (isBusy)
-                            const LinearProgressIndicator(
-                              color: AppColors.primary,
-                            ),
-
-                          // Header Card
-                          _buildHeaderCard(currentTx, strings),
-                          const SizedBox(height: 16),
-
-                          // Lines Section
-                          _buildLinesSection(currentTx, strings),
-                          const SizedBox(height: 16),
-
-                          // Review Details Card (if in review or has review info)
-                          if (currentTx.state == 'review' ||
-                              provider.selectedReview != null)
-                            _buildReviewCard(provider.selectedReview, strings),
-                          const SizedBox(height: 24),
-
-                          // Action Buttons
-                          _buildActionButtons(currentTx, strings, isBusy),
-                          const SizedBox(height: 32),
-                        ],
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: _loadDetails,
+                        child: Text(strings('retry')),
                       ),
-                    ),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadDetails,
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      if (isBusy)
+                        const LinearProgressIndicator(color: AppColors.primary),
+
+                      // Header Card
+                      _buildHeaderCard(currentTx, strings),
+                      const SizedBox(height: 16),
+
+                      // Lines Section
+                      _buildLinesSection(currentTx, strings),
+                      const SizedBox(height: 16),
+
+                      // Review Details Card (if in review or has review info)
+                      if (currentTx.state == 'review' ||
+                          provider.selectedReview != null)
+                        _buildReviewCard(provider.selectedReview, strings),
+                      const SizedBox(height: 24),
+
+                      // Action Buttons
+                      _buildActionButtons(currentTx, strings, isBusy),
+                      const SizedBox(height: 32),
+                    ],
+                  ),
+                ),
         );
       },
     );
@@ -615,12 +619,16 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: stateBg,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: stateColor.withValues(alpha: 0.4)),
+                    border: Border.all(
+                      color: stateColor.withValues(alpha: 0.4),
+                    ),
                   ),
                   child: Text(
                     _formatStateLabel(tx.state, strings),
@@ -632,8 +640,10 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceSubtle,
                     borderRadius: BorderRadius.circular(8),
@@ -691,10 +701,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
               },
             ),
             const SizedBox(height: 8),
-            _buildInfoRow(
-              label: strings('customer_id'),
-              value: tx.customerId,
-            ),
+            _buildInfoRow(label: strings('customer_id'), value: tx.customerId),
             if (tx.leadId != null && tx.leadId!.isNotEmpty) ...[
               const SizedBox(height: 8),
               _buildInfoRow(
@@ -708,10 +715,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
               value: tx.resourceVersion,
             ),
             const SizedBox(height: 8),
-            _buildInfoRow(
-              label: strings('created_at'),
-              value: tx.createdAt,
-            ),
+            _buildInfoRow(label: strings('created_at'), value: tx.createdAt),
           ],
         ),
       ),
@@ -939,14 +943,16 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: review.isApproved
                         ? AppColors.statusSuccessContainer
                         : review.isRejected
-                            ? AppColors.statusErrorContainer
-                            : AppColors.statusWarningContainer,
+                        ? AppColors.statusErrorContainer
+                        : AppColors.statusWarningContainer,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -957,8 +963,8 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                       color: review.isApproved
                           ? AppColors.statusSuccess
                           : review.isRejected
-                              ? AppColors.statusError
-                              : AppColors.statusWarning,
+                          ? AppColors.statusError
+                          : AppColors.statusWarning,
                     ),
                   ),
                 ),
@@ -1020,10 +1026,8 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                       : () async {
                           final updated = await Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (context) =>
-                                  TransactionDraftFormScreen(
-                                transactionProvider:
-                                    widget.transactionProvider,
+                              builder: (context) => TransactionDraftFormScreen(
+                                transactionProvider: widget.transactionProvider,
                                 businessId: widget.businessId,
                                 existingTransaction: tx,
                               ),
@@ -1079,7 +1083,10 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                     foregroundColor: Colors.white,
                   ),
                   onPressed: isBusy ? null : () => _showApproveDialog(tx),
-                  icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
+                  icon: const Icon(
+                    Icons.check_circle_outline_rounded,
+                    size: 18,
+                  ),
                   label: Text(strings('approve_review')),
                 ),
               ),
@@ -1130,9 +1137,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
       return SizedBox(
         width: double.infinity,
         child: TextButton.icon(
-          style: TextButton.styleFrom(
-            foregroundColor: AppColors.statusError,
-          ),
+          style: TextButton.styleFrom(foregroundColor: AppColors.statusError),
           onPressed: isBusy ? null : () => _showCancelDialog(tx),
           icon: const Icon(Icons.cancel_outlined, size: 18),
           label: Text(strings('cancel_transaction')),

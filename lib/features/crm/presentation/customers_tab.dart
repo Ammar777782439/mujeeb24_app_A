@@ -253,16 +253,16 @@ class _CustomersTabState extends State<CustomersTab> {
                   ? const Center(child: CircularProgressIndicator())
                   : customers.isEmpty
                   ? (provider.activeCustomerFiltersCount > 0
-                      ? FilterEmptyState(
-                          title: strings('no_filtered_results'),
-                          subtitle: strings('no_filtered_results_hint'),
-                          onClearFilters: () {
-                            _searchController.clear();
-                            provider.clearCustomerFilters(widget.businessId);
-                          },
-                          clearButtonText: strings('reset_all_filters'),
-                        )
-                      : _buildEmptyState(strings))
+                        ? FilterEmptyState(
+                            title: strings('no_filtered_results'),
+                            subtitle: strings('no_filtered_results_hint'),
+                            onClearFilters: () {
+                              _searchController.clear();
+                              provider.clearCustomerFilters(widget.businessId);
+                            },
+                            clearButtonText: strings('reset_all_filters'),
+                          )
+                        : _buildEmptyState(strings))
                   : ListView.separated(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
                       itemCount: customers.length,
@@ -463,10 +463,7 @@ class _CustomersTabState extends State<CustomersTab> {
                       runSpacing: 4,
                       children: contactPoints.map((cp) {
                         final meta = ChannelPresentation.getMeta(cp.kind);
-                        return ChannelBadge(
-                          channel: meta.key,
-                          size: 10,
-                        );
+                        return ChannelBadge(channel: meta.key, size: 10);
                       }).toList(),
                     ),
                   ],

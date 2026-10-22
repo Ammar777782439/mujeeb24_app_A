@@ -52,7 +52,9 @@ class FakeTransactionRepository extends TransactionRepository {
     if (transactionType != null &&
         transactionType.isNotEmpty &&
         transactionType != 'all') {
-      filtered = filtered.where((t) => t.transactionType == transactionType).toList();
+      filtered = filtered
+          .where((t) => t.transactionType == transactionType)
+          .toList();
     }
     return TransactionPage(items: filtered, hasMore: false);
   }
@@ -236,7 +238,10 @@ class FakeTransactionRepository extends TransactionRepository {
   }
 }
 
-Widget buildTestWidget({required Widget child, Locale locale = const Locale('ar')}) {
+Widget buildTestWidget({
+  required Widget child,
+  Locale locale = const Locale('ar'),
+}) {
   return MaterialApp(
     locale: locale,
     supportedLocales: const [Locale('ar'), Locale('en')],
@@ -310,33 +315,38 @@ void main() {
   );
 
   group('Phase 4 Widget Tests: TransactionsScreen', () {
-    testWidgets('renders transaction list, search bar, state and type filter chips', (tester) async {
-      final repo = FakeTransactionRepository(
-        mockTransactions: [sampleDraftTx, sampleReviewTx],
-      );
-      final provider = TransactionProvider(transactionRepository: repo);
+    testWidgets(
+      'renders transaction list, search bar, state and type filter chips',
+      (tester) async {
+        final repo = FakeTransactionRepository(
+          mockTransactions: [sampleDraftTx, sampleReviewTx],
+        );
+        final provider = TransactionProvider(transactionRepository: repo);
 
-      await tester.pumpWidget(
-        buildTestWidget(
-          child: TransactionsScreen(
-            transactionProvider: provider,
-            businessId: testBusinessId,
+        await tester.pumpWidget(
+          buildTestWidget(
+            child: TransactionsScreen(
+              transactionProvider: provider,
+              businessId: testBusinessId,
+            ),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpAndSettle();
+        await tester.pumpAndSettle();
 
-      expect(find.text('المعاملات التجارية'), findsOneWidget);
-      expect(find.byType(TextField), findsOneWidget); // Search bar
-      expect(find.text('مسودة'), findsWidgets);
-      expect(find.text('قيد المراجعة'), findsWidgets);
-      expect(find.text('180.00 SAR'), findsOneWidget);
-      expect(find.text('1200.00 SAR'), findsOneWidget);
-      expect(find.byType(FloatingActionButton), findsOneWidget);
-    });
+        expect(find.text('المعاملات التجارية'), findsOneWidget);
+        expect(find.byType(TextField), findsOneWidget); // Search bar
+        expect(find.text('مسودة'), findsWidgets);
+        expect(find.text('قيد المراجعة'), findsWidgets);
+        expect(find.text('180.00 SAR'), findsOneWidget);
+        expect(find.text('1200.00 SAR'), findsOneWidget);
+        expect(find.byType(FloatingActionButton), findsOneWidget);
+      },
+    );
 
-    testWidgets('filtering by state reloads filtered transactions', (tester) async {
+    testWidgets('filtering by state reloads filtered transactions', (
+      tester,
+    ) async {
       final repo = FakeTransactionRepository(
         mockTransactions: [sampleDraftTx, sampleReviewTx],
       );
@@ -365,71 +375,85 @@ void main() {
   });
 
   group('Phase 4 Widget Tests: TransactionDraftFormScreen', () {
-    testWidgets('validates required fields, adds lines, and submits draft creation', (tester) async {
-      _setLargeViewport(tester);
-      final repo = FakeTransactionRepository();
-      final provider = TransactionProvider(transactionRepository: repo);
+    testWidgets(
+      'validates required fields, adds lines, and submits draft creation',
+      (tester) async {
+        _setLargeViewport(tester);
+        final repo = FakeTransactionRepository();
+        final provider = TransactionProvider(transactionRepository: repo);
 
-      await tester.pumpWidget(
-        buildTestWidget(
-          child: TransactionDraftFormScreen(
-            transactionProvider: provider,
-            businessId: testBusinessId,
+        await tester.pumpWidget(
+          buildTestWidget(
+            child: TransactionDraftFormScreen(
+              transactionProvider: provider,
+              businessId: testBusinessId,
+            ),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpAndSettle();
+        await tester.pumpAndSettle();
 
-      expect(find.widgetWithText(ElevatedButton, 'إنشاء مسودة معاملة'), findsOneWidget);
+        expect(
+          find.widgetWithText(ElevatedButton, 'إنشاء مسودة معاملة'),
+          findsOneWidget,
+        );
 
-      // Attempt submit without filling customer_id
-      await tester.tap(find.widgetWithText(ElevatedButton, 'إنشاء مسودة معاملة'));
-      await tester.pumpAndSettle();
+        // Attempt submit without filling customer_id
+        await tester.tap(
+          find.widgetWithText(ElevatedButton, 'إنشاء مسودة معاملة'),
+        );
+        await tester.pumpAndSettle();
 
-      // Validation error shown
-      expect(find.text('حقل مطلوب'), findsWidgets);
+        // Validation error shown
+        expect(find.text('حقل مطلوب'), findsWidgets);
 
-      // Enter customer ID and item ID
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'معرف العميل (UUID) *'),
-        'c_11111111-2222-3333-4444-555555555555',
-      );
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'معرّف عنصر الكتالوج *'),
-        'item_alpha',
-      );
+        // Enter customer ID and item ID
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'معرف العميل (UUID) *'),
+          'c_11111111-2222-3333-4444-555555555555',
+        );
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'معرّف عنصر الكتالوج *'),
+          'item_alpha',
+        );
 
-      // Add a second line
-      await tester.tap(find.widgetWithText(TextButton, 'إضافة بند'));
-      await tester.pumpAndSettle();
+        // Add a second line
+        await tester.tap(find.widgetWithText(TextButton, 'إضافة بند'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('اسم البند #2'), findsOneWidget);
+        expect(find.text('اسم البند #2'), findsOneWidget);
 
-      // Fill second line
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'معرّف عنصر الكتالوج *').last,
-        'item_beta',
-      );
+        // Fill second line
+        await tester.enterText(
+          find.widgetWithText(TextFormField, 'معرّف عنصر الكتالوج *').last,
+          'item_beta',
+        );
 
-      // Remove second line
-      await tester.tap(find.byIcon(Icons.delete_outline_rounded).first);
-      await tester.pumpAndSettle();
+        // Remove second line
+        await tester.tap(find.byIcon(Icons.delete_outline_rounded).first);
+        await tester.pumpAndSettle();
 
-      expect(find.text('اسم البند #2'), findsNothing);
+        expect(find.text('اسم البند #2'), findsNothing);
 
-      // Submit
-      await tester.tap(find.widgetWithText(ElevatedButton, 'إنشاء مسودة معاملة'));
-      await tester.pumpAndSettle();
+        // Submit
+        await tester.tap(
+          find.widgetWithText(ElevatedButton, 'إنشاء مسودة معاملة'),
+        );
+        await tester.pumpAndSettle();
 
-      expect(repo.createTransactionDraftCalled, true);
-    });
+        expect(repo.createTransactionDraftCalled, true);
+      },
+    );
   });
 
   group('Phase 4 Widget Tests: TransactionDetailScreen & Lifecycle Actions', () {
-    testWidgets('renders detail overview, lines table, and draft actions', (tester) async {
+    testWidgets('renders detail overview, lines table, and draft actions', (
+      tester,
+    ) async {
       _setLargeViewport(tester);
-      final repo = FakeTransactionRepository(mockSingleTransaction: sampleDraftTx);
+      final repo = FakeTransactionRepository(
+        mockSingleTransaction: sampleDraftTx,
+      );
       final provider = TransactionProvider(transactionRepository: repo);
 
       await tester.pumpWidget(
@@ -447,49 +471,62 @@ void main() {
       expect(find.text('تفاصيل المعاملة'), findsOneWidget);
       expect(find.text('180.00 SAR'), findsWidgets);
       expect(find.text('ساعة أنيقة'), findsOneWidget);
-      expect(find.widgetWithText(OutlinedButton, 'تعديل المسودة'), findsOneWidget);
-      expect(find.widgetWithText(ElevatedButton, 'إرسال للمراجعة'), findsOneWidget);
+      expect(
+        find.widgetWithText(OutlinedButton, 'تعديل المسودة'),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(ElevatedButton, 'إرسال للمراجعة'),
+        findsOneWidget,
+      );
       expect(find.widgetWithText(TextButton, 'إلغاء المعاملة'), findsOneWidget);
     });
 
-    testWidgets('Submit for review dialog prompts for reason codes and submits', (tester) async {
-      _setLargeViewport(tester);
-      final repo = FakeTransactionRepository(mockSingleTransaction: sampleDraftTx);
-      final provider = TransactionProvider(transactionRepository: repo);
+    testWidgets(
+      'Submit for review dialog prompts for reason codes and submits',
+      (tester) async {
+        _setLargeViewport(tester);
+        final repo = FakeTransactionRepository(
+          mockSingleTransaction: sampleDraftTx,
+        );
+        final provider = TransactionProvider(transactionRepository: repo);
 
-      await tester.pumpWidget(
-        buildTestWidget(
-          child: TransactionDetailScreen(
-            transactionProvider: provider,
-            businessId: testBusinessId,
-            transactionId: sampleDraftTx.id,
+        await tester.pumpWidget(
+          buildTestWidget(
+            child: TransactionDetailScreen(
+              transactionProvider: provider,
+              businessId: testBusinessId,
+              transactionId: sampleDraftTx.id,
+            ),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpAndSettle();
+        await tester.pumpAndSettle();
 
-      // Tap submit for review
-      await tester.tap(find.widgetWithText(ElevatedButton, 'إرسال للمراجعة'));
-      await tester.pumpAndSettle();
+        // Tap submit for review
+        await tester.tap(find.widgetWithText(ElevatedButton, 'إرسال للمراجعة'));
+        await tester.pumpAndSettle();
 
-      // Dialog appears
-      expect(find.byType(AlertDialog), findsOneWidget);
-      expect(find.text('رموز أسباب المراجعة *'), findsOneWidget);
+        // Dialog appears
+        expect(find.byType(AlertDialog), findsOneWidget);
+        expect(find.text('رموز أسباب المراجعة *'), findsOneWidget);
 
-      // Tap submit in dialog
-      await tester.tap(
-        find.descendant(
-          of: find.byType(AlertDialog),
-          matching: find.widgetWithText(ElevatedButton, 'إرسال للمراجعة'),
-        ),
-      );
-      await tester.pumpAndSettle();
+        // Tap submit in dialog
+        await tester.tap(
+          find.descendant(
+            of: find.byType(AlertDialog),
+            matching: find.widgetWithText(ElevatedButton, 'إرسال للمراجعة'),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(repo.submitTransactionReviewCalled, true);
-    });
+        expect(repo.submitTransactionReviewCalled, true);
+      },
+    );
 
-    testWidgets('Review state renders review card and Approve/Reject dialogs', (tester) async {
+    testWidgets('Review state renders review card and Approve/Reject dialogs', (
+      tester,
+    ) async {
       _setLargeViewport(tester);
       final repo = FakeTransactionRepository(
         mockSingleTransaction: sampleReviewTx,
@@ -516,8 +553,14 @@ void main() {
       expect(find.text('بيانات المراجعة'), findsOneWidget);
       expect(find.text('PENDING'), findsOneWidget);
       expect(find.text('high_value'), findsOneWidget);
-      expect(find.widgetWithText(ElevatedButton, 'اعتماد المعاملة'), findsOneWidget);
-      expect(find.widgetWithText(ElevatedButton, 'رفض المعاملة'), findsOneWidget);
+      expect(
+        find.widgetWithText(ElevatedButton, 'اعتماد المعاملة'),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(ElevatedButton, 'رفض المعاملة'),
+        findsOneWidget,
+      );
 
       // Tap Approve
       await tester.tap(find.widgetWithText(ElevatedButton, 'اعتماد المعاملة'));
@@ -537,7 +580,9 @@ void main() {
       expect(repo.approveTransactionReviewCalled, true);
     });
 
-    testWidgets('Reject review dialog prompts for reason and calls reject', (tester) async {
+    testWidgets('Reject review dialog prompts for reason and calls reject', (
+      tester,
+    ) async {
       _setLargeViewport(tester);
       final repo = FakeTransactionRepository(
         mockSingleTransaction: sampleReviewTx,
@@ -578,44 +623,49 @@ void main() {
       expect(repo.rejectTransactionReviewCalled, true);
     });
 
-    testWidgets('Confirm transaction dialog prompts for evidence reference and confirms', (tester) async {
-      _setLargeViewport(tester);
-      final repo = FakeTransactionRepository(
-        mockSingleTransaction: sampleReviewTx,
-      );
-      final provider = TransactionProvider(transactionRepository: repo);
+    testWidgets(
+      'Confirm transaction dialog prompts for evidence reference and confirms',
+      (tester) async {
+        _setLargeViewport(tester);
+        final repo = FakeTransactionRepository(
+          mockSingleTransaction: sampleReviewTx,
+        );
+        final provider = TransactionProvider(transactionRepository: repo);
 
-      await tester.pumpWidget(
-        buildTestWidget(
-          child: TransactionDetailScreen(
-            transactionProvider: provider,
-            businessId: testBusinessId,
-            transactionId: sampleReviewTx.id,
+        await tester.pumpWidget(
+          buildTestWidget(
+            child: TransactionDetailScreen(
+              transactionProvider: provider,
+              businessId: testBusinessId,
+              transactionId: sampleReviewTx.id,
+            ),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpAndSettle();
+        await tester.pumpAndSettle();
 
-      // Tap Confirm
-      await tester.tap(find.widgetWithText(OutlinedButton, 'تأكيد المعاملة'));
-      await tester.pumpAndSettle();
+        // Tap Confirm
+        await tester.tap(find.widgetWithText(OutlinedButton, 'تأكيد المعاملة'));
+        await tester.pumpAndSettle();
 
-      expect(find.byType(AlertDialog), findsOneWidget);
-      expect(find.text('مرجع الإثبات / الإيصال *'), findsOneWidget);
+        expect(find.byType(AlertDialog), findsOneWidget);
+        expect(find.text('مرجع الإثبات / الإيصال *'), findsOneWidget);
 
-      await tester.tap(
-        find.descendant(
-          of: find.byType(AlertDialog),
-          matching: find.widgetWithText(ElevatedButton, 'تأكيد المعاملة'),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.tap(
+          find.descendant(
+            of: find.byType(AlertDialog),
+            matching: find.widgetWithText(ElevatedButton, 'تأكيد المعاملة'),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(repo.confirmTransactionCalled, true);
-    });
+        expect(repo.confirmTransactionCalled, true);
+      },
+    );
 
-    testWidgets('Cancel transaction dialog prompts for reason and cancels', (tester) async {
+    testWidgets('Cancel transaction dialog prompts for reason and cancels', (
+      tester,
+    ) async {
       _setLargeViewport(tester);
       final repo = FakeTransactionRepository(
         mockSingleTransaction: sampleDraftTx,
@@ -663,7 +713,9 @@ void main() {
   });
 
   group('Phase 4 Widget Tests: DashboardTab Reviews Navigation', () {
-    testWidgets('tapping review banner triggers onNavigateToReviews callback', (tester) async {
+    testWidgets('tapping review banner triggers onNavigateToReviews callback', (
+      tester,
+    ) async {
       bool reviewNavCalled = false;
       final merchantProvider = MerchantProvider(
         merchantRepository: FakeMerchantRepository(),
@@ -706,7 +758,7 @@ void main() {
 
 class FakeMerchantRepository extends MerchantRepository {
   FakeMerchantRepository()
-      : super(apiClient: ApiClient(baseUrl: 'https://mock.local'));
+    : super(apiClient: ApiClient(baseUrl: 'https://mock.local'));
 
   @override
   Future<DashboardOverview> getDashboardOverview(String businessId) async {

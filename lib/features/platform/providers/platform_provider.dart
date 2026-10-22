@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../../../core/errors/api_error.dart';
 import '../../../core/models/platform_models.dart';
 import '../../../core/platform/platform_repository.dart';
@@ -47,9 +48,11 @@ class PlatformProvider extends ChangeNotifier {
   List<PlatformBusinessView> get businesses {
     if (_businessStatusFilter == 'all') return _businesses;
     return _businesses
-        .where((b) =>
-            b.platformStatus.toLowerCase() ==
-            _businessStatusFilter.toLowerCase())
+        .where(
+          (b) =>
+              b.platformStatus.toLowerCase() ==
+              _businessStatusFilter.toLowerCase(),
+        )
         .toList();
   }
 
@@ -70,8 +73,9 @@ class PlatformProvider extends ChangeNotifier {
 
     try {
       final page = await repository.listBusinesses(
-        platformStatus:
-            _businessStatusFilter != 'all' ? _businessStatusFilter : null,
+        platformStatus: _businessStatusFilter != 'all'
+            ? _businessStatusFilter
+            : null,
       );
       _businesses = page.items;
       _lastRequestId = page.requestId;
@@ -420,8 +424,7 @@ class PlatformProvider extends ChangeNotifier {
   List<PlanView> get plans {
     if (_planStatusFilter == 'all') return _plans;
     return _plans
-        .where(
-            (p) => p.status.toLowerCase() == _planStatusFilter.toLowerCase())
+        .where((p) => p.status.toLowerCase() == _planStatusFilter.toLowerCase())
         .toList();
   }
 
@@ -586,7 +589,10 @@ class PlatformProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final updated = await repository.cancelSubscription(subId, reason: reason);
+      final updated = await repository.cancelSubscription(
+        subId,
+        reason: reason,
+      );
       final idx = _subscriptions.indexWhere((s) => s.id == subId);
       if (idx != -1) _subscriptions[idx] = updated;
       _actionSuccessMessage = 'تم إلغاء الاشتراك';
@@ -700,7 +706,8 @@ class PlatformProvider extends ChangeNotifier {
     if (_ticketStatusFilter == 'all') return _tickets;
     return _tickets
         .where(
-            (t) => t.status.toLowerCase() == _ticketStatusFilter.toLowerCase())
+          (t) => t.status.toLowerCase() == _ticketStatusFilter.toLowerCase(),
+        )
         .toList();
   }
 

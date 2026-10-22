@@ -244,10 +244,7 @@ class PlatformRepository {
 
   /// `GET /platform/ai`
   Future<PlatformAIOverviewView> getAIOverview() async {
-    final response = await apiClient.get(
-      '/platform/ai',
-      requiresAuth: true,
-    );
+    final response = await apiClient.get('/platform/ai', requiresAuth: true);
     final data = _extractDataMap(response);
     return PlatformAIOverviewView.fromJson(data);
   }
@@ -261,9 +258,7 @@ class PlatformRepository {
       'Idempotency-Key':
           idempotencyKey ?? _generateIdempotencyKey('plat_ai_killswitch'),
     };
-    final body = <String, dynamic>{
-      'reason': ?reason,
-    };
+    final body = <String, dynamic>{'reason': ?reason};
 
     final response = await apiClient.post(
       '/platform/ai/disable',
@@ -469,9 +464,7 @@ class PlatformRepository {
       'Idempotency-Key':
           idempotencyKey ?? _generateIdempotencyKey('plat_sub_cancel'),
     };
-    final body = <String, dynamic>{
-      'reason': ?reason,
-    };
+    final body = <String, dynamic>{'reason': ?reason};
 
     final response = await apiClient.post(
       '/platform/subscriptions/$subscriptionId/cancel',
